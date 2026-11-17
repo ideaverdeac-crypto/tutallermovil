@@ -878,26 +878,8 @@ export default function FlotasDashboardPage() {
             </span>
           </div>
 
-          {/* Enlaces de Navegación Rápida */}
+          {/* Acciones de Cabecera */}
           <div className="flex items-center gap-2">
-            <Link
-              href="/admin/despacho"
-              className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#1E56B0] px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-colors"
-            >
-              <Truck className="w-3.5 h-3.5 text-slate-400" />
-              <span>Despacho</span>
-            </Link>
-
-            <Link
-              href="/admin/finanzas"
-              className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#1E56B0] px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-colors"
-            >
-              <DollarSign className="w-3.5 h-3.5 text-slate-400" />
-              <span>Finanzas</span>
-            </Link>
-
-            <div className="h-5 w-px bg-slate-200 hidden md:block" />
-
             {/* Botón Registrar/Editar Empresa */}
             <button
               type="button"

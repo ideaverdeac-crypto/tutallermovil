@@ -479,6 +479,8 @@ export default function TableroDespachoPage() {
     avatarColor: 'bg-indigo-600'
   });
 
+  const [esDuenio, setEsDuenio] = useState<boolean>(false);
+
   const [operadorasConectadas, setOperadorasConectadas] = useState<OperadoraPresencia[]>([
     {
       id: 'ana.despacho@tutallermovil.com',
@@ -807,6 +809,34 @@ export default function TableroDespachoPage() {
         setMostrarBotonTutorial(false);
       } else {
         setMostrarBotonTutorial(true);
+      }
+
+      // Detectar si el usuario actual es el Dueño (ADMIN)
+      const roleMatch = document.cookie.match(/(^| )ttm_role=([^;]+)/);
+      const userRole = roleMatch ? decodeURIComponent(roleMatch[2]).toUpperCase() : '';
+
+      const codeMatch = document.cookie.match(/(^| )ttm_user_code=([^;]+)/);
+      const userCode = codeMatch ? decodeURIComponent(codeMatch[2]).toLowerCase() : '';
+
+      if (
+        userRole === 'ADMIN' ||
+        userCode.includes('admin') ||
+        userCode.includes('dueno') ||
+        userCode.includes('owner') ||
+        userCode === 'admin@tutallermovil.com'
+      ) {
+        setEsDuenio(true);
+      } else {
+        const supabase = createClient();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (
+            user?.user_metadata?.role?.toUpperCase() === 'ADMIN' ||
+            user?.email?.toLowerCase().includes('admin') ||
+            user?.email?.toLowerCase().includes('dueno')
+          ) {
+            setEsDuenio(true);
+          }
+        }).catch(() => {});
       }
     }
 
@@ -1577,13 +1607,17 @@ export default function TableroDespachoPage() {
 
           {/* Acciones de Cabecera */}
           <div className="flex items-center gap-3">
-            <Link
-              href="/admin/finanzas"
-              className="h-10 px-3.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-2xs"
-            >
-              <Landmark className="w-4 h-4 text-[#1E56B0]" />
-              <span className="hidden md:inline">Finanzas & QA</span>
-            </Link>
+            {/* Acceso a Finanzas & QA: Estrictamente Exclusivo para el Dueño / ADMIN */}
+            {esDuenio && (
+              <Link
+                href="/admin/finanzas"
+                className="h-10 px-3.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-2xs"
+                title="Panel Financiero y Administrativo (Exclusivo Dueño / Admin)"
+              >
+                <Landmark className="w-4 h-4 text-[#1E56B0]" />
+                <span className="hidden md:inline">Finanzas & QA</span>
+              </Link>
+            )}
 
             {/* Botón Cotizador Orden con Tooltip explicativo */}
             <div className="flex items-center gap-1">
