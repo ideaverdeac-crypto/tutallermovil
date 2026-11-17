@@ -32,7 +32,8 @@ import {
   ClipboardCheck,
   Shield,
   Phone,
-  Star
+  Star,
+  UserPlus
 } from 'lucide-react';
 
 interface OrdenKanban {
@@ -54,6 +55,7 @@ const MECANICOS_DISPONIBLES = [
   {
     id: '123e4567-e89b-12d3-a456-426614174000',
     nombre: 'Carlos Mendoza',
+    iniciales: 'CM',
     credencial: '#TTM-0842',
     especialidad: 'Especialista Senior (OBD2 & Inyección)',
     unidad: 'Moto Yamaha FZ • AB123CD',
@@ -63,6 +65,7 @@ const MECANICOS_DISPONIBLES = [
   {
     id: '223e4567-e89b-12d3-a456-426614174001',
     nombre: 'Alejandro Blanco',
+    iniciales: 'AB',
     credencial: '#TTM-0912',
     especialidad: 'Mecánica Ligera & Frenos',
     unidad: 'Moto Suzuki GN • AC456DF',
@@ -72,11 +75,62 @@ const MECANICOS_DISPONIBLES = [
   {
     id: '323e4567-e89b-12d3-a456-426614174002',
     nombre: 'Roberto Páez',
+    iniciales: 'RP',
     credencial: '#TTM-0341',
     especialidad: 'Electricidad Automotriz & Baterías',
     unidad: 'Moto Bera SBR • AE789GH',
     rating: '4.8 ★',
     foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
+  }
+];
+
+// Mecánicos en el Radar táctil con cálculo de distancia y disponibilidad
+const MECANICOS_RADAR = [
+  {
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    nombre: 'Carlos Mendoza',
+    iniciales: 'CM',
+    credencial: '#TTM-0842',
+    especialidad: 'Especialista Senior (OBD2 & Inyección)',
+    distancia: '1.2 km (8 min)',
+    disponible: true,
+    foto: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80'
+  },
+  {
+    id: '223e4567-e89b-12d3-a456-426614174001',
+    nombre: 'Alejandro Blanco',
+    iniciales: 'AB',
+    credencial: '#TTM-0912',
+    especialidad: 'Mecánica Ligera & Frenos',
+    distancia: '3.4 km (18 min)',
+    disponible: true,
+    foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
+  },
+  {
+    id: '323e4567-e89b-12d3-a456-426614174002',
+    nombre: 'Roberto Páez',
+    iniciales: 'RP',
+    credencial: '#TTM-0341',
+    especialidad: 'Electricidad Automotriz & Baterías',
+    distancia: '6.1 km (35 min)',
+    disponible: false,
+    foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
+  }
+];
+
+// Motorizados de Delivery de Repuestos (Runners)
+const MOTORIZADOS_RUNNER = [
+  {
+    id: 'runner_luis',
+    nombre: 'Luis',
+    unidad: 'Moto Bera SBR Negra (Placa AB987CD)',
+    estado: 'A 5 min de la repuestera'
+  },
+  {
+    id: 'runner_pedro',
+    nombre: 'Pedro',
+    unidad: 'Moto Yamaha Roja (Placa XY456ZW)',
+    estado: 'En zona Altamira'
   }
 ];
 
@@ -223,7 +277,70 @@ function CronometroSLA({ createdAt }: { createdAt?: string }) {
   );
 }
 
-// Avatar del mecánico asignado con anillo sutil, interactivo (abre ficha Bento de garita)
+// Avatar del mecánico asignado con estilo squircle oscuro, iniciales CM en verde neón y badge de estatus (Fiel a la referencia de diseño)
+interface MecanicoAvatarSquircleProps {
+  initials?: string;
+  size?: 'sm' | 'md' | 'lg';
+  status?: 'verified' | 'available' | 'slate';
+  className?: string;
+  onClick?: () => void;
+}
+
+function MecanicoAvatarSquircle({
+  initials = 'CM',
+  size = 'sm',
+  status = 'verified',
+  className = '',
+  onClick
+}: MecanicoAvatarSquircleProps) {
+  const sizeClasses = {
+    sm: 'w-7 h-7 rounded-xl text-[11px]',
+    md: 'w-11 h-11 rounded-2xl text-sm',
+    lg: 'w-20 h-20 rounded-3xl text-2xl'
+  }[size];
+
+  const dotSize = {
+    sm: 'w-2.5 h-2.5 -bottom-0.5 -right-0.5 ring-[1.5px]',
+    md: 'w-3.5 h-3.5 -bottom-0.5 -right-0.5 ring-2',
+    lg: 'w-6 h-6 -bottom-1 -right-1 ring-[3px]'
+  }[size];
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-700/60 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 ${
+        onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
+      } ${className}`}
+    >
+      <span className="drop-shadow-xs">{initials}</span>
+
+      {/* Indicador inferior derecho con aro blanco idéntico a las referencias del usuario */}
+      {status === 'verified' ? (
+        <span
+          className={`absolute ${dotSize} rounded-full bg-[#16A34A] ring-white flex items-center justify-center shadow-xs text-white`}
+          title="Técnico Verificado Oficial"
+        >
+          <Check className={`${size === 'lg' ? 'w-3.5 h-3.5 stroke-[3.5]' : size === 'md' ? 'w-2 h-2 stroke-[3.5]' : 'w-1.5 h-1.5 stroke-[3.5]'}`} />
+        </span>
+      ) : status === 'available' ? (
+        <span
+          className={`absolute ${dotSize} rounded-full bg-emerald-500 ring-white flex items-center justify-center shadow-xs`}
+          title="Disponible / En ruta"
+        >
+          <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+        </span>
+      ) : (
+        /* Estado base (círculo gris/slate con aro blanco idéntico a la imagen CM) */
+        <span
+          className={`absolute ${dotSize} rounded-full bg-[#8B9BB4] ring-white shadow-xs`}
+          title="Estatus de servicio"
+        />
+      )}
+    </div>
+  );
+}
+
+// Badge interactivo del mecánico asignado con avatar squircle 'CM' neon lime
 function MecanicoAsignadoBadge({ onClick }: { onClick?: () => void }) {
   return (
     <button
@@ -235,11 +352,9 @@ function MecanicoAsignadoBadge({ onClick }: { onClick?: () => void }) {
       className="flex items-center gap-2 hover:bg-slate-100/90 px-2 py-1 -mx-2 -my-1 rounded-xl transition-all cursor-pointer text-left w-full group select-none"
       title="Ver ficha operativa de Carlos Mendoza (#TTM-0842)"
     >
-      <img
-        src={FOTO_MECANICO_OFICIAL}
-        alt="Carlos Mendoza"
-        className="w-6 h-6 rounded-full object-cover ring-2 ring-[#E2E8F0] group-hover:ring-[#1E56B0] shrink-0 transition-all shadow-2xs"
-      />
+      {/* Avatar Squircle con 'CM' en verde neón e indicador de estado según la referencia */}
+      <MecanicoAvatarSquircle initials="CM" size="sm" status="verified" />
+
       <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
         <span className="text-xs font-bold text-[#0A1525] group-hover:text-[#1E56B0] transition-colors truncate">
           Carlos Mendoza
@@ -261,11 +376,21 @@ export default function TableroDespachoPage() {
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragOverColId, setDragOverColId] = useState<string | null>(null);
 
-  // Estados de Modales
+  // Estados de Modales y Paneles Tácticos
   const [modalCotizadorOpen, setModalCotizadorOpen] = useState(false);
   const [modalAsignarOpen, setModalAsignarOpen] = useState(false);
   const [modalMecanicoDetalleOpen, setModalMecanicoDetalleOpen] = useState(false);
   const [ordenParaAsignar, setOrdenParaAsignar] = useState<OrdenKanban | null>(null);
+
+  // Estados del Centro de Despacho Táctico
+  const [sheetRadarMecanicosOpen, setSheetRadarMecanicosOpen] = useState(false);
+  const [ordenParaRadar, setOrdenParaRadar] = useState<OrdenKanban | null>(null);
+  const [modalRunnerOpen, setModalRunnerOpen] = useState(false);
+  const [ordenParaRunner, setOrdenParaRunner] = useState<OrdenKanban | null>(null);
+  const [runnersAsignados, setRunnersAsignados] = useState<Record<string, string>>({
+    'orden_demo_1': 'Luis'
+  });
+  const [toastPagoExitoso, setToastPagoExitoso] = useState<string | null>(null);
 
   // Estado del Cotizador
   const [manoDeObra, setManoDeObra] = useState<string>('');
@@ -417,12 +542,88 @@ export default function TableroDespachoPage() {
     setOrdenParaAsignar(null);
   };
 
-  const handleValidarPago = async (orden: OrdenKanban) => {
-    const confirmar = confirm(`¿Confirmar validación de pago y conciliación para la orden de ${orden.cliente_nombre}?`);
-    if (!confirmar) return;
+  // 1. Asignación Forzada desde el Radar de Mecánicos
+  const handleForzarAsignacion = async (mecanico: typeof MECANICOS_RADAR[0]) => {
+    if (!ordenParaRadar) return;
+    const ordenId = ordenParaRadar.id;
+    const cliente = ordenParaRadar.cliente_nombre;
 
-    await moverOrden(orden.id, 'COMPLETADA');
-    alert('¡Pago validado y orden conciliada exitosamente!');
+    console.log('[BITÁCORA INMUTABLE] Operadora forzó asignación manual de especialista en ruta.', {
+      evento: 'ASIGNACION_MANUAL_RADAR',
+      ordenId,
+      cliente,
+      mecanicoId: mecanico.id,
+      mecanicoNombre: mecanico.nombre,
+      mecanicoCredencial: mecanico.credencial,
+      distanciaGPS: mecanico.distancia,
+      estadoAnterior: 'DIAGNOSTICO_AGENDADO',
+      nuevoEstado: 'ASIGNADO',
+      timestamp: new Date().toISOString()
+    });
+
+    await moverOrden(ordenId, 'ASIGNADO', mecanico.id);
+    setSheetRadarMecanicosOpen(false);
+    setOrdenParaRadar(null);
+  };
+
+  // 2. Asignación de Runner para Despacho de Repuestos
+  const handleSeleccionarRunner = (runnerNombre: string) => {
+    if (!ordenParaRunner) return;
+    const ordenId = ordenParaRunner.id;
+
+    console.log('[BITÁCORA INMUTABLE] Operadora asignó runner para despacho de repuestos.', {
+      evento: 'RUNNER_ASIGNADO',
+      ordenId,
+      cliente: ordenParaRunner.cliente_nombre,
+      runnerAsignado: runnerNombre,
+      timestamp: new Date().toISOString()
+    });
+
+    setRunnersAsignados((prev) => ({
+      ...prev,
+      [ordenId]: runnerNombre
+    }));
+
+    setModalRunnerOpen(false);
+    setOrdenParaRunner(null);
+  };
+
+  // 3. Validación de Pago y Cierre con Retención QA (Mueve fuera del Kanban)
+  const handleValidarPagoYCerrar = async (orden: OrdenKanban) => {
+    const monto =
+      typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0
+        ? (orden.ganancia_estimada * 1.5).toFixed(2)
+        : '75.00';
+    const retencionQA = (parseFloat(monto) * 0.03).toFixed(2);
+
+    console.log('[BITÁCORA INMUTABLE] Operadora validó y concilió pago de orden.', {
+      evento: 'ORDEN_PAGADA_CONCILIADA',
+      ordenId: orden.id,
+      cliente: orden.cliente_nombre,
+      montoTotalUSD: monto,
+      retencionQA_3pct: retencionQA,
+      estadoAnterior: orden.estado,
+      nuevoEstado: 'PAGADO',
+      timestamp: new Date().toISOString()
+    });
+
+    // Optimistic update: remover del Kanban (estado PAGADO)
+    setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('ordenes')
+        .update({ estado: 'PAGADO' })
+        .eq('id', orden.id);
+    } catch (err) {
+      console.error('Error al actualizar estado PAGADO en Supabase:', err);
+    }
+
+    setToastPagoExitoso('Orden pagada. Fondo QA retenido (3%)');
+    setTimeout(() => {
+      setToastPagoExitoso(null);
+    }, 4500);
   };
 
   // 4. Lógica Financiera del Cotizador ($40 regla de negocio P0)
@@ -593,7 +794,7 @@ export default function TableroDespachoPage() {
                             onDragEnd={handleDragEnd}
                             whileHover={{ scale: isBeingDragged ? 1 : 1.02, y: isBeingDragged ? 0 : -2 }}
                             transition={{ duration: 0.2 }}
-                            className={`bg-white rounded-2xl border p-3.5 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-2.5 cursor-grab active:cursor-grabbing select-none ${
+                            className={`bg-white rounded-2xl border p-3.5 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-2.5 cursor-grab active:cursor-grabbing select-none group ${
                               isBeingDragged
                                 ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
                                 : 'border-[#E2E8F0] hover:border-[#1E56B0]'
@@ -639,21 +840,45 @@ export default function TableroDespachoPage() {
                               </div>
                             )}
 
-                            {/* En REPUESTOS_EN_RUTA: Avatar del Mecánico Asignado + Badge de Runner */}
+                            {/* En REPUESTOS_EN_RUTA: Avatar del Mecánico Asignado + Gestión de Runner */}
                             {columna.id === 'REPUESTOS_EN_RUTA' && (
                               <div className="space-y-1.5 ml-5">
                                 <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
                                   <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
                                 </div>
-                                <div className="p-1.5 px-2.5 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs">
-                                  <span className="font-extrabold text-[#1E56B0] flex items-center gap-1.5 text-[11px]">
-                                    <Bike className="w-3.5 h-3.5 text-[#1E56B0]" />
-                                    Runner asignado
-                                  </span>
-                                  <span className="font-mono text-[9px] text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-100 font-bold">
-                                    Repuestos en ruta
-                                  </span>
-                                </div>
+
+                                {runnersAsignados[orden.id] ? (
+                                  <div className="p-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs shadow-2xs">
+                                    <span className="font-extrabold text-emerald-800 flex items-center gap-1.5 text-xs">
+                                      <Check className="w-3.5 h-3.5 text-emerald-700 stroke-[3]" />
+                                      Runner: {runnersAsignados[orden.id]}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOrdenParaRunner(orden);
+                                        setModalRunnerOpen(true);
+                                      }}
+                                      className="text-[10px] font-bold text-slate-400 hover:text-[#0A1525] underline ml-1 cursor-pointer"
+                                    >
+                                      Cambiar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOrdenParaRunner(orden);
+                                      setModalRunnerOpen(true);
+                                    }}
+                                    className="w-full h-8 px-3 rounded-xl bg-sky-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 border border-sky-200 transition-all opacity-90 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-2xs"
+                                  >
+                                    <Bike className="w-3.5 h-3.5" />
+                                    <span>Asignar Runner</span>
+                                  </button>
+                                )}
                               </div>
                             )}
 
@@ -688,7 +913,7 @@ export default function TableroDespachoPage() {
                               </div>
                             )}
 
-                            {/* En PENDIENTE_PAGO: Monto total a cobrar en grande y botón oscuro 'Validar Pago' */}
+                            {/* En PENDIENTE_PAGO: Monto total a cobrar en grande y botón oscuro 'Validar Pago y Cerrar' */}
                             {columna.id === 'PENDIENTE_PAGO' && (
                               <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 ml-5 space-y-2">
                                 <div className="flex items-baseline justify-between">
@@ -704,12 +929,12 @@ export default function TableroDespachoPage() {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleValidarPago(orden);
+                                    handleValidarPagoYCerrar(orden);
                                   }}
                                   className="w-full h-9 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Validar Pago</span>
+                                  <span>Validar Pago y Cerrar</span>
                                 </button>
                               </div>
                             )}
@@ -722,22 +947,24 @@ export default function TableroDespachoPage() {
                               </div>
 
                               <div className="flex items-center gap-1.5">
-                                {/* Botón de asignación en columna diagnóstico */}
+                                {/* Botón de asignación táctica en columna diagnóstico */}
                                 {columna.id === 'DIAGNOSTICO_AGENDADO' && (
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setOrdenParaAsignar(orden);
-                                      setModalAsignarOpen(true);
+                                      setOrdenParaRadar(orden);
+                                      setSheetRadarMecanicosOpen(true);
                                     }}
-                                    className="text-[11px] font-black text-[#1E56B0] hover:text-[#0A1525] bg-blue-50 hover:bg-[#CCFF00] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                                    className="h-8 px-2.5 rounded-lg bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center gap-1.5 transition-all opacity-90 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-2xs"
+                                    title="Abrir Radar de Mecánicos para asignación manual"
                                   >
-                                    + Asignar
+                                    <UserPlus className="w-3.5 h-3.5" />
+                                    <span>Asignar</span>
                                   </button>
                                 )}
 
-                                {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente */}
+                                {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente con fade-in */}
                                 {columna.estadoSiguiente && (
                                   <motion.button
                                     type="button"
@@ -746,13 +973,13 @@ export default function TableroDespachoPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (columna.id === 'DIAGNOSTICO_AGENDADO') {
-                                        setOrdenParaAsignar(orden);
-                                        setModalAsignarOpen(true);
+                                        setOrdenParaRadar(orden);
+                                        setSheetRadarMecanicosOpen(true);
                                       } else {
                                         moverOrden(orden.id, columna.estadoSiguiente!);
                                       }
                                     }}
-                                    className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-colors shadow-xs cursor-pointer shrink-0"
+                                    className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-all shadow-xs cursor-pointer shrink-0 opacity-90 sm:opacity-0 sm:group-hover:opacity-100"
                                     title={`Mover a ${columna.estadoSiguiente}`}
                                   >
                                     {isUpdating ? (
@@ -1020,10 +1247,10 @@ export default function TableroDespachoPage() {
                     className="p-3.5 rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] bg-[#F8FAFC] hover:bg-blue-50/40 transition-all flex items-center justify-between gap-3 shadow-2xs"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={mec.foto}
-                        alt={mec.nombre}
-                        className="w-11 h-11 rounded-xl object-cover border border-[#CBD5E1] shadow-2xs shrink-0"
+                      <MecanicoAvatarSquircle
+                        initials={mec.iniciales}
+                        size="md"
+                        status="verified"
                       />
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
@@ -1089,20 +1316,16 @@ export default function TableroDespachoPage() {
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Cabecera: Foto Grande w-20 h-20, Nombre, Código y Calificación */}
+              {/* Cabecera: Avatar Squircle Oficial w-20 h-20, Nombre, Código y Calificación */}
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1 text-center sm:text-left">
-                <img
-                  src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80"
-                  alt="Carlos Mendoza"
-                  className="w-20 h-20 rounded-full object-cover ring-4 ring-[#E2E8F0] shadow-md shrink-0"
-                />
+                <MecanicoAvatarSquircle initials="CM" size="lg" status="verified" />
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
                       Carlos Mendoza
                     </h2>
-                    <span className="w-5 h-5 rounded-full bg-[#16a34a] flex items-center justify-center shrink-0 shadow-2xs" title="Técnico Verificado Oficial">
+                    <span className="w-5 h-5 rounded-full bg-[#16A34A] flex items-center justify-center shrink-0 shadow-2xs" title="Técnico Verificado Oficial">
                       <Check className="w-3 h-3 text-white stroke-[3.5]" />
                     </span>
                   </div>
@@ -1239,6 +1462,227 @@ export default function TableroDespachoPage() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 5. SHEET / PANEL LATERAL: RADAR DE MECÁNICOS (Asignación) */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {sheetRadarMecanicosOpen && ordenParaRadar && (
+          <div className="fixed inset-0 z-50 flex justify-end bg-[#0A1525]/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="w-full max-w-md bg-white h-full shadow-2xl border-l border-[#E2E8F0] flex flex-col justify-between overflow-hidden"
+            >
+              {/* Cabecera del Sheet */}
+              <div className="p-6 border-b border-[#E2E8F0] flex items-start justify-between bg-white">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-[#1E56B0] text-[#CCFF00] flex items-center justify-center font-bold">
+                      <Radio className="w-4 h-4 animate-pulse" />
+                    </div>
+                    <h2 className="text-lg font-black text-[#0A1525] tracking-tight">
+                      Radar de Mecánicos
+                    </h2>
+                  </div>
+                  <p className="text-xs text-[#475569] font-medium">
+                    Orden #{ordenParaRadar.id.slice(0, 8).toUpperCase()} • {ordenParaRadar.sector} ({ordenParaRadar.cliente_nombre})
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSheetRadarMecanicosOpen(false);
+                    setOrdenParaRadar(null);
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Lista de Mecánicos en el Radar */}
+              <div className="p-6 flex-1 overflow-y-auto space-y-4">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <span>Especialistas por Cobertura</span>
+                  <span className="text-[#1E56B0] font-mono">3 simulados</span>
+                </div>
+
+                {MECANICOS_RADAR.map((mec) => (
+                  <div
+                    key={mec.id}
+                    className={`p-4 rounded-2xl border transition-all space-y-3.5 ${
+                      mec.disponible
+                        ? 'bg-white border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm'
+                        : 'bg-slate-50/70 border-slate-200 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <MecanicoAvatarSquircle
+                          initials={mec.iniciales}
+                          size="md"
+                          status={mec.disponible ? 'verified' : 'slate'}
+                        />
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="text-sm font-black text-[#0A1525]">
+                              {mec.nombre}
+                            </h3>
+                            <span className="font-mono text-[10px] font-bold text-[#1E56B0] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                              {mec.credencial}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#475569] font-medium">
+                            {mec.especialidad}
+                          </p>
+                          <div className="flex items-center gap-1 text-[11px] text-slate-500 pt-0.5">
+                            <MapPin className="w-3 h-3 text-[#1E56B0]" />
+                            <span>{mec.distancia}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Badge: Verde lima si Disponible, gris si Ocupado */}
+                      <span
+                        className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 border ${
+                          mec.disponible
+                            ? 'bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/10'
+                            : 'bg-slate-200 text-slate-500 border-slate-300'
+                        }`}
+                      >
+                        {mec.disponible ? '● Disponible' : 'Ocupado'}
+                      </span>
+                    </div>
+
+                    {/* Botón Forzar Asignación */}
+                    {mec.disponible ? (
+                      <button
+                        type="button"
+                        onClick={() => handleForzarAsignacion(mec)}
+                        className="w-full h-10 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span>Forzar Asignación Inmediata</span>
+                      </button>
+                    ) : (
+                      <div className="text-[11px] font-semibold text-slate-400 italic text-center py-1 bg-slate-100/60 rounded-xl">
+                        En servicio activo • No disponible para despacho
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer del Sheet */}
+              <div className="p-4 border-t border-[#E2E8F0] bg-[#F8FAFC] text-center">
+                <p className="text-[11px] text-slate-400 font-medium">
+                  🔒 Cada forzado queda registrado en la bitácora inmutable de despacho táctico.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 6. MODAL GESTIÓN DE RUNNER (Seleccionar Motorizado)      */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalRunnerOpen && ordenParaRunner && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 20 }}
+              className="w-full max-w-sm bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-sky-100 text-[#1E56B0] flex items-center justify-center font-bold">
+                    <Bike className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-[#0A1525] tracking-tight">
+                      Seleccionar Motorizado
+                    </h3>
+                    <p className="text-[11px] text-[#475569]">
+                      Despacho para {ordenParaRunner.sector}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalRunnerOpen(false);
+                    setOrdenParaRunner(null);
+                  }}
+                  className="p-1 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {MOTORIZADOS_RUNNER.map((runner) => (
+                  <button
+                    key={runner.id}
+                    type="button"
+                    onClick={() => handleSeleccionarRunner(runner.nombre)}
+                    className="w-full p-3.5 rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] hover:bg-blue-50/40 text-left transition-all flex items-center justify-between group cursor-pointer shadow-2xs"
+                  >
+                    <div className="space-y-0.5">
+                      <span className="text-sm font-black text-[#0A1525] group-hover:text-[#1E56B0]">
+                        {runner.nombre}
+                      </span>
+                      <p className="text-xs text-[#475569] font-medium">{runner.unidad}</p>
+                      <p className="text-[11px] text-emerald-700 font-bold">{runner.estado}</p>
+                    </div>
+                    <span className="h-8 px-3 rounded-lg bg-slate-100 group-hover:bg-[#CCFF00] group-hover:text-[#0A1525] text-xs font-black flex items-center transition-colors">
+                      Asignar
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 7. TOAST ANIMADO: VALIDACIÓN DE PAGO (Retención 3% QA)   */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {toastPagoExitoso && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-50 bg-[#0A1525] text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#16a34a] flex items-center justify-center text-white shrink-0">
+              <Check className="w-4 h-4 stroke-[3.5]" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-white">
+                {toastPagoExitoso}
+              </p>
+              <p className="text-[10px] text-slate-400">
+                La orden fue conciliada y archivada fuera del tablero activo.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastPagoExitoso(null)}
+              className="text-slate-400 hover:text-white ml-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 
