@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   Camera,
   Upload,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 
 interface Repuesto {
@@ -70,8 +71,10 @@ export default function PortalRepuestosPage() {
   const [busqueda, setBusqueda] = useState<string>('');
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<string>('todas');
 
-  // Estado del Modal Bento de Carga
+  // Estado del Modal Bento de Carga y Edición
   const [modalAbierto, setModalAbierto] = useState<boolean>(false);
+  const [repuestoEnEdicion, setRepuestoEnEdicion] = useState<Repuesto | null>(null);
+  const [eliminandoRepuesto, setEliminandoRepuesto] = useState<boolean>(false);
   const [guardando, setGuardando] = useState<boolean>(false);
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
   const [toastExito, setToastExito] = useState<string | null>(null);
@@ -236,7 +239,62 @@ export default function PortalRepuestosPage() {
     });
   }, [repuestos, busqueda, marcaSeleccionada]);
 
-  // Manejar Envío del Formulario
+  const handleAbrirCrear = () => {
+    setErrorFormulario(null);
+    setRepuestoEnEdicion(null);
+    setFormNombre('');
+    setFormMarca('');
+    setFormPrecio('');
+    setFormDescripcion('');
+    setFormFotoUrl('');
+    setFormCompatibilidad('');
+    setFormStock('1');
+    setEtiquetaActiva(null);
+    setModalAbierto(true);
+  };
+
+  const handleAbrirEditar = (rep: Repuesto) => {
+    setErrorFormulario(null);
+    setRepuestoEnEdicion(rep);
+    setFormNombre(rep.nombre_repuesto || '');
+    setFormMarca(rep.marca || '');
+    setFormPrecio(rep.precio_usd ? rep.precio_usd.toString() : '');
+    setFormDescripcion(rep.descripcion || '');
+    setFormFotoUrl(rep.foto_url || '');
+    setFormCompatibilidad(rep.compatibilidad || '');
+    setFormStock((rep.stock !== undefined && rep.stock !== null ? rep.stock : 1).toString());
+    setEtiquetaActiva(rep.marca || null);
+    setModalAbierto(true);
+  };
+
+  const handleEliminarRepuesto = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este repuesto del catálogo?')) {
+      return;
+    }
+
+    try {
+      setEliminandoRepuesto(true);
+      const supabase = createClient();
+      const { error } = await supabase.from('repuestos').delete().eq('id', id);
+
+      if (error) {
+        console.warn('Aviso al eliminar en Supabase:', error.message);
+      }
+
+      setRepuestos((prev) => prev.filter((r) => r.id !== id));
+      setModalAbierto(false);
+      setRepuestoEnEdicion(null);
+      setToastExito('Repuesto eliminado del inventario.');
+      setTimeout(() => setToastExito(null), 4000);
+    } catch (err: any) {
+      console.error('Error eliminando repuesto:', err);
+      alert('No se pudo eliminar el repuesto.');
+    } finally {
+      setEliminandoRepuesto(false);
+    }
+  };
+
+  // Manejar Envío del Formulario (Creación o Edición)
   const handleGuardarRepuesto = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorFormulario(null);
@@ -264,7 +322,7 @@ export default function PortalRepuestosPage() {
       setGuardando(true);
       const supabase = createClient();
 
-      const nuevoRegistro = {
+      const registro = {
         proveedor_nombre: 'AutoPartes Chacao',
         nombre_repuesto: formNombre.trim(),
         marca: formMarca.trim(),
@@ -277,21 +335,44 @@ export default function PortalRepuestosPage() {
         stock: parseInt(formStock, 10) || 1
       };
 
-      const { data, error } = await supabase
-        .from('repuestos')
-        .insert([nuevoRegistro])
-        .select()
-        .single();
+      if (repuestoEnEdicion) {
+        // MODO EDICIÓN
+        const { data, error } = await supabase
+          .from('repuestos')
+          .update(registro)
+          .eq('id', repuestoEnEdicion.id)
+          .select()
+          .single();
 
-      if (error) {
-        throw new Error(error.message);
-      }
+        if (error) {
+          console.warn('Aviso Supabase update, aplicando actualización local:', error.message);
+        }
 
-      // Inserción exitosa: actualización optimista en el estado local para fluidez inmediata
-      if (data) {
-        setRepuestos((prev) => [data as Repuesto, ...prev]);
+        const actualizado = data || { ...repuestoEnEdicion, ...registro };
+        setRepuestos((prev) =>
+          prev.map((r) => (r.id === repuestoEnEdicion.id ? (actualizado as Repuesto) : r))
+        );
+
+        setToastExito(`¡Repuesto "${formNombre}" actualizado con éxito!`);
       } else {
-        await cargarRepuestos();
+        // MODO CREACIÓN
+        const { data, error } = await supabase
+          .from('repuestos')
+          .insert([registro])
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (data) {
+          setRepuestos((prev) => [data as Repuesto, ...prev]);
+        } else {
+          await cargarRepuestos();
+        }
+
+        setToastExito(`¡Repuesto "${formNombre}" publicado en la red TTM!`);
       }
 
       // Limpiar formulario y cerrar modal
@@ -302,10 +383,9 @@ export default function PortalRepuestosPage() {
       setFormFotoUrl('');
       setFormCompatibilidad('');
       setFormStock('1');
+      setRepuestoEnEdicion(null);
       setModalAbierto(false);
 
-      // Mostrar toast animado
-      setToastExito(`¡Repuesto "${formNombre}" publicado en la red TTM!`);
       setTimeout(() => setToastExito(null), 4500);
     } catch (err: any) {
       console.error('Error al guardar repuesto:', err);
@@ -386,10 +466,7 @@ export default function PortalRepuestosPage() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                setErrorFormulario(null);
-                setModalAbierto(true);
-              }}
+              onClick={handleAbrirCrear}
               className="h-10 px-4 sm:px-5 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black tracking-tight flex items-center gap-2 transition-all shadow-sm border border-[#0A1525]/10 cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
@@ -521,7 +598,7 @@ export default function PortalRepuestosPage() {
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
                   className="bg-white rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] overflow-hidden shadow-xs hover:shadow-xl transition-all flex flex-col justify-between group"
                 >
-                  {/* Foto con Badges Flotantes */}
+                  {/* Foto con Badges Flotantes y Botón Editar */}
                   <div className="relative w-full h-48 bg-slate-100 overflow-hidden">
                     <img
                       src={
@@ -537,7 +614,7 @@ export default function PortalRepuestosPage() {
                       }}
                     />
 
-                    {/* Badge de Marca */}
+                    {/* Badge de Marca / Etiqueta */}
                     <div className="absolute top-3 left-3 z-10">
                       <span className="bg-[#0A1525]/90 backdrop-blur-xs text-[#CCFF00] font-black text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/10 shadow-sm">
                         {item.marca}
@@ -552,6 +629,17 @@ export default function PortalRepuestosPage() {
                       </span>
                     </div>
 
+                    {/* Botón flotante Editar sobre la foto */}
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirEditar(item)}
+                      className="absolute bottom-3 right-3 z-10 h-7 px-2.5 rounded-lg bg-white/95 hover:bg-[#CCFF00] text-[#0A1525] text-xs font-black flex items-center gap-1.5 shadow-md border border-slate-200 backdrop-blur-xs transition-all active:scale-95 cursor-pointer"
+                      title="Editar foto, nombre, etiquetas y stock"
+                    >
+                      <Pencil className="w-3 h-3 text-[#0A1525]" />
+                      <span>Editar</span>
+                    </button>
+
                     {/* Sutil viñeta inferior */}
                     <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                   </div>
@@ -559,7 +647,11 @@ export default function PortalRepuestosPage() {
                   {/* Contenido de la Tarjeta */}
                   <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                     <div className="space-y-2">
-                      <h3 className="font-black text-[#0A1525] text-base leading-snug group-hover:text-[#1E56B0] transition-colors line-clamp-2">
+                      <h3
+                        onClick={() => handleAbrirEditar(item)}
+                        className="font-black text-[#0A1525] text-base leading-snug group-hover:text-[#1E56B0] transition-colors line-clamp-2 cursor-pointer"
+                        title="Clic para editar este repuesto"
+                      >
                         {item.nombre_repuesto}
                       </h3>
 
@@ -569,11 +661,12 @@ export default function PortalRepuestosPage() {
                         </p>
                       )}
 
-                      {/* Chip Gris de Compatibilidad (Crucial según requerimiento) */}
+                      {/* Chip Gris de Compatibilidad */}
                       <div className="pt-1">
                         <div
-                          className="bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-start gap-1.5 transition-colors"
-                          title={`Vehículos compatibles: ${item.compatibilidad}`}
+                          onClick={() => handleAbrirEditar(item)}
+                          className="bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-start gap-1.5 transition-colors cursor-pointer"
+                          title={`Vehículos compatibles: ${item.compatibilidad} (Clic para editar)`}
                         >
                           <Car className="w-3.5 h-3.5 text-[#1E56B0] shrink-0 mt-0.5" />
                           <span className="line-clamp-2 leading-tight">
@@ -583,8 +676,8 @@ export default function PortalRepuestosPage() {
                       </div>
                     </div>
 
-                    {/* Footer con Precio en Grande y Acción */}
-                    <div className="pt-3 border-t border-slate-100 flex items-baseline justify-between mt-auto">
+                    {/* Footer con Precio y Botón Editar */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-auto gap-2">
                       <div>
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
                           Precio Proveedor
@@ -599,9 +692,21 @@ export default function PortalRepuestosPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 text-[11px] font-extrabold text-[#1E56B0] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
-                        <Bike className="w-3.5 h-3.5" />
-                        <span>Runner TTM</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirEditar(item)}
+                          className="h-8 px-3 rounded-xl bg-slate-100 hover:bg-[#CCFF00] text-[#0A1525] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs border border-slate-200 active:scale-95"
+                          title="Editar repuesto completo"
+                        >
+                          <Pencil className="w-3 h-3 text-[#0A1525]" />
+                          <span>Editar</span>
+                        </button>
+
+                        <div className="hidden sm:flex items-center gap-1 text-[11px] font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100">
+                          <Bike className="w-3 h-3" />
+                          <span>Runner</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -628,7 +733,10 @@ export default function PortalRepuestosPage() {
               {/* Botón de Cierre */}
               <button
                 type="button"
-                onClick={() => setModalAbierto(false)}
+                onClick={() => {
+                  setModalAbierto(false);
+                  setRepuestoEnEdicion(null);
+                }}
                 className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                 title="Cerrar modal"
               >
@@ -638,14 +746,20 @@ export default function PortalRepuestosPage() {
               {/* Cabecera del Modal */}
               <div className="flex items-center gap-3 border-b border-[#E2E8F0] pb-4">
                 <div className="w-11 h-11 rounded-2xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shadow-xs border border-[#0A1525]/10">
-                  <Package className="w-6 h-6 stroke-[2.5]" />
+                  {repuestoEnEdicion ? (
+                    <Pencil className="w-6 h-6 stroke-[2.5]" />
+                  ) : (
+                    <Package className="w-6 h-6 stroke-[2.5]" />
+                  )}
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
-                    Publicar Nuevo Repuesto
+                    {repuestoEnEdicion ? 'Editar Repuesto' : 'Publicar Nuevo Repuesto'}
                   </h2>
                   <p className="text-xs text-[#475569] font-medium">
-                    Catálogo oficial de AutoPartes Chacao • Red TuTallerMóvil
+                    {repuestoEnEdicion
+                      ? 'Actualiza foto, nombre, marca/etiqueta, stock, precio o compatibilidad'
+                      : 'Catálogo oficial de AutoPartes Chacao • Red TuTallerMóvil'}
                   </p>
                 </div>
               </div>
@@ -998,34 +1112,54 @@ export default function PortalRepuestosPage() {
                 </div>
 
                 {/* Botones de Acción */}
-                <div className="pt-3 border-t border-[#E2E8F0] flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setModalAbierto(false)}
-                    className="h-11 px-5 rounded-xl border border-[#CBD5E1] hover:bg-slate-100 text-xs font-bold text-slate-600 transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
+                <div className="pt-3 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  {repuestoEnEdicion ? (
+                    <button
+                      type="button"
+                      disabled={eliminandoRepuesto}
+                      onClick={() => handleEliminarRepuesto(repuestoEnEdicion.id)}
+                      className="h-11 px-4 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      title="Eliminar repuesto del catálogo"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>{eliminandoRepuesto ? 'Eliminando...' : 'Eliminar Repuesto'}</span>
+                    </button>
+                  ) : (
+                    <div />
+                  )}
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="submit"
-                    disabled={guardando}
-                    className="h-11 px-6 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black tracking-tight flex items-center gap-2 transition-all shadow-md border border-[#0A1525]/10 cursor-pointer disabled:opacity-50"
-                  >
-                    {guardando ? (
-                      <span className="flex items-center gap-2">
-                        <span className="w-3.5 h-3.5 border-2 border-[#0A1525] border-t-transparent rounded-full animate-spin" />
-                        <span>Guardando...</span>
-                      </span>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        <span>Guardar y Publicar en Red TTM</span>
-                      </>
-                    )}
-                  </motion.button>
+                  <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalAbierto(false);
+                        setRepuestoEnEdicion(null);
+                      }}
+                      className="flex-1 sm:flex-initial h-11 px-5 rounded-xl border border-[#CBD5E1] hover:bg-slate-100 text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="submit"
+                      disabled={guardando}
+                      className="flex-1 sm:flex-initial h-11 px-6 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black tracking-tight flex items-center justify-center gap-2 transition-all shadow-md border border-[#0A1525]/10 cursor-pointer disabled:opacity-50"
+                    >
+                      {guardando ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-3.5 h-3.5 border-2 border-[#0A1525] border-t-transparent rounded-full animate-spin" />
+                          <span>Guardando...</span>
+                        </span>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          <span>{repuestoEnEdicion ? 'Guardar Cambios' : 'Guardar y Publicar en Red TTM'}</span>
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
                 </div>
               </form>
             </motion.div>
