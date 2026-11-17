@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -25,7 +25,8 @@ import {
   Car,
   Loader2,
   RefreshCw,
-  Inbox
+  Inbox,
+  LocateFixed
 } from 'lucide-react';
 
 type EstadoMecanico = 'DISPONIBLE' | 'EN_SERVICIO' | 'INACTIVO';
@@ -38,9 +39,24 @@ interface OrdenSupabase {
   sector: string;
   ganancia_estimada: number | string;
   estado: string;
-  latitud?: number;
-  longitud?: number;
+  latitud?: number | string | null;
+  longitud?: number | string | null;
   created_at?: string;
+}
+
+// 2. Función con fórmula de Haversine para calcular distancia en km
+function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 export default function PortalAliadosPage() {
@@ -51,8 +67,33 @@ export default function PortalAliadosPage() {
   const [ordenes, setOrdenes] = useState<OrdenSupabase[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [aceptandoId, setAceptandoId] = useState<string | null>(null);
 
-  // 1. Consulta a Supabase para traer todas las órdenes donde estado = 'DISPONIBLE'
+  // 1. Geolocalización del mecánico
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [gpsActivo, setGpsActivo] = useState<boolean>(false);
+
+  // Obtener geolocalización al montar el componente
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+          setGpsActivo(true);
+        },
+        (error) => {
+          console.warn('GPS no disponible o denegado por el usuario:', error.message);
+          setGpsActivo(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    }
+  }, []);
+
+  // Consulta a Supabase para traer todas las órdenes donde estado = 'DISPONIBLE'
   const cargarOrdenes = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setCargando(true);
@@ -82,9 +123,80 @@ export default function PortalAliadosPage() {
     cargarOrdenes();
   }, []);
 
-  // 3. Manejar botón "Aceptar Servicio"
-  const handleAceptarServicio = (orden: OrdenSupabase) => {
-    alert('¡Servicio aceptado!');
+  // 3. Ordenar por cercanía (Haversine) si hay coordenadas del usuario
+  const ordenesConDistancia = useMemo(() => {
+    return ordenes
+      .map((orden) => {
+        let distanciaKm: number | null = null;
+        if (
+          userCoords &&
+          orden.latitud !== null &&
+          orden.latitud !== undefined &&
+          orden.longitud !== null &&
+          orden.longitud !== undefined
+        ) {
+          const latOrd = Number(orden.latitud);
+          const lonOrd = Number(orden.longitud);
+          if (!isNaN(latOrd) && !isNaN(lonOrd)) {
+            distanciaKm = calcularDistanciaKm(
+              userCoords.latitude,
+              userCoords.longitude,
+              latOrd,
+              lonOrd
+            );
+          }
+        }
+        return {
+          ...orden,
+          distanciaKm
+        };
+      })
+      .sort((a, b) => {
+        // Si ambos tienen distancia, ordenar el más cercano primero
+        if (a.distanciaKm !== null && b.distanciaKm !== null) {
+          return a.distanciaKm - b.distanciaKm;
+        }
+        // Los que tienen distancia van antes de los que no tienen
+        if (a.distanciaKm !== null) return -1;
+        if (b.distanciaKm !== null) return 1;
+        return 0;
+      });
+  }, [ordenes, userCoords]);
+
+  // 4 y 5. Acción de Aceptar con Supabase RPC y manejo de Race Conditions
+  const handleAceptarServicio = async (orden: OrdenSupabase) => {
+    if (aceptandoId) return;
+    setAceptandoId(orden.id);
+
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc('aceptar_servicio_disponible', {
+        p_orden_id: orden.id,
+        p_mecanico_id: '123e4567-e89b-12d3-a456-426614174000'
+      });
+
+      if (error) {
+        console.error('Error al llamar RPC aceptar_servicio_disponible:', error);
+        alert('Lo sentimos, otro mecánico acaba de aceptar este servicio');
+        await cargarOrdenes(true);
+        return;
+      }
+
+      if (data === true) {
+        alert('¡Servicio aceptado! Dirígete al cliente');
+        // Eliminar esa tarjeta de la lista visualmente
+        setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
+      } else {
+        alert('Lo sentimos, otro mecánico acaba de aceptar este servicio');
+        // Actualizar la lista para remover la orden ya tomada
+        await cargarOrdenes(true);
+      }
+    } catch (err) {
+      console.error('Excepción al aceptar servicio:', err);
+      alert('Lo sentimos, ocurrió un problema al aceptar este servicio. Intenta nuevamente.');
+    } finally {
+      setAceptandoId(null);
+    }
   };
 
   return (
@@ -191,15 +303,18 @@ export default function PortalAliadosPage() {
               </div>
             </div>
 
-            {/* Zona de Cobertura */}
-            <div className="flex sm:flex-col items-center sm:items-end justify-center gap-1 text-xs text-slate-500 bg-[#F8FAFC] border border-[#CBD5E1] p-3 rounded-xl sm:min-w-[160px]">
+            {/* Zona de Cobertura & GPS State */}
+            <div className="flex sm:flex-col items-center sm:items-end justify-center gap-1.5 text-xs text-slate-500 bg-[#F8FAFC] border border-[#CBD5E1] p-3 rounded-xl sm:min-w-[170px]">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
                 Zona de Cobertura
               </span>
               <span className="font-bold text-[#0A1525] flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-[#1E56B0]" /> Gran Caracas
               </span>
-              <span className="text-[10px] text-emerald-700 font-semibold">Radio: 10 KM activo</span>
+              <span className={`text-[10px] font-semibold flex items-center gap-1 ${gpsActivo ? 'text-emerald-700' : 'text-slate-400'}`}>
+                <LocateFixed className="w-3 h-3" />
+                {gpsActivo ? 'GPS activo • Cercanía' : 'GPS no detectado'}
+              </span>
             </div>
 
           </div>
@@ -364,7 +479,7 @@ export default function PortalAliadosPage() {
               </h2>
               {!cargando && (
                 <span className="bg-[#CCFF00] text-[#0A1525] font-extrabold text-xs px-2.5 py-0.5 rounded-full">
-                  {ordenes.length} en base de datos
+                  {ordenesConDistancia.length} disponibles
                 </span>
               )}
             </div>
@@ -401,7 +516,7 @@ export default function PortalAliadosPage() {
                 Consultando órdenes disponibles en Supabase...
               </p>
             </div>
-          ) : ordenes.length === 0 ? (
+          ) : ordenesConDistancia.length === 0 ? (
             /* 5. Mensaje Vacío si no hay órdenes */
             <div className="bg-white border border-[#CBD5E1] rounded-2xl p-12 text-center space-y-3 shadow-xs">
               <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-400">
@@ -415,11 +530,12 @@ export default function PortalAliadosPage() {
               </p>
             </div>
           ) : (
-            /* 2. Feed de Servicios con Datos Reales de la BD */
+            /* Feed de Servicios con Datos Reales y Ordenados por Distancia */
             <div className="space-y-4">
-              {ordenes.map((orden, index) => {
+              {ordenesConDistancia.map((orden, index) => {
                 const gananciaFormatted = `$${Number(orden.ganancia_estimada || 0).toFixed(2)} USD`;
                 const shortId = orden.id ? `#${orden.id.slice(0, 8).toUpperCase()}` : `#ORD-${index + 1}`;
+                const isAccepting = aceptandoId === orden.id;
 
                 return (
                   <motion.div
@@ -433,7 +549,7 @@ export default function PortalAliadosPage() {
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       
-                      {/* Datos de la Orden (Falla, Modelo, Sector) */}
+                      {/* Datos de la Orden (Falla, Modelo, Sector, Distancia) */}
                       <div className="space-y-2 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
@@ -443,6 +559,15 @@ export default function PortalAliadosPage() {
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
                             {orden.estado}
                           </span>
+
+                          {/* Distancia Calculada con Haversine (si GPS concedido y orden tiene coords) */}
+                          {orden.distanciaKm !== null && (
+                            <span className="inline-flex items-center gap-1 bg-[#1E56B0]/10 text-[#1E56B0] border border-[#1E56B0]/20 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
+                              <Navigation className="w-3 h-3 text-[#1E56B0]" />
+                              A {orden.distanciaKm < 1 ? `${Math.round(orden.distanciaKm * 1000)} m` : `${orden.distanciaKm.toFixed(1)} km`}
+                            </span>
+                          )}
+
                           {orden.cliente_nombre && (
                             <span className="text-[11px] text-slate-400">
                               Cliente: <strong className="text-slate-600">{orden.cliente_nombre}</strong>
@@ -469,7 +594,7 @@ export default function PortalAliadosPage() {
                         </div>
                       </div>
 
-                      {/* Ganancia Real y Botón de Aceptar */}
+                      {/* Ganancia Real y Botón de Aceptar con RPC */}
                       <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                         <div className="text-left lg:text-right">
                           <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
@@ -483,16 +608,30 @@ export default function PortalAliadosPage() {
                           </span>
                         </div>
 
-                        {/* 3. Botón "Aceptar Servicio" con alert('¡Servicio aceptado!') */}
+                        {/* 4. Botón "Aceptar Servicio" con llamada RPC y race condition */}
                         <motion.button
                           type="button"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                          disabled={isAccepting}
+                          whileHover={{ scale: isAccepting ? 1 : 1.02 }}
+                          whileTap={{ scale: isAccepting ? 1 : 0.98 }}
                           onClick={() => handleAceptarServicio(orden)}
-                          className="w-full lg:w-44 h-12 text-base font-extrabold bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10"
+                          className={`w-full lg:w-44 h-12 text-base font-extrabold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 ${
+                            isAccepting
+                              ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                              : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
+                          }`}
                         >
-                          <Navigation className="w-4 h-4 text-[#0A1525]" />
-                          <span>Aceptar Servicio</span>
+                          {isAccepting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-[#0A1525]" />
+                              <span>Aceptando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Navigation className="w-4 h-4 text-[#0A1525]" />
+                              <span>Aceptar Servicio</span>
+                            </>
+                          )}
                         </motion.button>
                       </div>
 
