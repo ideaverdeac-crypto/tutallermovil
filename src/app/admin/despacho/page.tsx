@@ -39,7 +39,8 @@ import {
   Plus,
   Minus,
   Package,
-  FileDown
+  FileDown,
+  Landmark
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -1123,6 +1124,14 @@ export default function TableroDespachoPage() {
 
           {/* Acciones de Cabecera */}
           <div className="flex items-center gap-3">
+            <Link
+              href="/admin/finanzas"
+              className="h-10 px-3.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-2xs"
+            >
+              <Landmark className="w-4 h-4 text-[#1E56B0]" />
+              <span className="hidden md:inline">Finanzas & QA</span>
+            </Link>
+
             {/* Botón Cotizador Orden (Fondo #0A1525, texto blanco) */}
             <motion.button
               type="button"
