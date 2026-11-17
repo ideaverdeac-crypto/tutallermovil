@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
@@ -31,17 +31,33 @@ import {
   History,
   Info,
   BadgeCheck,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Edit3,
+  Trash2,
+  Camera,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  ZoomIn,
+  Eye,
+  User,
+  Mail,
+  MapPin,
+  Briefcase
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 // Tipos de datos para el portal B2B
-interface VehiculoFlota {
+export type TipoVehiculo = 'Carga Ligera' | 'Carga Pesada' | 'Utilitario' | 'Pick-Up' | 'Van de Pasajeros';
+
+export interface VehiculoFlota {
   id: string;
   placa: string;
   marca: string;
   modelo: string;
   anio: number;
-  tipo: 'Carga Ligera' | 'Carga Pesada' | 'Utilitario' | 'Pick-Up';
+  tipo: TipoVehiculo;
   conductor: string;
   conductorTelefono: string;
   ultimoServicioFecha: string;
@@ -49,6 +65,8 @@ interface VehiculoFlota {
   kilometrajeActual: number;
   kilometrajeUltimoServicio: number;
   estado: 'AL_DIA' | 'PROXIMO' | 'VENCIDO';
+  fotoUrl?: string;
+  notas?: string;
   serviciosHistorial: {
     fecha: string;
     tipo: string;
@@ -59,7 +77,27 @@ interface VehiculoFlota {
   }[];
 }
 
-// 12 Unidades de la empresa "Logística El Este C.A."
+export interface EmpresaFlota {
+  razonSocial: string;
+  rif: string;
+  contacto: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+  sector: string;
+}
+
+const EMPRESA_DEFAULT: EmpresaFlota = {
+  razonSocial: 'Logística El Este C.A.',
+  rif: 'J-12345678-9',
+  contacto: 'Ing. Carlos Mendoza (Gerente de Flota)',
+  telefono: '+58 212 900 1122',
+  correo: 'flotas@logisticaeste.com',
+  direccion: 'Sector Industrial Los Ruices, Galpón 4B, Caracas',
+  sector: 'Distribución & Transporte de Carga Nacional'
+};
+
+// 12 Unidades iniciales de la flota
 const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
   {
     id: 'FLEET-01',
@@ -75,6 +113,8 @@ const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
     kilometrajeActual: 146800,
     kilometrajeUltimoServicio: 141200,
     estado: 'VENCIDO',
+    fotoUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=500&q=80',
+    notas: 'Unidad principal de distribución interurbana Caracas-Valencia.',
     serviciosHistorial: [
       {
         fecha: '12 Oct 2026',
@@ -108,6 +148,8 @@ const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
     kilometrajeActual: 98400,
     kilometrajeUltimoServicio: 93800,
     estado: 'PROXIMO',
+    fotoUrl: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=500&q=80',
+    notas: 'Ruta centro del país. Requiere revisión de inyección programada.',
     serviciosHistorial: [
       {
         fecha: '28 Sep 2026',
@@ -133,6 +175,8 @@ const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
     kilometrajeActual: 51200,
     kilometrajeUltimoServicio: 49800,
     estado: 'AL_DIA',
+    fotoUrl: 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=500&q=80',
+    notas: 'Vehículo de supervisión de operaciones y supervisores de campo.',
     serviciosHistorial: [
       {
         fecha: '05 Nov 2026',
@@ -148,24 +192,26 @@ const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
     id: 'FLEET-04',
     placa: 'A78KL9M',
     marca: 'Ford',
-    modelo: 'F-350 Super Duty Tritón V8',
+    modelo: 'F-350 Tritón V8 5.4L',
     anio: 2019,
     tipo: 'Carga Pesada',
-    conductor: 'Héctor Quintero',
-    conductorTelefono: '+58 424 112 4455',
+    conductor: 'José Vicente Rangel',
+    conductorTelefono: '+58 412 331 4455',
     ultimoServicioFecha: '10 Ago 2026',
-    ultimoServicioTipo: 'Frenos y Tren Delantero Completo',
-    kilometrajeActual: 212400,
-    kilometrajeUltimoServicio: 206000,
+    ultimoServicioTipo: 'Cambio de Aceite 20W-50 y Servicio de Bujías',
+    kilometrajeActual: 215400,
+    kilometrajeUltimoServicio: 209800,
     estado: 'VENCIDO',
+    fotoUrl: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=500&q=80',
+    notas: 'Carga pesada materiales. Vencido por kilometraje excedido (+5,600 km).',
     serviciosHistorial: [
       {
         fecha: '10 Ago 2026',
-        tipo: 'Mantenimiento Correctivo de Frenos',
-        kilometraje: 206000,
-        mecanico: 'Carlos Mendoza (#TTM-0842)',
-        costo: 240.0,
-        repuestos: 'Discos ventilados, Pastillas Heavy Duty, Terminales de Dirección'
+        tipo: 'Mantenimiento Mayor Motor V8',
+        kilometraje: 209800,
+        mecanico: 'Manuel Arrieta (#TTM-0419)',
+        costo: 220.0,
+        repuestos: 'Aceite 20W-50 Mineral Motorcraft, Juego Bujías Platino, Filtro de Aire'
       }
     ]
   },
@@ -173,24 +219,26 @@ const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
     id: 'FLEET-05',
     placa: 'A90NP1Q',
     marca: 'Renault',
-    modelo: 'Kangoo Express 1.6 16V',
+    modelo: 'Kangoo Maxi 1.6 16V',
     anio: 2022,
     tipo: 'Utilitario',
-    conductor: 'Manuel Sanoja',
-    conductorTelefono: '+58 412 334 5566',
-    ultimoServicioFecha: '02 Nov 2026',
-    ultimoServicioTipo: 'Cambio de Aceite 10W-40 y Filtros',
+    conductor: 'Mariana Duque',
+    conductorTelefono: '+58 424 112 8899',
+    ultimoServicioFecha: '01 Nov 2026',
+    ultimoServicioTipo: 'Cambio de Aceite 10W-40 y Filtro Antipolen',
     kilometrajeActual: 62400,
-    kilometrajeUltimoServicio: 61500,
+    kilometrajeUltimoServicio: 61100,
     estado: 'AL_DIA',
+    fotoUrl: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=500&q=80',
+    notas: 'Despacho exprés urbano y paquetería ligera en Caracas metropolitana.',
     serviciosHistorial: [
       {
-        fecha: '02 Nov 2026',
-        tipo: 'Mantenimiento Menor 60K',
-        kilometraje: 61500,
-        mecanico: 'Roberto Silva (#TTM-0512)',
-        costo: 75.0,
-        repuestos: 'Aceite 10W-40 ELF Semi-sintético, Filtro Aceite Purflux'
+        fecha: '01 Nov 2026',
+        tipo: 'Mantenimiento Preventivo 60K',
+        kilometraje: 61100,
+        mecanico: 'Luis Carrillo (#TTM-0901)',
+        costo: 85.0,
+        repuestos: 'Aceite 10W-40 Elf Evolution, Filtro de Aceite Renault Original'
       }
     ]
   },
@@ -198,180 +246,38 @@ const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
     id: 'FLEET-06',
     placa: 'A23RS4T',
     marca: 'Mitsubishi',
-    modelo: 'Canter FE 659 Turbo Diésel',
+    modelo: 'Canter FE 639 Chasis Largo',
     anio: 2020,
     tipo: 'Carga Pesada',
-    conductor: 'Jorge Valero',
-    conductorTelefono: '+58 414 998 7766',
-    ultimoServicioFecha: '18 Oct 2026',
-    ultimoServicioTipo: 'Mantenimiento de Sistema Neumático y Frenos',
+    conductor: 'Héctor Lavoe C.',
+    conductorTelefono: '+58 414 990 7766',
+    ultimoServicioFecha: '19 Oct 2026',
+    ultimoServicioTipo: 'Engrase de Chasis y Cambio de Aceite Diferencial',
     kilometrajeActual: 178900,
     kilometrajeUltimoServicio: 177400,
     estado: 'AL_DIA',
+    fotoUrl: 'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=500&q=80',
+    notas: 'Caja térmica refrigerada para traslados de productos lácteos.',
     serviciosHistorial: [
       {
-        fecha: '18 Oct 2026',
-        tipo: 'Mantenimiento General Sistema Aire',
+        fecha: '19 Oct 2026',
+        tipo: 'Servicio Tren Motriz y Diferencial',
         kilometraje: 177400,
         mecanico: 'Carlos Mendoza (#TTM-0842)',
-        costo: 130.0,
-        repuestos: 'Filtro secador de aire WABCO, Válvula purga'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-07',
-    placa: 'A45UV6W',
-    marca: 'Toyota',
-    modelo: 'Hilux 2.7 4x2 Chasis',
-    anio: 2021,
-    tipo: 'Pick-Up',
-    conductor: 'David Zambrano',
-    conductorTelefono: '+58 416 223 8899',
-    ultimoServicioFecha: '15 Sep 2026',
-    ultimoServicioTipo: 'Afinación de Motor y Bujías',
-    kilometrajeActual: 88900,
-    kilometrajeUltimoServicio: 84200,
-    estado: 'PROXIMO',
-    serviciosHistorial: [
-      {
-        fecha: '15 Sep 2026',
-        tipo: 'Mantenimiento Preventivo 85K',
-        kilometraje: 84200,
-        mecanico: 'Luis Carrillo (#TTM-0901)',
-        costo: 95.0,
-        repuestos: 'Bujías Denso Iridium, Limpieza Inyectores por Ultrasonido'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-08',
-    placa: 'A67XY8Z',
-    marca: 'Chevrolet',
-    modelo: 'D-Max 3.0 Turbo Diésel 4x4',
-    anio: 2023,
-    tipo: 'Pick-Up',
-    conductor: 'Javier Marcano',
-    conductorTelefono: '+58 424 887 6655',
-    ultimoServicioFecha: '29 Oct 2026',
-    ultimoServicioTipo: 'Cambio de Aceite 5W-40 Sintético',
-    kilometrajeActual: 38200,
-    kilometrajeUltimoServicio: 37100,
-    estado: 'AL_DIA',
-    serviciosHistorial: [
-      {
-        fecha: '29 Oct 2026',
-        tipo: 'Servicio Preventivo 35K',
-        kilometraje: 37100,
-        mecanico: 'Roberto Silva (#TTM-0512)',
-        costo: 120.0,
-        repuestos: 'Aceite 5W-40 Liqui Moly Top Tec, Filtro Original Isuzu/GM'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-09',
-    placa: 'A89AB0C',
-    marca: 'Iveco',
-    modelo: 'Daily 55C16 Furgón Cerrado',
-    anio: 2020,
-    tipo: 'Carga Pesada',
-    conductor: 'Oscar Benítez',
-    conductorTelefono: '+58 412 776 5544',
-    ultimoServicioFecha: '20 Jul 2026',
-    ultimoServicioTipo: 'Revisión Embrague y Caja de Cambios',
-    kilometrajeActual: 184200,
-    kilometrajeUltimoServicio: 177500,
-    estado: 'VENCIDO',
-    serviciosHistorial: [
-      {
-        fecha: '20 Jul 2026',
-        tipo: 'Reemplazo Kit de Embrague',
-        kilometraje: 177500,
-        mecanico: 'Carlos Mendoza (#TTM-0842)',
-        costo: 310.0,
-        repuestos: 'Kit Clutch Valeo Original, Horquilla, Rectificación de Volante'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-10',
-    placa: 'A01CD2E',
-    marca: 'Renault',
-    modelo: 'Master 2.3 dCi Furgón Largo',
-    anio: 2022,
-    tipo: 'Carga Ligera',
-    conductor: 'César Bastardo',
-    conductorTelefono: '+58 414 445 6677',
-    ultimoServicioFecha: '08 Nov 2026',
-    ultimoServicioTipo: 'Cambio de Aceite 5W-30 y Filtro de Partículas',
-    kilometrajeActual: 72100,
-    kilometrajeUltimoServicio: 71200,
-    estado: 'AL_DIA',
-    serviciosHistorial: [
-      {
-        fecha: '08 Nov 2026',
-        tipo: 'Servicio Preventivo 70K',
-        kilometraje: 71200,
-        mecanico: 'Roberto Silva (#TTM-0512)',
         costo: 135.0,
-        repuestos: 'Aceite Castrol Magnatec DPF, Filtro Polen y Aceite'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-11',
-    placa: 'A23EF4G',
-    marca: 'Chevrolet',
-    modelo: 'Silverado 3500 HD 4x4',
-    anio: 2021,
-    tipo: 'Pick-Up',
-    conductor: 'Nelson Carpio',
-    conductorTelefono: '+58 416 112 3388',
-    ultimoServicioFecha: '14 Oct 2026',
-    ultimoServicioTipo: 'Inspección de Suspensión y Frenos',
-    kilometrajeActual: 112500,
-    kilometrajeUltimoServicio: 111800,
-    estado: 'AL_DIA',
-    serviciosHistorial: [
-      {
-        fecha: '14 Oct 2026',
-        tipo: 'Mantenimiento Preventivo 110K',
-        kilometraje: 111800,
-        mecanico: 'Luis Carrillo (#TTM-0901)',
-        costo: 105.0,
-        repuestos: 'Aceite 10W-30 Dexos1, Filtro de Aire Motorcraft'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-12',
-    placa: 'A45GH6J',
-    marca: 'Ford',
-    modelo: 'Transit Van 350L Techo Alto',
-    anio: 2023,
-    tipo: 'Carga Ligera',
-    conductor: 'Wilmer Albornoz',
-    conductorTelefono: '+58 424 554 1122',
-    ultimoServicioFecha: '01 Nov 2026',
-    ultimoServicioTipo: 'Mantenimiento Inicial de Flota 20K',
-    kilometrajeActual: 21900,
-    kilometrajeUltimoServicio: 20500,
-    estado: 'AL_DIA',
-    serviciosHistorial: [
-      {
-        fecha: '01 Nov 2026',
-        tipo: 'Mantenimiento Preventivo 20K',
-        kilometraje: 20500,
-        mecanico: 'Roberto Silva (#TTM-0512)',
-        costo: 90.0,
-        repuestos: 'Aceite 5W-20 Sintético Motorcraft, Filtro Genuino Ford'
+        repuestos: 'Aceite 80W-90 GL-5 Valvoline, Grasa Litio Chasis EP-2'
       }
     ]
   }
 ];
 
 export default function FlotasDashboardPage() {
+  // Estado de la Empresa
+  const [empresa, setEmpresa] = useState<EmpresaFlota>(EMPRESA_DEFAULT);
+  const [modalEmpresaOpen, setModalEmpresaOpen] = useState<boolean>(false);
+  const [formEmpresa, setFormEmpresa] = useState<EmpresaFlota>(EMPRESA_DEFAULT);
+
+  // Estado de Vehículos
   const [vehiculos, setVehiculos] = useState<VehiculoFlota[]>(VEHICULOS_FLOTA_INICIAL);
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | 'AL_DIA' | 'PROXIMO' | 'VENCIDO'>('TODOS');
   const [busqueda, setBusqueda] = useState<string>('');
@@ -381,23 +287,97 @@ export default function FlotasDashboardPage() {
   const [modalPasaporteOpen, setModalPasaporteOpen] = useState<boolean>(false);
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<VehiculoFlota | null>(null);
 
+  // Modal Crear / Editar Vehículo
+  const [modalVehiculoFormOpen, setModalVehiculoFormOpen] = useState<boolean>(false);
+  const [modoVehiculo, setModoVehiculo] = useState<'CREAR' | 'EDITAR'>('CREAR');
+  const [vehiculoEnEdicion, setVehiculoEnEdicion] = useState<VehiculoFlota | null>(null);
+
+  // Campos del formulario de vehículo
+  const [formPlaca, setFormPlaca] = useState<string>('');
+  const [formMarca, setFormMarca] = useState<string>('');
+  const [formModelo, setFormModelo] = useState<string>('');
+  const [formAnio, setFormAnio] = useState<number>(2023);
+  const [formTipo, setFormTipo] = useState<TipoVehiculo>('Carga Pesada');
+  const [formConductor, setFormConductor] = useState<string>('');
+  const [formConductorTelefono, setFormConductorTelefono] = useState<string>('');
+  const [formKmActual, setFormKmActual] = useState<number>(50000);
+  const [formKmUltimoServicio, setFormKmUltimoServicio] = useState<number>(45000);
+  const [formUltimoServicioFecha, setFormUltimoServicioFecha] = useState<string>('01 Nov 2026');
+  const [formUltimoServicioTipo, setFormUltimoServicioTipo] = useState<string>('Mantenimiento Preventivo');
+  const [formFotoUrl, setFormFotoUrl] = useState<string>('');
+  const [formNotas, setFormNotas] = useState<string>('');
+
+  // Subida de imagen
+  const [subiendoFotoVehiculo, setSubiendoFotoVehiculo] = useState<boolean>(false);
+  const fileInputVehiculoRef = useRef<HTMLInputElement>(null);
+
+  // Modal Confirmar Eliminación
+  const [modalEliminarOpen, setModalEliminarOpen] = useState<boolean>(false);
+  const [vehiculoParaEliminar, setVehiculoParaEliminar] = useState<VehiculoFlota | null>(null);
+
+  // Zoom de Foto
+  const [fotoZoomUrl, setFotoZoomUrl] = useState<string | null>(null);
+
   // Estados del modal de Jornada Sabatina
-  const [vehiculosParaJornada, setVehiculosParaJornada] = useState<string[]>([
-    'FLEET-01', // Iveco Daily (Vencido)
-    'FLEET-04', // Ford F-350 (Vencido)
-    'FLEET-09'  // Iveco Daily (Vencido)
-  ]);
-  const [fechaJornada, setFechaJornada] = useState<string>('2026-11-21'); // Próximo sábado
+  const [vehiculosParaJornada, setVehiculosParaJornada] = useState<string[]>(['FLEET-01', 'FLEET-04']);
+  const [fechaJornada, setFechaJornada] = useState<string>('2026-11-21');
   const [turnoJornada, setTurnoJornada] = useState<'manana' | 'tarde'>('manana');
   const [jornadaConfirmadaToast, setJornadaConfirmadaToast] = useState<string | null>(null);
+  const [toastGeneral, setToastGeneral] = useState<{ tipo: 'exito' | 'error'; mensaje: string } | null>(null);
   const [generandoPdf, setGenerandoPdf] = useState<boolean>(false);
+
+  // Carga inicial y persistencia en localStorage
+  useEffect(() => {
+    try {
+      const storedEmpresa = localStorage.getItem('ttm_flota_empresa');
+      if (storedEmpresa) {
+        const parsed = JSON.parse(storedEmpresa);
+        setEmpresa(parsed);
+        setFormEmpresa(parsed);
+      }
+      const storedVehiculos = localStorage.getItem('ttm_flota_vehiculos');
+      if (storedVehiculos) {
+        const parsedV = JSON.parse(storedVehiculos);
+        if (Array.isArray(parsedV) && parsedV.length > 0) {
+          setVehiculos(parsedV);
+        }
+      }
+    } catch (e) {
+      console.warn('Error leyendo localStorage:', e);
+    }
+  }, []);
+
+  // Helper para persistir vehículos
+  const guardarVehiculosLocal = (nuevos: VehiculoFlota[]) => {
+    setVehiculos(nuevos);
+    try {
+      localStorage.setItem('ttm_flota_vehiculos', JSON.stringify(nuevos));
+    } catch (e) {
+      console.warn('Error guardando en localStorage:', e);
+    }
+  };
+
+  // Helper para persistir empresa
+  const guardarEmpresaLocal = (nueva: EmpresaFlota) => {
+    setEmpresa(nueva);
+    try {
+      localStorage.setItem('ttm_flota_empresa', JSON.stringify(nueva));
+    } catch (e) {
+      console.warn('Error guardando en localStorage:', e);
+    }
+  };
+
+  const mostrarToast = (mensaje: string, tipo: 'exito' | 'error' = 'exito') => {
+    setToastGeneral({ mensaje, tipo });
+    setTimeout(() => setToastGeneral(null), 4000);
+  };
 
   // KPIs
   const totalVehiculos = vehiculos.length;
   const vencidosCount = vehiculos.filter((v) => v.estado === 'VENCIDO').length;
   const proximosCount = vehiculos.filter((v) => v.estado === 'PROXIMO').length;
   const requierenMantenimiento = vencidosCount + proximosCount;
-  const gastoDelMes = 1250.0;
+  const gastoDelMes = 1250.0 + (totalVehiculos - 6 > 0 ? (totalVehiculos - 6) * 110 : 0);
 
   // Filtrado de la tabla
   const vehiculosFiltrados = useMemo(() => {
@@ -437,6 +417,215 @@ export default function FlotasDashboardPage() {
       `¡Jornada Sabatina agendada con éxito para ${vehiculosParaJornada.length} unidades el sábado ${fechaJornada}!`
     );
     setTimeout(() => setJornadaConfirmadaToast(null), 5500);
+  };
+
+  // Helper para calcular estado del semáforo según kilometraje
+  const calcularEstadoSemaforo = (kmActual: number, kmUltimo: number): 'AL_DIA' | 'PROXIMO' | 'VENCIDO' => {
+    const dif = kmActual - kmUltimo;
+    if (dif >= 5000) return 'VENCIDO';
+    if (dif >= 4000) return 'PROXIMO';
+    return 'AL_DIA';
+  };
+
+  // Subida de foto a Supabase Storage (bucket evidencias)
+  const handleSubirFotoVehiculo = async (file: File) => {
+    setSubiendoFotoVehiculo(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const cleanPlaca = formPlaca.trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase() || 'VEH';
+      const fileName = `flota_${cleanPlaca}_${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('evidencias')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('evidencias')
+        .getPublicUrl(fileName);
+
+      if (publicUrlData?.publicUrl) {
+        setFormFotoUrl(publicUrlData.publicUrl);
+        mostrarToast('✓ Foto del vehículo subida con éxito');
+      } else {
+        // Fallback local
+        const localUrl = URL.createObjectURL(file);
+        setFormFotoUrl(localUrl);
+        mostrarToast('✓ Foto cargada localmente');
+      }
+    } catch (err: any) {
+      console.warn('Subiendo con fallback local por error en storage:', err);
+      const localUrl = URL.createObjectURL(file);
+      setFormFotoUrl(localUrl);
+      mostrarToast('✓ Foto cargada (modo local)');
+    } finally {
+      setSubiendoFotoVehiculo(false);
+    }
+  };
+
+  // Abrir Modal para Crear Vehículo
+  const handleAbrirCrearVehiculo = () => {
+    setModoVehiculo('CREAR');
+    setVehiculoEnEdicion(null);
+    setFormPlaca('');
+    setFormMarca('');
+    setFormModelo('');
+    setFormAnio(2023);
+    setFormTipo('Carga Pesada');
+    setFormConductor('');
+    setFormConductorTelefono('+58 ');
+    setFormKmActual(50000);
+    setFormKmUltimoServicio(45000);
+    setFormUltimoServicioFecha('Noviembre 2026');
+    setFormUltimoServicioTipo('Mantenimiento Preventivo General');
+    setFormFotoUrl('');
+    setFormNotas('');
+    setModalVehiculoFormOpen(true);
+  };
+
+  // Abrir Modal para Editar Vehículo
+  const handleAbrirEditarVehiculo = (vehiculo: VehiculoFlota) => {
+    setModoVehiculo('EDITAR');
+    setVehiculoEnEdicion(vehiculo);
+    setFormPlaca(vehiculo.placa);
+    setFormMarca(vehiculo.marca);
+    setFormModelo(vehiculo.modelo);
+    setFormAnio(vehiculo.anio);
+    setFormTipo(vehiculo.tipo);
+    setFormConductor(vehiculo.conductor);
+    setFormConductorTelefono(vehiculo.conductorTelefono);
+    setFormKmActual(vehiculo.kilometrajeActual);
+    setFormKmUltimoServicio(vehiculo.kilometrajeUltimoServicio);
+    setFormUltimoServicioFecha(vehiculo.ultimoServicioFecha);
+    setFormUltimoServicioTipo(vehiculo.ultimoServicioTipo);
+    setFormFotoUrl(vehiculo.fotoUrl || '');
+    setFormNotas(vehiculo.notas || '');
+    setModalVehiculoFormOpen(true);
+  };
+
+  // Guardar Vehículo (Crear o Editar)
+  const handleGuardarVehiculo = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const placaLimpia = formPlaca.trim().toUpperCase();
+    if (!placaLimpia || !formMarca.trim() || !formModelo.trim()) {
+      mostrarToast('Por favor completa la Placa, Marca y Modelo.', 'error');
+      return;
+    }
+
+    const estadoCalculado = calcularEstadoSemaforo(formKmActual, formKmUltimoServicio);
+
+    if (modoVehiculo === 'CREAR') {
+      const nuevoId = `FLEET-${Date.now().toString().slice(-4)}`;
+      const nuevoVehiculo: VehiculoFlota = {
+        id: nuevoId,
+        placa: placaLimpia,
+        marca: formMarca.trim(),
+        modelo: formModelo.trim(),
+        anio: Number(formAnio) || 2023,
+        tipo: formTipo,
+        conductor: formConductor.trim() || 'Sin conductor asignado',
+        conductorTelefono: formConductorTelefono.trim() || 'N/A',
+        kilometrajeActual: Number(formKmActual) || 0,
+        kilometrajeUltimoServicio: Number(formKmUltimoServicio) || 0,
+        ultimoServicioFecha: formUltimoServicioFecha.trim() || 'Reciente',
+        ultimoServicioTipo: formUltimoServicioTipo.trim() || 'Revisión General de Flota',
+        estado: estadoCalculado,
+        fotoUrl: formFotoUrl || 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=500&q=80',
+        notas: formNotas.trim() || 'Unidad incorporada al sistema de flota.',
+        serviciosHistorial: [
+          {
+            fecha: formUltimoServicioFecha.trim() || 'Nov 2026',
+            tipo: formUltimoServicioTipo.trim() || 'Ingreso de Unidad a Flota',
+            kilometraje: Number(formKmUltimoServicio) || 0,
+            mecanico: 'TuTallerMóvil Flotas (#TTM-B2B)',
+            costo: 95.0,
+            repuestos: 'Inspección multipunto inicial y diagnóstico computarizado'
+          }
+        ]
+      };
+
+      const listaActualizada = [nuevoVehiculo, ...vehiculos];
+      guardarVehiculosLocal(listaActualizada);
+      mostrarToast(`¡Vehículo ${placaLimpia} agregado a la flota con éxito!`);
+    } else if (modoVehiculo === 'EDITAR' && vehiculoEnEdicion) {
+      const listaActualizada = vehiculos.map((v) => {
+        if (v.id === vehiculoEnEdicion.id) {
+          return {
+            ...v,
+            placa: placaLimpia,
+            marca: formMarca.trim(),
+            modelo: formModelo.trim(),
+            anio: Number(formAnio) || v.anio,
+            tipo: formTipo,
+            conductor: formConductor.trim() || v.conductor,
+            conductorTelefono: formConductorTelefono.trim() || v.conductorTelefono,
+            kilometrajeActual: Number(formKmActual) || v.kilometrajeActual,
+            kilometrajeUltimoServicio: Number(formKmUltimoServicio) || v.kilometrajeUltimoServicio,
+            ultimoServicioFecha: formUltimoServicioFecha.trim() || v.ultimoServicioFecha,
+            ultimoServicioTipo: formUltimoServicioTipo.trim() || v.ultimoServicioTipo,
+            estado: estadoCalculado,
+            fotoUrl: formFotoUrl || v.fotoUrl,
+            notas: formNotas.trim()
+          };
+        }
+        return v;
+      });
+
+      guardarVehiculosLocal(listaActualizada);
+
+      // Si el vehículo editado estaba abierto en el pasaporte, actualizarlo
+      if (vehiculoSeleccionado?.id === vehiculoEnEdicion.id) {
+        setVehiculoSeleccionado({
+          ...vehiculoSeleccionado,
+          placa: placaLimpia,
+          marca: formMarca.trim(),
+          modelo: formModelo.trim(),
+          anio: Number(formAnio) || vehiculoSeleccionado.anio,
+          tipo: formTipo,
+          conductor: formConductor.trim() || vehiculoSeleccionado.conductor,
+          conductorTelefono: formConductorTelefono.trim() || vehiculoSeleccionado.conductorTelefono,
+          kilometrajeActual: Number(formKmActual) || vehiculoSeleccionado.kilometrajeActual,
+          kilometrajeUltimoServicio: Number(formKmUltimoServicio) || vehiculoSeleccionado.kilometrajeUltimoServicio,
+          estado: estadoCalculado,
+          fotoUrl: formFotoUrl || vehiculoSeleccionado.fotoUrl,
+          notas: formNotas.trim()
+        });
+      }
+
+      mostrarToast(`¡Datos del vehículo ${placaLimpia} actualizados exitosamente!`);
+    }
+
+    setModalVehiculoFormOpen(false);
+  };
+
+  // Confirmar y Ejecutar Eliminación de Unidad
+  const handleEliminarVehiculoConfirmado = () => {
+    if (!vehiculoParaEliminar) return;
+    const listaActualizada = vehiculos.filter((v) => v.id !== vehiculoParaEliminar.id);
+    guardarVehiculosLocal(listaActualizada);
+    mostrarToast(`Unidad ${vehiculoParaEliminar.placa} desincorporada de la flota.`);
+    setModalEliminarOpen(false);
+    setVehiculoParaEliminar(null);
+    if (modalPasaporteOpen && vehiculoSeleccionado?.id === vehiculoParaEliminar.id) {
+      setModalPasaporteOpen(false);
+    }
+  };
+
+  // Guardar Datos de la Empresa
+  const handleGuardarDatosEmpresa = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formEmpresa.razonSocial.trim() || !formEmpresa.rif.trim()) {
+      mostrarToast('Ingresa la Razón Social y el RIF de la empresa.', 'error');
+      return;
+    }
+    guardarEmpresaLocal(formEmpresa);
+    mostrarToast('¡Datos de la empresa guardados correctamente!');
+    setModalEmpresaOpen(false);
   };
 
   // 4. Generación de Factura Quincenal en PDF con jsPDF + AutoTable
@@ -487,10 +676,10 @@ export default function FlotasDashboardPage() {
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.text('Razón Social: Logística El Este C.A.', 14, 57);
-      doc.text('RIF: J-12345678-9', 14, 63);
-      doc.text('Dirección: Zona Industrial Los Ruices, Galpón 4B, Caracas.', 14, 69);
-      doc.text('Contacto: Dpto. de Transporte y Operaciones (+58 212 900 1122)', 14, 75);
+      doc.text(`Razón Social: ${empresa.razonSocial}`, 14, 57);
+      doc.text(`RIF: ${empresa.rif}`, 14, 63);
+      doc.text(`Dirección: ${empresa.direccion}`, 14, 69);
+      doc.text(`Contacto: ${empresa.contacto} (${empresa.telefono})`, 14, 75);
 
       // Cuadro de Resumen Quincenal a la derecha
       doc.setFillColor(248, 250, 252);
@@ -498,128 +687,93 @@ export default function FlotasDashboardPage() {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.text('RESUMEN DE FLOTA B2B', 126, 53);
+
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.text('Total Unidades Monitoreadas: 12', 126, 60);
-      doc.text('Servicios Ejecutados en Quincena: 8', 126, 66);
-      doc.text('Mantenimientos en Sitio: 100% In Situ', 126, 72);
+      doc.text(`Total Unidades Registradas: ${totalVehiculos}`, 126, 60);
+      doc.text(`Unidades con Mantenimiento: ${requierenMantenimiento}`, 126, 66);
+      doc.text(`Tasa de Disponibilidad Operativa: 96.4%`, 126, 72);
 
-      // 3. Tabla Detallada de Servicios Realizados
-      const filasServicios = [
-        ['02 Nov', 'A90NP1Q', 'Renault Kangoo', 'Mantenimiento Menor 60K (Aceite y Filtros)', 'Roberto Silva', '$75.00'],
-        ['05 Nov', 'A56GH7J', 'Toyota Hilux', 'Servicio 50.000 KM Garantía (Motul Sintético)', 'Luis Carrillo', '$110.00'],
-        ['08 Nov', 'A01CD2E', 'Renault Master', 'Servicio Preventivo 70K DPF', 'Roberto Silva', '$135.00'],
-        ['10 Nov', 'A45GH6J', 'Ford Transit', 'Inspección de Flota 20K In Situ', 'Roberto Silva', '$90.00'],
-        ['12 Nov', 'A23RS4T', 'Mitsubishi Canter', 'Revisión y Filtro Neumático de Aire', 'Carlos Mendoza', '$130.00'],
-        ['14 Nov', 'A23EF4G', 'Chevrolet Silverado', 'Mantenimiento Preventivo 110K', 'Luis Carrillo', '$105.00'],
-        ['15 Nov', 'A67XY8Z', 'Chevrolet D-Max', 'Cambio Aceite 5W-40 Liqui Moly', 'Roberto Silva', '$120.00'],
-        ['15 Nov', 'FLEET-AUD', 'Módulos Globales', 'Auditoría OBD2 y Odómetros Flota (12 Unid.)', 'Carlos Mendoza', '$485.00']
-      ];
+      // 3. Tabla Consolidada de Unidades con AutoTable
+      const tableData = vehiculos.map((v) => [
+        v.placa,
+        `${v.marca} ${v.modelo} (${v.anio})`,
+        v.tipo,
+        v.conductor,
+        `${v.kilometrajeActual.toLocaleString()} km`,
+        v.estado === 'AL_DIA' ? 'Al Día' : v.estado === 'PROXIMO' ? 'Próximo' : 'Vencido',
+        v.ultimoServicioFecha
+      ]);
 
       autoTable(doc, {
-        startY: 83,
-        head: [['Fecha', 'Placa', 'Vehículo', 'Detalle del Servicio In Situ', 'Especialista', 'Total USD']],
-        body: filasServicios,
+        startY: 84,
+        head: [['Placa', 'Vehículo / Modelo', 'Tipo', 'Conductor Asignado', 'Odómetro', 'Semáforo', 'Últ. Servicio']],
+        body: tableData,
         theme: 'striped',
         headStyles: {
-          fillColor: [30, 86, 176],
+          fillColor: [10, 21, 37],
           textColor: [255, 255, 255],
-          fontSize: 8,
-          fontStyle: 'bold'
+          fontStyle: 'bold',
+          fontSize: 8
         },
-        styles: {
+        bodyStyles: {
           fontSize: 8,
-          cellPadding: 2.8
+          textColor: [30, 41, 59]
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
         },
         columnStyles: {
-          0: { cellWidth: 16 },
-          1: { cellWidth: 20, fontStyle: 'bold' },
-          2: { cellWidth: 32 },
-          3: { cellWidth: 70 },
-          4: { cellWidth: 32 },
-          5: { cellWidth: 20, halign: 'right', fontStyle: 'bold' }
+          0: { fontStyle: 'bold' },
+          5: { fontStyle: 'bold' }
         }
       });
 
-      // 4. Totales y Conciliación
-      const finalY = (doc as any).lastAutoTable.finalY + 8;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text('Términos: Crédito Corporativo B2B Quincenal (Net 15 Días)', 14, finalY + 4);
-      doc.text('Garantía Oficial TuTallerMóvil: 90 Días o 5,000 km en repuestos y mano de obra', 14, finalY + 9);
-      doc.text('Pago conciliado vía Transferencia Banesco o Zelle: pagos@tutallermovil.com', 14, finalY + 14);
-
-      // Cuadro de Totales
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(125, finalY, 71, 36, 2, 2, 'FD');
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text('Subtotal Servicios:', 130, finalY + 8);
-      doc.text('$1,250.00', 190, finalY + 8, { align: 'right' });
-
-      doc.text('Descuento Convenio Flota (-10%):', 130, finalY + 14);
-      doc.setTextColor(22, 163, 74);
-      doc.text('-$125.00', 190, finalY + 14, { align: 'right' });
-
-      doc.setTextColor(grisOscuro[0], grisOscuro[1], grisOscuro[2]);
-      doc.text('Retención Fondo QA (3%):', 130, finalY + 20);
-      doc.text('$33.75', 190, finalY + 20, { align: 'right' });
-
-      doc.setDrawColor(200, 200, 200);
-      doc.line(130, finalY + 23, 192, finalY + 23);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('TOTAL A CONCILIAR:', 130, finalY + 30);
-      doc.setTextColor(azulCobalto[0], azulCobalto[1], azulCobalto[2]);
-      doc.text('$1,125.00 USD', 190, finalY + 30, { align: 'right' });
-
       // Guardar PDF
-      doc.save('Factura_Quincenal_LogisticaElEste_TTM.pdf');
-    } catch (err) {
-      console.error('Error generando factura PDF:', err);
-      alert('Ocurrió un error al generar el PDF de facturación.');
+      const cleanRif = empresa.rif.replace(/[^a-zA-Z0-9]/g, '_');
+      doc.save(`Factura_Flotas_TTM_${cleanRif}.pdf`);
+      mostrarToast('✓ Factura Proforma descargada en PDF');
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      mostrarToast('Hubo un error al generar el PDF.', 'error');
     } finally {
       setGenerandoPdf(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] font-sans pb-24 selection:bg-[#CCFF00] selection:text-[#0A1525]">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col font-sans selection:bg-[#CCFF00] selection:text-[#0A1525] pb-20">
       
       {/* ======================================================== */}
-      {/* 1. TOPBAR DE NAVEGACIÓN Y ACCESO A OTROS PANELES        */}
+      {/* 1. NAVBAR SUPERIOR CORPORATIVO                           */}
       {/* ======================================================== */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] px-4 sm:px-8 py-3.5 shadow-2xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] px-4 sm:px-8 py-3.5 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           
-          {/* Logo y Switch de Módulos */}
+          {/* Logo y Badge B2B */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-xl bg-[#0A1525] text-white flex items-center justify-center font-black text-sm shadow-xs group-hover:bg-[#1E56B0] transition-colors">
-                <span className="text-[#CCFF00]">T</span>TM
-              </div>
-              <div>
-                <span className="text-sm font-black text-[#0A1525] tracking-tight block">
-                  TuTallerMóvil
-                </span>
-                <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider block">
-                  Portal Corporativo B2B
-                </span>
-              </div>
+              <span className="text-2xl font-black tracking-tight text-[#0A1525] group-hover:text-[#1E56B0] transition-colors">
+                TTM
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-widest bg-[#0A1525] text-[#CCFF00] px-2 py-0.5 rounded-md border border-slate-700">
+                Flotas B2B
+              </span>
             </Link>
+            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+            <span className="text-xs font-bold text-slate-500 hidden sm:inline">
+              Gestión Integral de Mantenimiento Móvil In Situ
+            </span>
           </div>
 
-          {/* Links directos de navegación para administradores */}
-          <div className="flex items-center gap-2.5">
+          {/* Enlaces de Navegación Rápida */}
+          <div className="flex items-center gap-2">
             <Link
               href="/admin/despacho"
               className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#1E56B0] px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-colors"
             >
               <Truck className="w-3.5 h-3.5 text-slate-400" />
-              <span>Despacho Operadora</span>
+              <span>Despacho</span>
             </Link>
 
             <Link
@@ -627,22 +781,67 @@ export default function FlotasDashboardPage() {
               className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#1E56B0] px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-colors"
             >
               <DollarSign className="w-3.5 h-3.5 text-slate-400" />
-              <span>Dashboard Dueño</span>
+              <span>Finanzas</span>
             </Link>
 
             <div className="h-5 w-px bg-slate-200 hidden md:block" />
 
-            <div className="flex items-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] px-3 py-1.5 rounded-2xl text-xs font-semibold text-[#0A1525]">
+            {/* Botón Registrar/Editar Empresa */}
+            <button
+              type="button"
+              onClick={() => {
+                setFormEmpresa(empresa);
+                setModalEmpresaOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0A1525] bg-white border border-[#CBD5E1] hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+              title="Registrar o editar datos de la empresa cliente"
+            >
+              <Building2 className="w-3.5 h-3.5 text-[#1E56B0]" />
+              <span className="hidden sm:inline">Perfil Empresa</span>
+            </button>
+
+            <div className="flex items-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] px-3 py-1.5 rounded-xl text-xs font-semibold text-[#0A1525]">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Flota Conectada GPS</span>
+              <span className="hidden sm:inline">Flota Conectada</span>
             </div>
           </div>
 
         </div>
       </header>
 
-      {/* Alerta flotante de confirmación de jornada */}
+      {/* Alerta flotante general */}
       <AnimatePresence>
+        {toastGeneral && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-18 inset-x-0 z-50 max-w-md mx-auto px-4"
+          >
+            <div className={`p-4 rounded-2xl shadow-xl flex items-center justify-between border-2 ${
+              toastGeneral.tipo === 'exito'
+                ? 'bg-[#0A1525] text-white border-[#CCFF00]'
+                : 'bg-rose-900 text-white border-rose-400'
+            }`}>
+              <div className="flex items-center gap-3">
+                {toastGeneral.tipo === 'exito' ? (
+                  <CheckCircle2 className="w-5 h-5 text-[#CCFF00] shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                )}
+                <span className="text-xs font-bold">{toastGeneral.mensaje}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setToastGeneral(null)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {jornadaConfirmadaToast && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -667,7 +866,7 @@ export default function FlotasDashboardPage() {
         )}
       </AnimatePresence>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6 flex-1">
 
         {/* ======================================================== */}
         {/* 2. HEADER DE LA EMPRESA (Bento Card Principal)          */}
@@ -677,25 +876,41 @@ export default function FlotasDashboardPage() {
 
           {/* Información Corporativa */}
           <div className="space-y-2 relative z-10">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-blue-50 text-[#1E56B0] border border-blue-200">
                 Cuenta Corporativa Premium B2B
               </span>
               <span className="px-3 py-1 rounded-full text-[11px] font-bold text-slate-500 bg-slate-100">
-                Convenio Nacional TTM
+                {empresa.sector}
               </span>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#0A1525] text-white flex items-center justify-center font-black shadow-xs">
-                <Building2 className="w-6 h-6 text-[#CCFF00]" />
+              <div className="w-13 h-13 rounded-2xl bg-[#0A1525] text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                <Building2 className="w-7 h-7 text-[#CCFF00]" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-[#0A1525] tracking-tight">
-                  Logística El Este C.A.
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#0A1525] tracking-tight">
+                    {empresa.razonSocial}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormEmpresa(empresa);
+                      setModalEmpresaOpen(true);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-[#1E56B0] hover:bg-slate-100 transition-colors"
+                    title="Editar datos de la empresa"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                </div>
                 <p className="text-xs sm:text-sm font-semibold text-slate-500">
-                  RIF: <strong className="text-[#0A1525] font-mono">J-12345678-9</strong> • Sector Industrial Los Ruices, Caracas
+                  RIF: <strong className="text-[#0A1525] font-mono">{empresa.rif}</strong> • {empresa.direccion}
+                </p>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Contacto: {empresa.contacto} • {empresa.telefono} • {empresa.correo}
                 </p>
               </div>
             </div>
@@ -713,17 +928,27 @@ export default function FlotasDashboardPage() {
               title="Descargar proforma consolidada con jsPDF"
             >
               <FileDown className="w-4 h-4 text-[#1E56B0]" />
-              <span>{generandoPdf ? 'Generando PDF...' : 'Descargar Factura Quincenal (PDF)'}</span>
+              <span>{generandoPdf ? 'Generando PDF...' : 'Factura Quincenal (PDF)'}</span>
             </button>
 
             {/* Botón Principal: Agendar Jornada Sabatina */}
             <button
               type="button"
               onClick={() => setModalJornadaOpen(true)}
-              className="h-12 px-5 rounded-2xl bg-[#1E56B0] hover:bg-[#0A1525] text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 transition-all cursor-pointer active:scale-95"
+              className="h-12 px-5 rounded-2xl bg-[#0A1525] hover:bg-slate-800 text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-95"
             >
               <Calendar className="w-4 h-4 text-[#CCFF00]" />
-              <span>Agendar Jornada Sabatina</span>
+              <span>Agendar Jornada</span>
+            </button>
+
+            {/* Botón Destacado: Agregar Unidad a la Flota */}
+            <button
+              type="button"
+              onClick={handleAbrirCrearVehiculo}
+              className="h-12 px-5 rounded-2xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4 text-[#CCFF00] stroke-[3]" />
+              <span>+ Agregar Vehículo</span>
             </button>
 
           </div>
@@ -744,7 +969,7 @@ export default function FlotasDashboardPage() {
                 <span className="text-3xl sm:text-4xl font-black text-[#0A1525] font-mono">
                   {totalVehiculos}
                 </span>
-                <span className="text-xs font-bold text-slate-500">camiones & vans</span>
+                <span className="text-xs font-bold text-slate-500">unidades en sistema</span>
               </div>
               <span className="text-[11px] text-emerald-700 font-extrabold flex items-center gap-1 pt-1">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -766,7 +991,7 @@ export default function FlotasDashboardPage() {
                 <span className="text-3xl sm:text-4xl font-black text-rose-600 font-mono">
                   {requierenMantenimiento}
                 </span>
-                <span className="text-xs font-bold text-slate-500">unidades en alerta</span>
+                <span className="text-xs font-bold text-slate-500">en semáforo de alerta</span>
               </div>
               <span className="text-[11px] text-rose-700 font-extrabold flex items-center gap-1 pt-1">
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
@@ -792,7 +1017,7 @@ export default function FlotasDashboardPage() {
               </div>
               <span className="text-[11px] text-emerald-700 font-extrabold flex items-center gap-1 pt-1">
                 <Sparkles className="w-3.5 h-3.5 text-[#16A34A]" />
-                <span>Ahorro B2B: $210 vs Taller Convencional</span>
+                <span>Tarifa B2B Preferencial TuTallerMóvil</span>
               </span>
             </div>
             <div className="w-13 h-13 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
@@ -807,31 +1032,33 @@ export default function FlotasDashboardPage() {
         {/* ======================================================== */}
         <section className="bg-white rounded-3xl border border-[#E2E8F0] shadow-sm overflow-hidden space-y-4 p-5 sm:p-6">
           
-          {/* Cabecera y Filtros */}
+          {/* Cabecera, Búsqueda y Botón Añadir */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
             <div>
-              <h2 className="text-lg font-black text-[#0A1525] tracking-tight flex items-center gap-2">
-                <span>Estado Operativo de las Unidades</span>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-[#0A1525] tracking-tight">
+                  Estado Operativo de las Unidades
+                </h2>
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                   {vehiculosFiltrados.length} de {totalVehiculos}
                 </span>
-              </h2>
+              </div>
               <p className="text-xs text-slate-500 font-medium">
-                Semáforo predictivo según kilometraje y tiempo transcurrido desde el último servicio.
+                Semáforo predictivo según kilometraje transcurrido. Puedes editar o agregar fotos a cada vehículo.
               </p>
             </div>
 
-            {/* Barra de Filtros y Búsqueda */}
+            {/* Barra de Filtros, Búsqueda y Botón */}
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
               
               {/* Buscador */}
-              <div className="relative w-full sm:w-60">
+              <div className="relative w-full sm:w-56">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Buscar por placa, modelo o chofer..."
+                  placeholder="Buscar placa, modelo, chofer..."
                   className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 text-xs text-[#0A1525] focus:outline-none focus:border-[#1E56B0] bg-[#F8FAFC]"
                 />
               </div>
@@ -841,7 +1068,7 @@ export default function FlotasDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroEstado('TODOS')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     filtroEstado === 'TODOS' ? 'bg-white text-[#0A1525] shadow-xs' : 'text-slate-500'
                   }`}
                 >
@@ -850,7 +1077,7 @@ export default function FlotasDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroEstado('AL_DIA')}
-                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
                     filtroEstado === 'AL_DIA' ? 'bg-white text-emerald-800 shadow-xs' : 'text-slate-500'
                   }`}
                 >
@@ -860,7 +1087,7 @@ export default function FlotasDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroEstado('PROXIMO')}
-                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
                     filtroEstado === 'PROXIMO' ? 'bg-white text-amber-800 shadow-xs' : 'text-slate-500'
                   }`}
                 >
@@ -870,7 +1097,7 @@ export default function FlotasDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setFiltroEstado('VENCIDO')}
-                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
                     filtroEstado === 'VENCIDO' ? 'bg-white text-rose-800 shadow-xs' : 'text-slate-500'
                   }`}
                 >
@@ -878,6 +1105,16 @@ export default function FlotasDashboardPage() {
                   <span>Vencidos</span>
                 </button>
               </div>
+
+              {/* Botón Rápido + Agregar Unidad */}
+              <button
+                type="button"
+                onClick={handleAbrirCrearVehiculo}
+                className="h-9 px-3 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#CCFF00]" />
+                <span className="hidden sm:inline">Nueva Unidad</span>
+              </button>
 
             </div>
           </div>
@@ -887,122 +1124,192 @@ export default function FlotasDashboardPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 bg-[#F8FAFC] text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-5 sm:px-6">Placa</th>
+                  <th className="py-3 px-5 sm:px-6">Unidad / Foto</th>
                   <th className="py-3 px-4">Marca / Modelo</th>
                   <th className="py-3 px-4">Conductor Asignado</th>
                   <th className="py-3 px-4">Último Servicio</th>
-                  <th className="py-3 px-4 text-right">Kilometraje Actual</th>
-                  <th className="py-3 px-4 text-center">Semáforo de Estado</th>
-                  <th className="py-3 px-5 sm:px-6 text-right">Acción</th>
+                  <th className="py-3 px-4 text-right">Odómetro Actual</th>
+                  <th className="py-3 px-4 text-center">Semáforo</th>
+                  <th className="py-3 px-5 sm:px-6 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {vehiculosFiltrados.map((vehiculo) => {
-                  const difKm = vehiculo.kilometrajeActual - vehiculo.kilometrajeUltimoServicio;
+                {vehiculosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                      <Truck className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
+                      <p className="font-bold text-sm text-[#0A1525]">No se encontraron vehículos</p>
+                      <p className="text-xs text-slate-500 mt-1">Prueba con otro término de búsqueda o agrega una nueva unidad.</p>
+                      <button
+                        type="button"
+                        onClick={handleAbrirCrearVehiculo}
+                        className="mt-3 px-4 py-2 rounded-xl bg-[#1E56B0] text-white text-xs font-bold inline-flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-[#CCFF00]" />
+                        <span>Agregar Vehículo Ahora</span>
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  vehiculosFiltrados.map((vehiculo) => {
+                    const difKm = vehiculo.kilometrajeActual - vehiculo.kilometrajeUltimoServicio;
 
-                  return (
-                    <tr
-                      key={vehiculo.id}
-                      className="hover:bg-blue-50/40 transition-colors group"
-                    >
-                      {/* Placa con Diseño Matrícula */}
-                      <td className="py-3.5 px-5 sm:px-6 whitespace-nowrap">
-                        <div className="inline-flex flex-col items-center bg-white border border-[#0A1525]/30 rounded-lg px-2.5 py-1 shadow-2xs">
-                          <span className="text-[8px] font-black text-slate-400 tracking-widest leading-none">
-                            VENEZUELA
-                          </span>
-                          <span className="font-mono text-xs font-black text-[#0A1525] tracking-wider">
-                            {vehiculo.placa}
-                          </span>
-                        </div>
-                      </td>
+                    return (
+                      <tr
+                        key={vehiculo.id}
+                        className="hover:bg-blue-50/40 transition-colors group"
+                      >
+                        {/* Foto y Placa */}
+                        <td className="py-3.5 px-5 sm:px-6 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            {/* Thumbnail con Zoom */}
+                            <div
+                              onClick={() => vehiculo.fotoUrl && setFotoZoomUrl(vehiculo.fotoUrl)}
+                              className="w-12 h-10 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative group/foto cursor-pointer flex items-center justify-center shadow-2xs"
+                              title={vehiculo.fotoUrl ? 'Clic para ver foto en grande' : 'Sin foto'}
+                            >
+                              {vehiculo.fotoUrl ? (
+                                <>
+                                  <img
+                                    src={vehiculo.fotoUrl}
+                                    alt={vehiculo.placa}
+                                    className="w-full h-full object-cover group-hover/foto:scale-110 transition-transform"
+                                  />
+                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/foto:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                    <ZoomIn className="w-3.5 h-3.5" />
+                                  </div>
+                                </>
+                              ) : (
+                                <Car className="w-5 h-5 text-slate-400" />
+                              )}
+                            </div>
 
-                      {/* Marca / Modelo */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="space-y-0.5">
-                          <span className="font-black text-[#0A1525] text-xs block">
-                            {vehiculo.marca} {vehiculo.modelo}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            Año {vehiculo.anio} • {vehiculo.tipo}
-                          </span>
-                        </div>
-                      </td>
+                            {/* Placa con Diseño Matrícula */}
+                            <div className="inline-flex flex-col items-center bg-white border border-[#0A1525]/30 rounded-lg px-2.5 py-1 shadow-2xs">
+                              <span className="text-[8px] font-black text-slate-400 tracking-widest leading-none">
+                                VENEZUELA
+                              </span>
+                              <span className="font-mono text-xs font-black text-[#0A1525] tracking-wider">
+                                {vehiculo.placa}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
 
-                      {/* Conductor Asignado */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="space-y-0.5">
-                          <span className="font-bold text-[#0A1525] block">
-                            {vehiculo.conductor}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {vehiculo.conductorTelefono}
-                          </span>
-                        </div>
-                      </td>
+                        {/* Marca / Modelo */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="space-y-0.5">
+                            <span className="font-black text-[#0A1525] text-xs block">
+                              {vehiculo.marca} {vehiculo.modelo}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              Año {vehiculo.anio} • {vehiculo.tipo}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Último Servicio */}
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-0.5 max-w-[190px]">
-                          <span className="font-bold text-slate-700 text-[11px] block truncate">
-                            {vehiculo.ultimoServicioTipo}
-                          </span>
-                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{vehiculo.ultimoServicioFecha}</span>
-                          </span>
-                        </div>
-                      </td>
+                        {/* Conductor Asignado */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-[#0A1525] block">
+                              {vehiculo.conductor}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {vehiculo.conductorTelefono}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Kilometraje Actual */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="space-y-0.5">
-                          <span className="font-mono font-black text-[#0A1525] text-xs block">
-                            {vehiculo.kilometrajeActual.toLocaleString()} km
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            +{difKm.toLocaleString()} km desde últ.
-                          </span>
-                        </div>
-                      </td>
+                        {/* Último Servicio */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-0.5 max-w-[190px]">
+                            <span className="font-bold text-slate-700 text-[11px] block truncate">
+                              {vehiculo.ultimoServicioTipo}
+                            </span>
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{vehiculo.ultimoServicioFecha}</span>
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* El Semáforo */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        {vehiculo.estado === 'AL_DIA' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
-                            <span>Al día</span>
-                          </span>
-                        ) : vehiculo.estado === 'PROXIMO' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-50 text-amber-800 border border-amber-200">
-                            <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-                            <span>Próximo (+4,000 km)</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-50 text-rose-800 border border-rose-300">
-                            <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-pulse" />
-                            <span>Vencido (Requiere servicio)</span>
-                          </span>
-                        )}
-                      </td>
+                        {/* Kilometraje Actual */}
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="space-y-0.5">
+                            <span className="font-mono font-black text-[#0A1525] text-xs block">
+                              {vehiculo.kilometrajeActual.toLocaleString()} km
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              +{difKm.toLocaleString()} km desde últ.
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Acción: Ver Pasaporte Técnico */}
-                      <td className="py-3.5 px-5 sm:px-6 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setVehiculoSeleccionado(vehiculo);
-                            setModalPasaporteOpen(true);
-                          }}
-                          className="h-8 px-3 rounded-xl bg-slate-100 hover:bg-[#0A1525] text-slate-700 hover:text-white font-bold text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group-hover:bg-[#1E56B0] group-hover:text-white"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5 text-[#CCFF00]" />
-                          <span>Ver Pasaporte Técnico</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        {/* El Semáforo */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          {vehiculo.estado === 'AL_DIA' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
+                              <span>Al día</span>
+                            </span>
+                          ) : vehiculo.estado === 'PROXIMO' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-50 text-amber-800 border border-amber-200">
+                              <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+                              <span>Próximo (+4,000 km)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-50 text-rose-800 border border-rose-300">
+                              <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-pulse" />
+                              <span>Vencido (Requiere servicio)</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Acciones: Pasaporte, Editar, Eliminar */}
+                        <td className="py-3.5 px-5 sm:px-6 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1.5">
+                            {/* Ver Pasaporte */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVehiculoSeleccionado(vehiculo);
+                                setModalPasaporteOpen(true);
+                              }}
+                              className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-[#0A1525] text-slate-700 hover:text-white font-bold text-xs inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs group-hover:bg-[#1E56B0] group-hover:text-white"
+                              title="Ver pasaporte técnico e historial"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 text-[#CCFF00]" />
+                              <span className="hidden md:inline">Pasaporte</span>
+                            </button>
+
+                            {/* Editar Unidad */}
+                            <button
+                              type="button"
+                              onClick={() => handleAbrirEditarVehiculo(vehiculo)}
+                              className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                              title="Editar datos y foto del vehículo"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Eliminar Unidad */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVehiculoParaEliminar(vehiculo);
+                                setModalEliminarOpen(true);
+                              }}
+                              className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                              title="Desincorporar vehículo de la flota"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -1010,6 +1317,524 @@ export default function FlotasDashboardPage() {
         </section>
 
       </main>
+
+      {/* ======================================================== */}
+      {/* MODAL: REGISTRAR / EDITAR EMPRESA CLIENTE                */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalEmpresaOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-7 space-y-5 border border-[#E2E8F0] shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setModalEmpresaOpen(false)}
+                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#0A1525] text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                  <Building2 className="w-6 h-6 text-[#CCFF00]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
+                    Datos de la Empresa de Flota
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Configura la información fiscal y operativa de tu cuenta corporativa.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleGuardarDatosEmpresa} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Razón Social / Nombre Comercial *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formEmpresa.razonSocial}
+                      onChange={(e) => setFormEmpresa({ ...formEmpresa, razonSocial: e.target.value })}
+                      placeholder="Ej. Logística El Este C.A."
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">RIF / ID Fiscal *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formEmpresa.rif}
+                      onChange={(e) => setFormEmpresa({ ...formEmpresa, rif: e.target.value.toUpperCase() })}
+                      placeholder="Ej. J-12345678-9"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-mono font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Sector / Industria</label>
+                    <input
+                      type="text"
+                      value={formEmpresa.sector}
+                      onChange={(e) => setFormEmpresa({ ...formEmpresa, sector: e.target.value })}
+                      placeholder="Ej. Alimentos, Carga, Farmacéutico"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Persona de Contacto</label>
+                    <input
+                      type="text"
+                      value={formEmpresa.contacto}
+                      onChange={(e) => setFormEmpresa({ ...formEmpresa, contacto: e.target.value })}
+                      placeholder="Ej. Carlos Mendoza (Gerente)"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Teléfono / WhatsApp</label>
+                    <input
+                      type="text"
+                      value={formEmpresa.telefono}
+                      onChange={(e) => setFormEmpresa({ ...formEmpresa, telefono: e.target.value })}
+                      placeholder="+58 412 123 4567"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Correo Electrónico Corporativo</label>
+                    <input
+                      type="email"
+                      value={formEmpresa.correo}
+                      onChange={(e) => setFormEmpresa({ ...formEmpresa, correo: e.target.value })}
+                      placeholder="flotas@empresa.com"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Dirección de Base / Galpón de Operaciones</label>
+                    <input
+                      type="text"
+                      value={formEmpresa.direccion}
+                      onChange={(e) => setFormEmpresa({ ...formEmpresa, direccion: e.target.value })}
+                      placeholder="Zona Industrial Los Ruices, Galpón 4B, Caracas"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setModalEmpresaOpen(false)}
+                    className="h-11 px-5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="h-11 px-6 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+                  >
+                    Guardar Datos de Empresa
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL: AGREGAR / EDITAR VEHÍCULO                         */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalVehiculoFormOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-7 space-y-5 border border-[#E2E8F0] shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setModalVehiculoFormOpen(false)}
+                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#1E56B0] text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                  {modoVehiculo === 'CREAR' ? (
+                    <Plus className="w-6 h-6 text-[#CCFF00] stroke-[3]" />
+                  ) : (
+                    <Edit3 className="w-6 h-6 text-[#CCFF00]" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
+                    {modoVehiculo === 'CREAR' ? 'Agregar Nueva Unidad a la Flota' : `Editar Unidad #${formPlaca}`}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Ingresa los datos del vehículo, conductor, kilometraje y sube una fotografía.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleGuardarVehiculo} className="space-y-4">
+                
+                {/* 1. SECCIÓN: FOTO DE LA UNIDAD */}
+                <div className="p-4 bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-[#0A1525] flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-[#1E56B0]" />
+                      <span>Fotografía del Vehículo</span>
+                    </span>
+                    {formFotoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFormFotoUrl('')}
+                        className="text-[11px] font-bold text-rose-600 hover:underline"
+                      >
+                        Quitar foto
+                      </button>
+                    )}
+                  </div>
+
+                  <input
+                    type="file"
+                    ref={fileInputVehiculoRef}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleSubirFotoVehiculo(file);
+                    }}
+                  />
+
+                  <div className="flex items-center gap-4">
+                    {/* Preview de la foto */}
+                    <div className="w-24 h-20 rounded-2xl bg-white border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative shadow-2xs">
+                      {subiendoFotoVehiculo ? (
+                        <div className="flex flex-col items-center gap-1 text-[10px] text-slate-500">
+                          <Loader2 className="w-5 h-5 text-[#1E56B0] animate-spin" />
+                          <span>Subiendo...</span>
+                        </div>
+                      ) : formFotoUrl ? (
+                        <img
+                          src={formFotoUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-slate-300 stroke-[1.5]" />
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5 flex-1">
+                      <button
+                        type="button"
+                        disabled={subiendoFotoVehiculo}
+                        onClick={() => fileInputVehiculoRef.current?.click()}
+                        className="h-10 px-4 rounded-xl bg-white border border-[#CBD5E1] hover:bg-slate-50 text-[#0A1525] text-xs font-bold inline-flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-[#1E56B0]" />
+                        <span>{formFotoUrl ? 'Cambiar Fotografía' : 'Subir Foto desde tu Equipo'}</span>
+                      </button>
+                      <p className="text-[10px] text-slate-400">
+                        Formatos JPG, PNG o WEBP. Se guardará vinculada a la ficha de la flota.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. SECCIÓN: DATOS BÁSICOS DEL VEHÍCULO */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  
+                  {/* Placa */}
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Placa / Matrícula *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formPlaca}
+                      onChange={(e) => setFormPlaca(e.target.value.toUpperCase())}
+                      placeholder="Ej. A12BC3D"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-mono font-bold"
+                    />
+                  </div>
+
+                  {/* Marca */}
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Marca *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formMarca}
+                      onChange={(e) => setFormMarca(e.target.value)}
+                      placeholder="Ej. Iveco, Toyota, Ford"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-semibold"
+                    />
+                  </div>
+
+                  {/* Modelo */}
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Modelo *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formModelo}
+                      onChange={(e) => setFormModelo(e.target.value)}
+                      placeholder="Ej. Daily 70C16, Hilux"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-semibold"
+                    />
+                  </div>
+
+                  {/* Año */}
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Año *</label>
+                    <input
+                      type="number"
+                      min={1990}
+                      max={2030}
+                      value={formAnio}
+                      onChange={(e) => setFormAnio(Number(e.target.value))}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+
+                  {/* Tipo de Vehículo */}
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Categoría / Tipo de Flota *</label>
+                    <select
+                      value={formTipo}
+                      onChange={(e) => setFormTipo(e.target.value as TipoVehiculo)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-medium"
+                    >
+                      <option value="Carga Pesada">Carga Pesada (Camiones, Gandolas, NPR)</option>
+                      <option value="Carga Ligera">Carga Ligera (Furgón, Van)</option>
+                      <option value="Pick-Up">Pick-Up 4x4 / 4x2</option>
+                      <option value="Utilitario">Utilitario / Paquetería Urbana</option>
+                      <option value="Van de Pasajeros">Van de Pasajeros / Traslado Personal</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3. SECCIÓN: CONDUCTOR ASIGNADO */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Chofer / Conductor Asignado</label>
+                    <input
+                      type="text"
+                      value={formConductor}
+                      onChange={(e) => setFormConductor(e.target.value)}
+                      placeholder="Nombre y Apellido del Chofer"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-extrabold text-[#0A1525]">Teléfono del Conductor</label>
+                    <input
+                      type="text"
+                      value={formConductorTelefono}
+                      onChange={(e) => setFormConductorTelefono(e.target.value)}
+                      placeholder="+58 412 123 4567"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0] font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. SECCIÓN: KILOMETRAJE Y SEMÁFORO */}
+                <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-3 text-xs">
+                  <span className="font-black text-[#1E56B0] uppercase tracking-wider block">
+                    Odómetro y Mantenimiento Predictivo
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-extrabold text-[#0A1525]">Kilometraje Actual (KM) *</label>
+                      <input
+                        type="number"
+                        min={0}
+                        required
+                        value={formKmActual}
+                        onChange={(e) => setFormKmActual(Number(e.target.value))}
+                        className="w-full h-10 px-3 rounded-xl border border-blue-200 bg-white font-mono font-bold focus:outline-none focus:border-[#1E56B0]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-extrabold text-[#0A1525]">KM en Último Servicio *</label>
+                      <input
+                        type="number"
+                        min={0}
+                        required
+                        value={formKmUltimoServicio}
+                        onChange={(e) => setFormKmUltimoServicio(Number(e.target.value))}
+                        className="w-full h-10 px-3 rounded-xl border border-blue-200 bg-white font-mono font-bold focus:outline-none focus:border-[#1E56B0]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-extrabold text-[#0A1525]">Fecha del Último Servicio</label>
+                      <input
+                        type="text"
+                        value={formUltimoServicioFecha}
+                        onChange={(e) => setFormUltimoServicioFecha(e.target.value)}
+                        placeholder="Ej. 15 Oct 2026"
+                        className="w-full h-10 px-3 rounded-xl border border-blue-200 bg-white focus:outline-none focus:border-[#1E56B0]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-extrabold text-[#0A1525]">Tipo del Último Servicio</label>
+                      <input
+                        type="text"
+                        value={formUltimoServicioTipo}
+                        onChange={(e) => setFormUltimoServicioTipo(e.target.value)}
+                        placeholder="Ej. Cambio de Aceite 15W-40"
+                        className="w-full h-10 px-3 rounded-xl border border-blue-200 bg-white focus:outline-none focus:border-[#1E56B0]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Cálculo en vivo del semáforo */}
+                  {(() => {
+                    const dif = formKmActual - formKmUltimoServicio;
+                    const semaforo = calcularEstadoSemaforo(formKmActual, formKmUltimoServicio);
+                    return (
+                      <div className="flex items-center justify-between pt-2 border-t border-blue-200/60 text-[11px] font-bold">
+                        <span>Kilómetros recorridos desde último servicio: <strong className="font-mono font-black text-[#0A1525]">+{dif.toLocaleString()} km</strong></span>
+                        <span className={`px-2.5 py-0.5 rounded-full ${
+                          semaforo === 'AL_DIA' ? 'bg-emerald-100 text-emerald-800' :
+                          semaforo === 'PROXIMO' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          Semáforo: {semaforo === 'AL_DIA' ? '✓ Al Día' : semaforo === 'PROXIMO' ? '⚠ Próximo (+4,000 km)' : '✕ Vencido (+5,000 km)'}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* 5. SECCIÓN: NOTAS */}
+                <div className="space-y-1 text-xs">
+                  <label className="font-extrabold text-[#0A1525]">Notas u Observaciones Operativas</label>
+                  <textarea
+                    rows={2}
+                    value={formNotas}
+                    onChange={(e) => setFormNotas(e.target.value)}
+                    placeholder="Ej. Asignado a ruta oriente, requiere revisión de bujes en próxima parada..."
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#1E56B0]"
+                  />
+                </div>
+
+                <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setModalVehiculoFormOpen(false)}
+                    className="h-11 px-5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="h-11 px-6 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4 text-[#CCFF00] stroke-[3]" />
+                    <span>{modoVehiculo === 'CREAR' ? 'Agregar a la Flota' : 'Guardar Cambios'}</span>
+                  </button>
+                </div>
+
+              </form>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL: CONFIRMAR ELIMINACIÓN DE VEHÍCULO                 */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalEliminarOpen && vehiculoParaEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-rose-200 shadow-2xl relative"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+                <Trash2 className="w-7 h-7 stroke-[2.2]" />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-[#0A1525]">¿Desincorporar Unidad?</h3>
+                <p className="text-xs text-slate-500">
+                  ¿Estás seguro de que deseas eliminar el vehículo <strong className="font-mono text-[#0A1525]">{vehiculoParaEliminar.placa}</strong> ({vehiculoParaEliminar.marca} {vehiculoParaEliminar.modelo}) de la flota activa?
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setModalEliminarOpen(false)}
+                  className="flex-1 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEliminarVehiculoConfirmado}
+                  className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition-colors shadow-sm"
+                >
+                  Sí, Desincorporar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL: VISOR DE FOTO EN PANTALLA COMPLETA                */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {fotoZoomUrl && (
+          <div
+            onClick={() => setFotoZoomUrl(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md cursor-pointer"
+          >
+            <div className="relative max-w-xl w-full" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setFotoZoomUrl(null)}
+                className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <img
+                src={fotoZoomUrl}
+                alt="Foto Vehículo Ampliada"
+                className="w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl"
+              />
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ======================================================== */}
       {/* MODAL 1: AGENDAR JORNADA SABATINA CORPORATIVA            */}
@@ -1048,53 +1873,52 @@ export default function FlotasDashboardPage() {
 
               {/* Configuración de Fecha y Turno */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-[#F8FAFC] border border-[#CBD5E1] p-4 rounded-2xl text-xs">
-                <div>
-                  <label className="font-extrabold text-[#0A1525] block mb-1">
-                    Fecha de la Jornada (Sábados Recomendados):
+                <div className="space-y-1">
+                  <label className="font-bold text-[#0A1525] flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#1E56B0]" />
+                    <span>Fecha de la Jornada (Sábado):</span>
                   </label>
                   <input
                     type="date"
                     value={fechaJornada}
                     onChange={(e) => setFechaJornada(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold text-[#0A1525] bg-white focus:outline-none focus:border-[#1E56B0]"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white font-mono font-bold text-[#0A1525] focus:outline-none focus:border-[#1E56B0]"
                   />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    Horario de servicio técnico: 8:00 AM a 4:00 PM
-                  </span>
                 </div>
 
-                <div>
-                  <label className="font-extrabold text-[#0A1525] block mb-1">
-                    Turno de Atención en Galpón:
+                <div className="space-y-1">
+                  <label className="font-bold text-[#0A1525] flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#1E56B0]" />
+                    <span>Turno Preferido:</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className="grid grid-cols-2 gap-2 h-10">
                     <button
                       type="button"
                       onClick={() => setTurnoJornada('manana')}
-                      className={`h-10 rounded-xl font-bold text-xs border transition-all ${
+                      className={`rounded-xl border font-bold text-xs transition-all cursor-pointer ${
                         turnoJornada === 'manana'
-                          ? 'bg-[#1E56B0] text-white border-[#1E56B0]'
-                          : 'bg-white text-slate-600 border-slate-300'
+                          ? 'bg-[#1E56B0] text-white border-[#1E56B0] shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
                       }`}
                     >
-                      Mañana (8:00 AM)
+                      Mañana (8am - 1pm)
                     </button>
                     <button
                       type="button"
                       onClick={() => setTurnoJornada('tarde')}
-                      className={`h-10 rounded-xl font-bold text-xs border transition-all ${
+                      className={`rounded-xl border font-bold text-xs transition-all cursor-pointer ${
                         turnoJornada === 'tarde'
-                          ? 'bg-[#1E56B0] text-white border-[#1E56B0]'
-                          : 'bg-white text-slate-600 border-slate-300'
+                          ? 'bg-[#1E56B0] text-white border-[#1E56B0] shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
                       }`}
                     >
-                      Tarde (1:00 PM)
+                      Tarde (1pm - 6pm)
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Selector de Vehículos */}
+              {/* Lista de Selección de Vehículos */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-[#0A1525] uppercase tracking-wider">
@@ -1200,34 +2024,65 @@ export default function FlotasDashboardPage() {
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Cabecera del Pasaporte */}
-              <div className="flex items-start justify-between gap-4 pr-10">
+              {/* Cabecera del Pasaporte con Foto */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-10">
                 <div className="flex items-center gap-3.5">
-                  <div className="inline-flex flex-col items-center bg-[#0A1525] text-white rounded-xl px-3 py-1.5 shadow-sm border border-slate-700">
-                    <span className="text-[9px] font-black text-[#CCFF00] tracking-widest leading-none">
-                      VENEZUELA
-                    </span>
-                    <span className="font-mono text-base font-black tracking-wider text-white">
-                      {vehiculoSeleccionado.placa}
-                    </span>
+                  {/* Foto destacada */}
+                  <div
+                    onClick={() => vehiculoSeleccionado.fotoUrl && setFotoZoomUrl(vehiculoSeleccionado.fotoUrl)}
+                    className="w-16 h-14 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 cursor-pointer shadow-sm relative group"
+                  >
+                    {vehiculoSeleccionado.fotoUrl ? (
+                      <>
+                        <img
+                          src={vehiculoSeleccionado.fotoUrl}
+                          alt={vehiculoSeleccionado.placa}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <ZoomIn className="w-4 h-4" />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <Car className="w-6 h-6" />
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                      Pasaporte Digital TuTallerMóvil
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                        Pasaporte Digital TuTallerMóvil
+                      </span>
+                      <span className="font-mono text-xs font-black text-[#1E56B0] bg-slate-100 px-2 py-0.5 rounded-md">
+                        {vehiculoSeleccionado.placa}
+                      </span>
+                    </div>
                     <h3 className="text-xl font-black text-[#0A1525] tracking-tight mt-0.5">
                       {vehiculoSeleccionado.marca} {vehiculoSeleccionado.modelo}
                     </h3>
                   </div>
                 </div>
+
+                {/* Botón Editar esta Unidad desde el Pasaporte */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleAbrirEditarVehiculo(vehiculoSeleccionado);
+                  }}
+                  className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-[#1E56B0] hover:text-white text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors shrink-0 shadow-2xs"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Editar Unidad</span>
+                </button>
               </div>
 
               {/* Ficha Resumen */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#F8FAFC] border border-[#CBD5E1] p-3.5 rounded-2xl text-xs">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Año</span>
-                  <span className="font-bold text-[#0A1525]">{vehiculoSeleccionado.anio}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Año / Tipo</span>
+                  <span className="font-bold text-[#0A1525]">{vehiculoSeleccionado.anio} • {vehiculoSeleccionado.tipo}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Odómetro Actual</span>
