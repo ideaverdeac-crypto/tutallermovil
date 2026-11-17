@@ -140,46 +140,46 @@ export default function RunnerPortalPage() {
     };
   }, []);
 
-  const getSubEstado = (id: string): SubEstadoRunner => {
-    return subEstadoPorOrden[id] || 'POR_RETIRAR';
-  };
+    const getSubEstado = (id: string): SubEstadoRunner => {
+      return subEstadoPorOrden[id] || 'POR_RETIRAR';
+    };
 
-  // Paso 3: Entregado al Mecánico
-  const entregarAlMecanico = async (orden: OrdenRunner) => {
-    try {
-      const supabase = createClient();
+    // Paso 3: Entregado al Mecánico
+    const entregarAlMecanico = async (orden: OrdenRunner) => {
+      try {
+        const supabase = createClient();
 
-      // 1. Actualizar orden en Supabase a EN_EJECUCION para que el Kanban se mueva automáticamente
-      if (!orden.id.startsWith('ord_runner_demo')) {
-        await supabase
-          .from('ordenes')
-          .update({ estado: 'EN_EJECUCION' })
-          .eq('id', orden.id);
-      }
+        // 1. Actualizar orden en Supabase a EN_EJECUCION para que el Kanban se mueva automáticamente
+        if (!orden.id.startsWith('ord_runner_demo')) {
+          await supabase
+            .from('ordenes')
+            .update({ estado: 'EN_EJECUCION' })
+            .eq('id', orden.id);
+        }
 
-      // 2. Bitácora inmutable en consola
-      console.log('[BITÁCORA INMUTABLE] Runner entregó repuestos. Estado de orden actualizado a EN_EJECUCION', {
-        runner: 'Luis Pérez',
-        orden_id: orden.id,
-        mecanico: orden.mecanico_nombre,
-        monto_acreditado: 4.00,
-        nuevo_estado_orden: 'EN_EJECUCION',
-        timestamp: new Date().toISOString()
-      });
+          // 2. Bitácora inmutable en consola
+          console.log('[BITÁCORA INMUTABLE] Runner entregó repuestos. Estado de orden actualizado a EN_EJECUCION', {
+            runner: 'Luis Pérez',
+            orden_id: orden.id,
+            mecanico: orden.mecanico_nombre,
+            monto_acreditado: 4.00,
+            nuevo_estado_orden: 'EN_EJECUCION',
+            timestamp: new Date().toISOString()
+          });
 
-      // 3. Acreditar saldo al runner (+ $4.00)
-      setSaldoHoy((prev) => prev + 4.00);
+          // 3. Acreditar saldo al runner (+ $4.00)
+          setSaldoHoy((prev) => prev + 4.00);
 
-      // 4. Animación de éxito y remoción de la tarjeta
-      setToastExito(`¡Entregado a ${orden.mecanico_nombre}! +$4.00 acreditados a tu saldo.`);
-      setTimeout(() => {
-        setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
-      }, 350);
+  // 4. Animación de éxito y remoción de la tarjeta
+  setToastExito(`¡Entregado a ${orden.mecanico_nombre}! +$4.00 acreditados a tu saldo.`);
+  setTimeout(() => {
+    setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
+  }, 350);
 
-      setTimeout(() => setToastExito(null), 5000);
-    } catch (err) {
-      console.error('Error al marcar entrega como completada:', err);
-    }
+  setTimeout(() => setToastExito(null), 5000);
+} catch (err) {
+  console.error('Error al marcar entrega como completada:', err);
+}
   };
 
   // Simular orden en REPUESTOS_EN_RUTA en Supabase para pruebas en vivo
@@ -231,132 +231,127 @@ export default function RunnerPortalPage() {
         }}
       />
 
-      {/* ======================================================== */}
-      {/* 1. HEADER PEGAJOSO (Sticky) Con Rendimiento & Switch iOS */}
-      {/* ======================================================== */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs">
-        <div className="max-w-md mx-auto px-4 py-3.5 space-y-3">
-          
-          {/* Fila Superior: Perfil del Runner, Saldo y Enlace Despacho */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Avatar circular con foto oficial */}
-              <div className="relative shrink-0">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
-                  alt="Luis Pérez"
-                  className="w-12 h-12 rounded-full object-cover ring-2 ring-[#CCFF00] shadow-xs"
-                />
-                <span
-                  className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-white ${
-                    recibiendoEntregas ? 'bg-[#16A34A]' : 'bg-slate-400'
-                  }`}
-                  title={recibiendoEntregas ? 'Activo en ruta' : 'Desconectado'}
-                />
+        {/* ======================================================== */}
+        {/* 1. HEADER PEGAJOSO (Sticky) Con Rendimiento & Switch iOS */}
+        {/* ======================================================== */}
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs">
+          <div className="max-w-md mx-auto px-4 py-3.5 space-y-3">
+
+              {/* Fila Superior: Perfil del Runner, Saldo y Enlace Despacho */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    {/* Avatar circular con foto oficial */}
+                    <div className="relative shrink-0">
+                      <img
+                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+                        alt="Luis Pérez"
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-[#CCFF00] shadow-xs"
+                      />
+                      <span
+                        className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-white ${recibiendoEntregas ? 'bg-[#16A34A]' : 'bg-slate-400'
+                          }`}
+                        title={recibiendoEntregas ? 'Activo en ruta' : 'Desconectado'}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h1 className="text-base font-black text-[#0A1525] tracking-tight">
+                          Luis Pérez
+                        </h1>
+                        <span className="w-4 h-4 rounded-full bg-[#16A34A] flex items-center justify-center text-white shadow-2xs">
+                          <Check className="w-2.5 h-2.5 stroke-[3.5]" />
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#475569] font-medium flex items-center gap-1">
+                        <Bike className="w-3.5 h-3.5 text-[#1E56B0]" />
+                        <span>Runner • Moto Bera SBR</span>
+                      </p>
+                    </div>
+                  </div>
+
+                    {/* Recuadro Saldo Hoy: $12.50 */}
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-3.5 py-2 text-right shadow-2xs">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
+                        Saldo hoy:
+                      </span>
+                        <p className="text-base font-black text-[#1E56B0] font-mono tracking-tight leading-none pt-0.5">
+                          ${saldoHoy.toFixed(2)}{' '}
+                          <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
+                        </p>
+                    </div>
+                  </div>
+
+                  {/* Switch Grande tipo iOS de 'Recibiendo Entregas' (Verde Lima #CCFF00) */}
+                  <button
+                    type="button"
+                    onClick={() => setRecibiendoEntregas(!recibiendoEntregas)}
+                    className={`w-full h-13 rounded-2xl px-4 flex items-center justify-between transition-all cursor-pointer border ${recibiendoEntregas
+                        ? 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border-[#0A1525]/10 shadow-sm'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-300'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${recibiendoEntregas ? 'bg-emerald-600 animate-ping' : 'bg-slate-400'
+                          }`}
+                      />
+                      <span className="text-xs font-black uppercase tracking-wider">
+                        {recibiendoEntregas ? 'Recibiendo Entregas' : 'Pausado / No disponible'}
+                      </span>
+                    </div>
+
+                    {/* Switch visual tipo iOS */}
+                    <div
+                      className={`w-12 h-6.5 rounded-full transition-colors relative p-0.5 shadow-inner ${recibiendoEntregas ? 'bg-[#0A1525]' : 'bg-slate-300'
+                        }`}
+                    >
+                      <div
+                        className={`w-5.5 h-5.5 rounded-full bg-white shadow-md transition-transform duration-200 ${recibiendoEntregas ? 'translate-x-5.5' : 'translate-x-0'
+                          }`}
+                      />
+                    </div>
+                  </button>
               </div>
+            </header>
 
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-base font-black text-[#0A1525] tracking-tight">
-                    Luis Pérez
-                  </h1>
-                  <span className="w-4 h-4 rounded-full bg-[#16A34A] flex items-center justify-center text-white shadow-2xs">
-                    <Check className="w-2.5 h-2.5 stroke-[3.5]" />
-                  </span>
-                </div>
-                <p className="text-xs text-[#475569] font-medium flex items-center gap-1">
-                  <Bike className="w-3.5 h-3.5 text-[#1E56B0]" />
-                  <span>Runner • Moto Bera SBR</span>
-                </p>
-              </div>
-            </div>
+                {/* ======================================================== */}
+                {/* 2. FEED DE ENTREGAS: Tarjetas de Ruta con 2 Bloques      */}
+                {/* ======================================================== */}
+                <main className="relative z-10 max-w-md mx-auto px-4 pt-4 space-y-4">
 
-            {/* Recuadro Saldo Hoy: $12.50 */}
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-3.5 py-2 text-right shadow-2xs">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
-                Saldo hoy:
-              </span>
-              <p className="text-base font-black text-[#1E56B0] font-mono tracking-tight leading-none pt-0.5">
-                ${saldoHoy.toFixed(2)}{' '}
-                <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
-              </p>
-            </div>
-          </div>
+                  {/* Barra de Título */}
+                  <div className="flex items-center justify-between px-1">
+                    <h2 className="text-xs font-black uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-[#1E56B0]" />
+                      <span>Rutas Asignadas ({ordenes.length})</span>
+                    </h2>
 
-          {/* Switch Grande tipo iOS de 'Recibiendo Entregas' (Verde Lima #CCFF00) */}
-          <button
-            type="button"
-            onClick={() => setRecibiendoEntregas(!recibiendoEntregas)}
-            className={`w-full h-13 rounded-2xl px-4 flex items-center justify-between transition-all cursor-pointer border ${
-              recibiendoEntregas
-                ? 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border-[#0A1525]/10 shadow-sm'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-300'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${
-                  recibiendoEntregas ? 'bg-emerald-600 animate-ping' : 'bg-slate-400'
-                }`}
-              />
-              <span className="text-xs font-black uppercase tracking-wider">
-                {recibiendoEntregas ? 'Recibiendo Entregas' : 'Pausado / No disponible'}
-              </span>
-            </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href="/admin/despacho"
+                        className="text-[11px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
+                      >
+                        <span>Kanban</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={cargarOrdenesRunner}
+                        className="text-slate-400 hover:text-[#0A1525] p-1 rounded-lg"
+                        title="Refrescar órdenes"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${cargando ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
 
-            {/* Switch visual tipo iOS */}
-            <div
-              className={`w-12 h-6.5 rounded-full transition-colors relative p-0.5 shadow-inner ${
-                recibiendoEntregas ? 'bg-[#0A1525]' : 'bg-slate-300'
-              }`}
-            >
-              <div
-                className={`w-5.5 h-5.5 rounded-full bg-white shadow-md transition-transform duration-200 ${
-                  recibiendoEntregas ? 'translate-x-5.5' : 'translate-x-0'
-                }`}
-              />
-            </div>
-          </button>
-        </div>
-      </header>
-
-      {/* ======================================================== */}
-      {/* 2. FEED DE ENTREGAS: Tarjetas de Ruta con 2 Bloques      */}
-      {/* ======================================================== */}
-      <main className="relative z-10 max-w-md mx-auto px-4 pt-4 space-y-4">
-        
-        {/* Barra de Título */}
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-black uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-            <Package className="w-3.5 h-3.5 text-[#1E56B0]" />
-            <span>Rutas Asignadas ({ordenes.length})</span>
-          </h2>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin/despacho"
-              className="text-[11px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
-            >
-              <span>Kanban</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </Link>
-            <button
-              type="button"
-              onClick={cargarOrdenesRunner}
-              className="text-slate-400 hover:text-[#0A1525] p-1 rounded-lg"
-              title="Refrescar órdenes"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${cargando ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-
-        {/* Estado Vacío */}
-        {ordenes.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-dashed border-[#CBD5E1] p-8 text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-              <Bike className="w-6 h-6" />
-            </div>
+                      {/* Estado Vacío */}
+                      {ordenes.length === 0 ? (
+                        <div className="bg-white rounded-3xl border border-dashed border-[#CBD5E1] p-8 text-center space-y-4">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                            <Bike className="w-6 h-6" />
+                          </div>
             <div className="space-y-1">
               <h3 className="text-sm font-black text-[#0A1525]">
                 ¡Sin entregas pendientes!
@@ -373,32 +368,32 @@ export default function RunnerPortalPage() {
               + Simular Despacho Inmediato
             </button>
           </div>
-        ) : (
-          <div className="space-y-5">
-            <AnimatePresence>
-              {ordenes.map((orden) => {
-                const subEstado = getSubEstado(orden.id);
+                          ) : (
+                          <div className="space-y-5">
+                            <AnimatePresence>
+                              {ordenes.map((orden) => {
+                                const subEstado = getSubEstado(orden.id);
 
-                return (
-                  <motion.div
-                    key={orden.id}
-                    layout
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -30, opacity: 0, scale: 0.94 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="overflow-hidden rounded-3xl shadow-md border border-[#E2E8F0] flex flex-col"
-                  >
-                    
-                    {/* ======================================================== */}
-                    {/* BLOQUE SUPERIOR (Recoger): Fondo Blanco, Borde Superior   */}
-                    {/* ======================================================== */}
-                    <div className="bg-white rounded-t-3xl p-4 sm:p-5 relative">
-                      <div className="flex items-center justify-between pb-1.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                          RECOGER EN:
-                        </span>
-                        {subEstado !== 'POR_RETIRAR' && (
+                                          return (
+                                          <motion.div
+                                            key={orden.id}
+                                            layout
+                                            initial={{ y: 50, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: -30, opacity: 0, scale: 0.94 }}
+                                            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                            className="overflow-hidden rounded-3xl shadow-md border border-[#E2E8F0] flex flex-col"
+                                          >
+
+                                            {/* ======================================================== */}
+                                            {/* BLOQUE SUPERIOR (Recoger): Fondo Blanco, Borde Superior   */}
+                                            {/* ======================================================== */}
+                                            <div className="bg-white rounded-t-3xl p-4 sm:p-5 relative">
+                                              <div className="flex items-center justify-between pb-1.5">
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                  RECOGER EN:
+                                                </span>
+                                                {subEstado !== 'POR_RETIRAR' && (
                           <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                             <Check className="w-2.5 h-2.5 stroke-[3]" />
                             Retirado
@@ -432,182 +427,182 @@ export default function RunnerPortalPage() {
                       </div>
                     </div>
 
-                    {/* ======================================================== */}
-                    {/* ICONO CONECTOR EN EL MEDIO (Flecha hacia abajo animada)  */}
-                    {/* ======================================================== */}
-                    <div className="relative flex items-center justify-center -my-3.5 z-20">
-                      <div className="absolute inset-x-0 h-px border-t border-dashed border-slate-300 pointer-events-none" />
-                      <motion.div
-                        animate={{ y: [0, 4, 0] }}
-                        transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-                        className="w-8 h-8 rounded-full bg-white border-2 border-[#1E56B0] shadow-md flex items-center justify-center text-[#1E56B0] shrink-0"
-                      >
-                        <ArrowDown className="w-4 h-4 stroke-[2.8]" />
-                      </motion.div>
-                    </div>
+                                                {/* ======================================================== */}
+                                                {/* ICONO CONECTOR EN EL MEDIO (Flecha hacia abajo animada)  */}
+                                                {/* ======================================================== */}
+                                                <div className="relative flex items-center justify-center -my-3.5 z-20">
+                                                  <div className="absolute inset-x-0 h-px border-t border-dashed border-slate-300 pointer-events-none" />
+                                                  <motion.div
+                                                    animate={{ y: [0, 4, 0] }}
+                                                    transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                                                    className="w-8 h-8 rounded-full bg-white border-2 border-[#1E56B0] shadow-md flex items-center justify-center text-[#1E56B0] shrink-0"
+                                                  >
+                                                    <ArrowDown className="w-4 h-4 stroke-[2.8]" />
+                                                  </motion.div>
+                                                </div>
 
-                    {/* ======================================================== */}
-                    {/* BLOQUE INFERIOR (Entregar): Fondo #F1F5F9 (Gris Sutil)   */}
-                    {/* ======================================================== */}
-                    <div className="bg-[#F1F5F9] rounded-b-3xl p-4 sm:p-5 relative space-y-3 pt-5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                          ENTREGAR A:
-                        </span>
-                        <span className="text-[10px] font-mono font-bold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                          Orden #{orden.id.slice(0, 6).toUpperCase()}
-                        </span>
-                      </div>
+                                                  {/* ======================================================== */}
+                                                  {/* BLOQUE INFERIOR (Entregar): Fondo #F1F5F9 (Gris Sutil)   */}
+                                                  {/* ======================================================== */}
+                                                  <div className="bg-[#F1F5F9] rounded-b-3xl p-4 sm:p-5 relative space-y-3 pt-5">
+                                                    <div className="flex items-center justify-between">
+                                                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                                        ENTREGAR A:
+                                                      </span>
+                                                      <span className="text-[10px] font-mono font-bold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                                        Orden #{orden.id.slice(0, 6).toUpperCase()}
+                                                      </span>
+                                                    </div>
 
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h4 className="text-base font-black text-[#0A1525] truncate">
-                            {orden.mecanico_nombre || 'Carlos Mendoza #TTM-0842'}
-                          </h4>
-                          <p className="text-xs font-semibold text-slate-600 pt-0.5">
-                            {orden.vehiculo_modelo} • {orden.sector}
-                          </p>
+                                                      <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                          <h4 className="text-base font-black text-[#0A1525] truncate">
+                                                            {orden.mecanico_nombre || 'Carlos Mendoza #TTM-0842'}
+                                                          </h4>
+                                                          <p className="text-xs font-semibold text-slate-600 pt-0.5">
+                                                            {orden.vehiculo_modelo} • {orden.sector}
+                                                          </p>
 
-                          {/* Paso 2: Llegada estimada: 12 min */}
-                          {subEstado === 'EN_RUTA' && (
-                            <p className="text-xs font-bold text-amber-700 pt-1.5 flex items-center gap-1.5 animate-pulse">
-                              <Clock className="w-3.5 h-3.5 text-amber-600" />
-                              <span>Llegada estimada: 12 min</span>
-                            </p>
-                          )}
-                        </div>
+                                                        {/* Paso 2: Llegada estimada: 12 min */}
+                                                        {subEstado === 'EN_RUTA' && (
+                                                          <p className="text-xs font-bold text-amber-700 pt-1.5 flex items-center gap-1.5 animate-pulse">
+                                                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                                            <span>Llegada estimada: 12 min</span>
+                                                          </p>
+                                                        )}
+                                                      </div>
 
-                        {/* Botón de llamada rápida al Mecánico */}
-                        <a
-                          href={`tel:${orden.mecanico_telefono || '+584121234567'}`}
-                          className="h-10 px-3.5 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-xs shrink-0 active:scale-95 cursor-pointer"
-                          title="Llamar al Mecánico"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                          <span>Llamar</span>
-                        </a>
-                      </div>
+                                                      {/* Botón de llamada rápida al Mecánico */}
+                                                      <a
+                                                        href={`tel:${orden.mecanico_telefono || '+584121234567'}`}
+                                                        className="h-10 px-3.5 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-xs shrink-0 active:scale-95 cursor-pointer"
+                                                        title="Llamar al Mecánico"
+                                                      >
+                                                        <Phone className="w-3.5 h-3.5" />
+                                                        <span>Llamar</span>
+                                                      </a>
+                                                    </div>
 
-                      {/* ======================================================== */}
-                      {/* 3. FLUJO DE ACCIÓN DE 3 PASOS (Un solo botón gigante)   */}
-                      {/* ======================================================== */}
-                      <div className="pt-2">
-                        <AnimatePresence mode="wait">
-                          {subEstado === 'POR_RETIRAR' && (
-                            /* Paso 1: 'Marcar como Retirado' (Fondo Azul Cobalto #1E56B0) */
-                            <motion.button
-                              key="btn_paso_1"
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              whileTap={{ scale: 0.97 }}
-                              type="button"
-                              onClick={() => {
-                                setSubEstadoPorOrden((prev) => ({
-                                  ...prev,
-                                  [orden.id]: 'EN_RUTA'
-                                }));
-                                console.log('[BITÁCORA INMUTABLE] Runner marcó como retirado los repuestos en mayorista', {
-                                  orden_id: orden.id,
-                                  runner: 'Luis Pérez',
-                                  timestamp: new Date().toISOString()
-                                });
-                              }}
-                              className="w-full h-14 rounded-2xl bg-[#1E56B0] hover:bg-[#15448c] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2 shadow-md active:scale-97 cursor-pointer transition-colors"
-                            >
-                              <Package className="w-5 h-5 text-[#CCFF00]" />
-                              <span>Marcar como Retirado</span>
-                            </motion.button>
-                          )}
+                                                    {/* ======================================================== */}
+                                                    {/* 3. FLUJO DE ACCIÓN DE 3 PASOS (Un solo botón gigante)   */}
+                                                    {/* ======================================================== */}
+                                                      <div className="pt-2">
+                                                        <AnimatePresence mode="wait">
+                                                            { subEstado === 'POR_RETIRAR' && (
+                                                              /* Paso 1: 'Marcar como Retirado' (Fondo Azul Cobalto #1E56B0) */
+                                                              <motion.button
+                                                                key="btn_paso_1"
+                                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                                whileTap={{ scale: 0.97 }}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                  setSubEstadoPorOrden((prev) => ({
+                                                                    ...prev,
+                                                                    [orden.id]: 'EN_RUTA'
+                                                                  }));
+                                                                  console.log('[BITÁCORA INMUTABLE] Runner marcó como retirado los repuestos en mayorista', {
+                                                                    orden_id: orden.id,
+                                                                    runner: 'Luis Pérez',
+                                                                    timestamp: new Date().toISOString()
+                                                                  });
+                                                                }}
+                                                                className="w-full h-14 rounded-2xl bg-[#1E56B0] hover:bg-[#15448c] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2 shadow-md active:scale-97 cursor-pointer transition-colors"
+                                                              >
+                                                                <Package className="w-5 h-5 text-[#CCFF00]" />
+                                                                <span>Marcar como Retirado</span>
+                                                              </motion.button>
+                                                            )}
 
-                          {subEstado === 'EN_RUTA' && (
-                            /* Paso 2: 'Iniciar Ruta al Mecánico' (Fondo Naranja #F59E0B) */
-                            <motion.button
-                              key="btn_paso_2"
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              whileTap={{ scale: 0.97 }}
-                              type="button"
-                              onClick={() => {
-                                setSubEstadoPorOrden((prev) => ({
-                                  ...prev,
-                                  [orden.id]: 'LLEGADO'
-                                }));
-                                console.log('[BITÁCORA INMUTABLE] Runner inició ruta GPS hacia el mecánico', {
-                                  orden_id: orden.id,
-                                  runner: 'Luis Pérez',
-                                  timestamp: new Date().toISOString()
-                                });
-                              }}
-                              className="w-full h-14 rounded-2xl bg-[#F59E0B] hover:bg-[#d97706] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2 shadow-md active:scale-97 cursor-pointer transition-colors"
-                            >
-                              <Bike className="w-5 h-5 text-white" />
-                              <span>Iniciar Ruta al Mecánico</span>
-                            </motion.button>
-                          )}
+                                                            { subEstado === 'EN_RUTA' && (
+                                                              /* Paso 2: 'Iniciar Ruta al Mecánico' (Fondo Naranja #F59E0B) */
+                                                              <motion.button
+                                                                key="btn_paso_2"
+                                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                                whileTap={{ scale: 0.97 }}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                  setSubEstadoPorOrden((prev) => ({
+                                                                    ...prev,
+                                                                    [orden.id]: 'LLEGADO'
+                                                                  }));
+                                                                  console.log('[BITÁCORA INMUTABLE] Runner inició ruta GPS hacia el mecánico', {
+                                                                    orden_id: orden.id,
+                                                                    runner: 'Luis Pérez',
+                                                                    timestamp: new Date().toISOString()
+                                                                  });
+                                                                }}
+                                                                className="w-full h-14 rounded-2xl bg-[#F59E0B] hover:bg-[#d97706] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2 shadow-md active:scale-97 cursor-pointer transition-colors"
+                                                              >
+                                                                <Bike className="w-5 h-5 text-white" />
+                                                                <span>Iniciar Ruta al Mecánico</span>
+                                                              </motion.button>
+                                                            )}
 
-                          {subEstado === 'LLEGADO' && (
-                            /* Paso 3: 'Entregado al Mecánico' (Fondo Verde Lima #CCFF00, texto oscuro) */
-                            <motion.button
-                              key="btn_paso_3"
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              whileTap={{ scale: 0.97 }}
-                              type="button"
-                              onClick={() => entregarAlMecanico(orden)}
-                              className="w-full h-14 rounded-2xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-base tracking-tight flex items-center justify-center gap-2.5 shadow-lg active:scale-97 cursor-pointer border border-[#0A1525]/10 transition-colors"
-                            >
-                              <CheckCircle2 className="w-6 h-6 text-[#0A1525]" />
-                              <span>Entregado al Mecánico</span>
-                            </motion.button>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                                                            { subEstado === 'LLEGADO' && (
+                                                              /* Paso 3: 'Entregado al Mecánico' (Fondo Verde Lima #CCFF00, texto oscuro) */
+                                                              <motion.button
+                                                                key="btn_paso_3"
+                                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                                whileTap={{ scale: 0.97 }}
+                                                                type="button"
+                                                                onClick={() => entregarAlMecanico(orden)}
+                                                                className="w-full h-14 rounded-2xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-base tracking-tight flex items-center justify-center gap-2.5 shadow-lg active:scale-97 cursor-pointer border border-[#0A1525]/10 transition-colors"
+                                                              >
+                                                                <CheckCircle2 className="w-6 h-6 text-[#0A1525]" />
+                                                                <span>Entregado al Mecánico</span>
+                                                              </motion.button>
+                                                            )}
+                                                        </AnimatePresence>
+                                                      </div>
 
-                    </div>
+                                                          </div>
 
-                  </motion.div>
-                );
+                                                </motion.div>
+                                              );
               })}
-            </AnimatePresence>
-          </div>
+                                            </AnimatePresence>
+                                          </div>
         )}
 
-      </main>
+                                      </main>
 
-      {/* ======================================================== */}
-      {/* 4. TOAST ANIMADO DE ÉXITO                                */}
-      {/* ======================================================== */}
-      <AnimatePresence>
-        {toastExito && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="fixed bottom-6 inset-x-4 max-w-md mx-auto z-50 bg-[#0A1525] text-white p-4 rounded-2xl shadow-2xl border border-slate-700/60 flex items-center gap-3.5"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center shrink-0 shadow-xs font-black">
-              <Sparkles className="w-5 h-5 text-[#0A1525]" />
-            </div>
-            <div className="space-y-0.5 min-w-0 flex-1">
-              <p className="text-xs font-black text-white">{toastExito}</p>
-              <p className="text-[10px] text-emerald-400 font-bold">
-                ✓ Estado en Supabase actualizado a EN_EJECUCION en tiempo real
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setToastExito(null)}
-              className="text-slate-400 hover:text-white p-1 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+                                      {/* ======================================================== */}
+                                      {/* 4. TOAST ANIMADO DE ÉXITO                                */}
+                                      {/* ======================================================== */}
+                                      <AnimatePresence>
+                                        {toastExito && (
+                                          <motion.div
+                                            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                                            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                                            className="fixed bottom-6 inset-x-4 max-w-md mx-auto z-50 bg-[#0A1525] text-white p-4 rounded-2xl shadow-2xl border border-slate-700/60 flex items-center gap-3.5"
+                                          >
+                                            <div className="w-10 h-10 rounded-xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center shrink-0 shadow-xs font-black">
+                                              <Sparkles className="w-5 h-5 text-[#0A1525]" />
+                                            </div>
+                                            <div className="space-y-0.5 min-w-0 flex-1">
+                                              <p className="text-xs font-black text-white">{toastExito}</p>
+                                              <p className="text-[10px] text-emerald-400 font-bold">
+                                                ✓ Estado en Supabase actualizado a EN_EJECUCION en tiempo real
+                                              </p>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => setToastExito(null)}
+                                              className="text-slate-400 hover:text-white p-1 cursor-pointer"
+                                            >
+                                              <X className="w-4 h-4" />
+                                            </button>
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                    );
 }

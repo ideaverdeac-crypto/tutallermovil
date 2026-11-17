@@ -37,6 +37,7 @@ import {
   Search,
   Trash2,
   Plus,
+  Minus,
   Package
 } from 'lucide-react';
 
@@ -742,6 +743,20 @@ export default function TableroDespachoPage() {
     setRepuestosSeleccionados((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const handleModificarCantidad = (id: string, delta: number) => {
+    setRepuestosSeleccionados((prev) =>
+      prev
+        .map((item) => {
+          if (item.id === id) {
+            const nuevaCantidad = item.cantidad + delta;
+            return nuevaCantidad > 0 ? { ...item, cantidad: nuevaCantidad } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as RepuestoSeleccionado[]
+    );
+  };
+
   // 4. Lógica Financiera del Cotizador ($40 regla de negocio P0)
   const totalRepuestosCatalogo = repuestosSeleccionados.reduce(
     (acc, r) => acc + r.precio_usd * r.cantidad,
@@ -1400,33 +1415,57 @@ export default function TableroDespachoPage() {
                         {repuestosSeleccionados.map((item) => (
                           <div
                             key={item.id}
-                            className="p-2 px-2.5 rounded-xl bg-white border border-[#E2E8F0] flex items-center justify-between gap-2 shadow-2xs"
+                            className="p-2 px-2.5 rounded-xl bg-white border border-[#E2E8F0] flex items-center justify-between gap-2 shadow-2xs hover:border-slate-300 transition-all"
                           >
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
                               <img
                                 src={item.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=100&q=80'}
                                 alt={item.nombre_repuesto}
-                                className="w-7 h-7 rounded-md object-cover border border-slate-200 shrink-0"
+                                className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
                               />
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-[#0A1525] truncate">
                                   {item.nombre_repuesto}
                                 </p>
                                 <p className="text-[10px] text-slate-400 font-semibold truncate">
-                                  {item.marca} • Cant: {item.cantidad}
+                                  {item.marca} • ${item.precio_usd.toFixed(2)} c/u
                                 </p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-mono font-black text-xs text-[#0A1525]">
+                            <div className="flex items-center gap-2.5 shrink-0">
+                              {/* Selector de Cantidad */}
+                              <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleModificarCantidad(item.id, -1)}
+                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-500 hover:text-[#0A1525] hover:bg-white active:scale-90 transition-all cursor-pointer"
+                                  title={item.cantidad > 1 ? "Reducir cantidad" : "Eliminar repuesto"}
+                                >
+                                  <Minus className="w-2.5 h-2.5" />
+                                </button>
+                                <span className="w-6 text-center text-xs font-mono font-black text-slate-800">
+                                  {item.cantidad}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleModificarCantidad(item.id, 1)}
+                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-500 hover:text-[#0A1525] hover:bg-[#CCFF00] active:scale-90 transition-all cursor-pointer"
+                                  title="Aumentar cantidad"
+                                >
+                                  <Plus className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+
+                              <span className="font-mono font-black text-xs text-[#0A1525] min-w-[54px] text-right">
                                 ${(item.precio_usd * item.cantidad).toFixed(2)}
                               </span>
+
                               <button
                                 type="button"
                                 onClick={() => handleEliminarRepuesto(item.id)}
                                 className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                                title="Eliminar repuesto"
+                                title="Eliminar del presupuesto"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
