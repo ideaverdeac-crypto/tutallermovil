@@ -91,15 +91,14 @@ export default function Home() {
       {/* 2. Header (Navegación) */}
       <header className="bg-white border-b border-[#CBD5E1] sticky top-0 z-40 backdrop-blur-md bg-white/95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
-          {/* Logo TTM */}
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl sm:text-3xl font-black tracking-tighter text-[#0A1525]">
-              TTM
-            </span>
-            <span className="hidden sm:inline-block text-xs font-bold uppercase tracking-wider bg-[#F8FAFC] border border-[#CBD5E1] px-2.5 py-0.5 rounded text-[#1E56B0]">
-              TuTallerMóvil
-            </span>
-          </div>
+          {/* Logo Oficial TTM */}
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <img
+              src="/icon.svg"
+              alt="TuTallerMóvil"
+              className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
+            />
+          </Link>
 
           {/* Acceso Clientes ('Mi Garaje') y Staff / Aliados */}
           <div className="flex items-center gap-2 sm:gap-3">

@@ -1756,7 +1756,11 @@ export default function TableroDespachoPage() {
             </Link>
 
             <div className="flex items-center gap-2">
-              <span className="text-xl font-black tracking-tight text-[#0A1525]">TTM</span>
+              <img
+                src="/icon.svg"
+                alt="TTM"
+                className="h-7 sm:h-8 w-auto object-contain"
+              />
               <span className="text-[11px] font-black uppercase tracking-wider bg-[#0A1525] text-[#CCFF00] px-2.5 py-0.5 rounded-md">
                 Torre de Despacho
               </span>
