@@ -27,9 +27,11 @@ import {
   RefreshCw,
   Inbox,
   LocateFixed,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
+import OnboardingModal from '@/components/ui/onboarding-modal';
 
 type EstadoMecanico = 'DISPONIBLE' | 'EN_SERVICIO' | 'INACTIVO';
 
@@ -72,6 +74,7 @@ export default function PortalAliadosPage() {
   const [cargando, setCargando] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [aceptandoId, setAceptandoId] = useState<string | null>(null);
+  const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
 
   // 1. Geolocalización del mecánico
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -300,6 +303,16 @@ export default function PortalAliadosPage() {
             >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#CCFF00] ring-2 ring-white"></span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMostrarTutorial(true)}
+              className="p-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E56B0] transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+              title="Ver tutorial de bienvenida"
+            >
+              <Sparkles className="w-4 h-4 text-[#1E56B0]" />
+              <span className="hidden sm:inline">Tutorial</span>
             </button>
 
             <button
@@ -808,6 +821,13 @@ export default function PortalAliadosPage() {
 
         </div>
       </nav>
+
+      {/* Onboarding Modal de Bienvenida para Mecánicos */}
+      <OnboardingModal
+        rol="MECANICO"
+        isOpen={mostrarTutorial ? true : undefined}
+        onClose={() => setMostrarTutorial(false)}
+      />
 
     </div>
   );

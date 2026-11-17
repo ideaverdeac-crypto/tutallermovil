@@ -25,6 +25,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
+import OnboardingModal from '@/components/ui/onboarding-modal';
 
 interface OrdenRunner {
   id: string;
@@ -59,6 +60,7 @@ export default function RunnerPortalPage() {
 
   // Toast de Éxito al Entregar
   const [toastExito, setToastExito] = useState<string | null>(null);
+  const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
 
   // Cargar órdenes en REPUESTOS_EN_RUTA de Supabase
   const cargarOrdenesRunner = async () => {
@@ -283,6 +285,17 @@ export default function RunnerPortalPage() {
                           <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
                         </p>
                       </div>
+
+                      {/* Botón Tutorial */}
+                      <button
+                        type="button"
+                        onClick={() => setMostrarTutorial(true)}
+                        className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E56B0] transition-colors shadow-2xs cursor-pointer shrink-0 flex items-center gap-1.5 text-xs font-bold"
+                        title="Ver tutorial de bienvenida"
+                      >
+                        <Sparkles className="w-4 h-4 text-[#1E56B0]" />
+                        <span className="hidden sm:inline">Tutorial</span>
+                      </button>
 
                       {/* Botón Cerrar Sesión */}
                       <button
@@ -617,6 +630,13 @@ export default function RunnerPortalPage() {
                                           </motion.div>
                                         )}
                                       </AnimatePresence>
+
+                                      {/* Onboarding Modal de Bienvenida para Runners */}
+                                      <OnboardingModal
+                                        rol="RUNNER"
+                                        isOpen={mostrarTutorial ? true : undefined}
+                                        onClose={() => setMostrarTutorial(false)}
+                                      />
                                     </div>
                                     );
 }

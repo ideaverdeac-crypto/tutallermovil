@@ -44,6 +44,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
+import OnboardingModal from '@/components/ui/onboarding-modal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -415,6 +416,7 @@ export default function TableroDespachoPage() {
   const [modalAsignarOpen, setModalAsignarOpen] = useState(false);
   const [modalMecanicoDetalleOpen, setModalMecanicoDetalleOpen] = useState(false);
   const [ordenParaAsignar, setOrdenParaAsignar] = useState<OrdenKanban | null>(null);
+  const [mostrarTutorial, setMostrarTutorial] = useState(false);
 
   // Estados del Centro de Despacho Táctico
   const [sheetRadarMecanicosOpen, setSheetRadarMecanicosOpen] = useState(false);
@@ -1166,6 +1168,16 @@ export default function TableroDespachoPage() {
 
             <button
               type="button"
+              onClick={() => setMostrarTutorial(true)}
+              className="h-10 px-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              title="Ver tutorial de bienvenida"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+              <span className="hidden sm:inline">Tutorial</span>
+            </button>
+
+            <button
+              type="button"
               onClick={cerrarSesion}
               className="h-10 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
               title="Cerrar sesión"
@@ -1614,6 +1626,10 @@ export default function TableroDespachoPage() {
                                 <img
                                   src={rep.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=150&q=80'}
                                   alt={rep.nombre_repuesto}
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=150&q=80';
+                                  }}
                                   className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0"
                                 />
                                 <div className="min-w-0">
@@ -1676,6 +1692,10 @@ export default function TableroDespachoPage() {
                               <img
                                 src={item.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=100&q=80'}
                                 alt={item.nombre_repuesto}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src =
+                                    'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=100&q=80';
+                                }}
                                 className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
                               />
                               <div className="min-w-0 flex-1">
@@ -2442,6 +2462,13 @@ export default function TableroDespachoPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Onboarding Modal de Bienvenida para Operadora */}
+      <OnboardingModal
+        rol="OPERADORA"
+        isOpen={mostrarTutorial ? true : undefined}
+        onClose={() => setMostrarTutorial(false)}
+      />
 
     </div>
   );

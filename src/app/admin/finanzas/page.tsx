@@ -34,6 +34,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
+import OnboardingModal from '@/components/ui/onboarding-modal';
 
 interface LiquidacionMecanico {
   id: string;
@@ -172,6 +173,7 @@ export default function FinanzasAdminPage() {
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
   const [toastNotificacion, setToastNotificacion] = useState<string | null>(null);
   const [diaHover, setDiaHover] = useState<typeof DIAS_SEMANA[0] | null>(null);
+  const [mostrarTutorial, setMostrarTutorial] = useState(false);
 
   // Manejador para Liberar Pago al Mecánico
   const handleLiberarPago = (id: string, mecanicoNombre: string, montoNeto: number) => {
@@ -278,6 +280,16 @@ export default function FinanzasAdminPage() {
               >
                 <Download className="w-3.5 h-3.5 text-[#CCFF00]" />
                 <span className="hidden lg:inline">Descargar Balance</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMostrarTutorial(true)}
+                className="h-10 px-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Ver tutorial de bienvenida"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+                <span className="hidden sm:inline">Tutorial</span>
               </button>
 
               <button
@@ -838,6 +850,13 @@ export default function FinanzasAdminPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Onboarding Modal de Bienvenida para Administrador */}
+      <OnboardingModal
+        rol="ADMIN"
+        isOpen={mostrarTutorial ? true : undefined}
+        onClose={() => setMostrarTutorial(false)}
+      />
 
     </div>
   );

@@ -30,6 +30,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
+import OnboardingModal from '@/components/ui/onboarding-modal';
 
 interface RepuestoItem {
   id?: string;
@@ -144,6 +145,7 @@ export default function PedidosProveedorPage() {
   const [pinIngresado, setPinIngresado] = useState<string>('');
   const [errorPIN, setErrorPIN] = useState<string | null>(null);
   const [validandoPIN, setValidandoPIN] = useState<boolean>(false);
+  const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
 
   // Carga inicial y obtención de pedidos desde Supabase
   const cargarPedidos = async (esRefrescoManual = false) => {
@@ -432,6 +434,16 @@ export default function PedidosProveedorPage() {
                 <Bike className="w-4 h-4 text-[#CCFF00]" />
                 <span className="hidden sm:inline">Centro de Despacho</span>
               </Link>
+
+              <button
+                type="button"
+                onClick={() => setMostrarTutorial(true)}
+                className="h-10 px-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Ver tutorial de bienvenida"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+                <span className="hidden sm:inline">Tutorial</span>
+              </button>
 
               <button
                 type="button"
@@ -982,6 +994,13 @@ export default function PedidosProveedorPage() {
           </motion.aside>
         )}
       </AnimatePresence>
+
+      {/* Onboarding Modal de Bienvenida para Casas de Repuestos */}
+      <OnboardingModal
+        rol="REPUESTOS"
+        isOpen={mostrarTutorial ? true : undefined}
+        onClose={() => setMostrarTutorial(false)}
+      />
 
     </div>
   );

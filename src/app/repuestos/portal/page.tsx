@@ -30,6 +30,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
+import OnboardingModal from '@/components/ui/onboarding-modal';
 
 interface Repuesto {
   id: string;
@@ -80,6 +81,7 @@ export default function PortalRepuestosPage() {
   const [guardando, setGuardando] = useState<boolean>(false);
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
   const [toastExito, setToastExito] = useState<string | null>(null);
+  const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
 
   // Formulario Bento
   const [formNombre, setFormNombre] = useState<string>('');
@@ -474,6 +476,16 @@ export default function PortalRepuestosPage() {
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Publicar Repuesto</span>
             </motion.button>
+
+            <button
+              type="button"
+              onClick={() => setMostrarTutorial(true)}
+              className="h-10 px-3.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              title="Ver tutorial de bienvenida"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+              <span className="hidden sm:inline">Tutorial</span>
+            </button>
 
             <button
               type="button"
@@ -1203,6 +1215,13 @@ export default function PortalRepuestosPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Onboarding Modal de Bienvenida para Portal de Repuestos */}
+      <OnboardingModal
+        rol="REPUESTOS"
+        isOpen={mostrarTutorial ? true : undefined}
+        onClose={() => setMostrarTutorial(false)}
+      />
     </div>
   );
 }
