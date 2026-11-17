@@ -1435,15 +1435,18 @@ export default function TableroDespachoPage() {
                               </div>
                             )}
 
-                            {/* En EN_INSPECCION: Badge de diagnóstico en curso + Botón de Cotizar */}
+                            {/* En EN_INSPECCION: Avatar del Mecánico + Icono Redondo de Diagnóstico en curso + Botón de Cotizar */}
                             {columna.id === 'EN_INSPECCION' && (
                               <div className="space-y-2 ml-5">
-                                <div className="flex items-center justify-between">
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-[#1E56B0] border border-blue-200 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse" />
-                                    Diagnóstico en curso
-                                  </span>
+                                <div className="flex items-center justify-between gap-2">
                                   <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
+                                  <div
+                                    className="w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#1E56B0] flex items-center justify-center shrink-0 relative shadow-2xs transition-colors cursor-help"
+                                    title="Diagnóstico en curso • Mecánico en sitio realizando inspección"
+                                  >
+                                    <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1E56B0] animate-pulse ring-2 ring-white" />
+                                  </div>
                                 </div>
                                 <button
                                   type="button"
