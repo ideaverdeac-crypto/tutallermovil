@@ -22,7 +22,8 @@ import {
   RotateCcw,
   Clock,
   Car,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -110,6 +111,8 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   const KILOMETRAJE_ANTERIOR = 48500;
   const [nuevoKm, setNuevoKm] = useState<string>('');
   const [fotoOdometro, setFotoOdometro] = useState<string | null>(null);
+  const [subiendoFoto, setSubiendoFoto] = useState<boolean>(false);
+  const [errorSubida, setErrorSubida] = useState<string | null>(null);
   const [horaFoto, setHoraFoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,6 +144,10 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           if (data.cliente_nombre) setClienteNombre(data.cliente_nombre);
           if (data.cliente_telefono) setClienteTelefono(data.cliente_telefono);
           if (data.falla_reportada) setFallaReportada(data.falla_reportada);
+          if (data.foto_odometro_url) {
+            setFotoOdometro(data.foto_odometro_url);
+            setHoraFoto('Guardado');
+          }
         }
       } catch (err) {
         // Fallback silencioso a datos estándar
@@ -168,18 +175,70 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   // Estado general de validación para Liquidación
   const puedeLiquidar = odometroValido && checklistCompleto;
 
-  // Manejo de foto del tablero
-  const handleCapturarFoto = (e?: React.ChangeEvent<HTMLInputElement>) => {
-    if (e && e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      setFotoOdometro(url);
-    } else {
-      // Simulación de foto instantánea si no se selecciona archivo
-      setFotoOdometro('https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80');
+  // Manejo de foto del tablero con subida real al Bucket 'evidencias' de Supabase
+  const handleCapturarFoto = async (e?: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e?.target?.files?.[0];
+    if (!file) return;
+
+    setSubiendoFoto(true);
+    setErrorSubida(null);
+
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const cleanId = id ? id.replace(/[^a-zA-Z0-9_-]/g, '_') : 'orden';
+      const fileName = `odometro_${cleanId}_${Date.now()}.${ext}`;
+
+      // 1. Subir al Bucket 'evidencias'
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('evidencias')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || 'Error al subir la imagen al bucket evidencias');
+      }
+
+      // 2. Obtener URL pública de la evidencia
+      const { data: publicUrlData } = supabase.storage
+        .from('evidencias')
+        .getPublicUrl(fileName);
+
+      const urlPublica = publicUrlData?.publicUrl;
+      if (!urlPublica) {
+        throw new Error('No se pudo generar la URL pública de la evidencia');
+      }
+
+      // 3. Actualizar la orden en la tabla 'ordenes'
+      const { error: dbError } = await supabase
+        .from('ordenes')
+        .update({
+          foto_odometro_url: urlPublica
+        })
+        .eq('id', id);
+
+      if (dbError) {
+        console.warn('Aviso guardando foto_odometro_url en Supabase:', dbError.message);
+      }
+
+      setFotoOdometro(urlPublica);
+      const ahora = new Date();
+      setHoraFoto(ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    } catch (err: any) {
+      console.error('Error al subir evidencia de odómetro:', err);
+      const mensaje = err?.message || 'Error al subir la evidencia. Por favor intenta de nuevo.';
+      setErrorSubida(mensaje);
+      setToastMensaje([mensaje]);
+      setTimeout(() => setToastMensaje(null), 5000);
+      setFotoOdometro(null); // Mantener candado bloqueado ante fallo
+    } finally {
+      setSubiendoFoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
-    const ahora = new Date();
-    setHoraFoto(ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   };
 
   const handleToggleChecklist = (itemId: string, valor: 'OK' | 'CAMBIO') => {
@@ -428,7 +487,17 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
               className="hidden"
             />
 
-            {!fotoOdometro ? (
+            {subiendoFoto ? (
+              <div className="w-full h-32 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-2 p-4 animate-pulse">
+                <Loader2 className="w-8 h-8 text-[#1E56B0] animate-spin" />
+                <span className="text-xs font-black text-[#0A1525]">
+                  Subiendo evidencia...
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Guardando en bucket evidencias de Supabase
+                </span>
+              </div>
+            ) : !fotoOdometro ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <motion.button
@@ -437,8 +506,6 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                     onClick={() => {
                       if (fileInputRef.current) {
                         fileInputRef.current.click();
-                      } else {
-                        handleCapturarFoto();
                       }
                     }}
                     className="w-full h-32 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50/50 hover:border-[#1E56B0] transition-all flex flex-col items-center justify-center gap-2 cursor-pointer active:bg-blue-100/50 group"
@@ -464,45 +531,47 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 </TooltipContent>
               </Tooltip>
             ) : (
+              /* Estado de Éxito: Recuadro verde lima (#CCFF00) con check y thumbnail */
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative w-full h-32 rounded-2xl overflow-hidden border-2 border-emerald-500 bg-emerald-50/30 flex items-center justify-between p-3"
+                className="relative w-full rounded-2xl overflow-hidden border-2 border-[#15803d] bg-[#CCFF00]/20 flex items-center justify-between p-3.5 shadow-sm"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <img
                     src={fotoOdometro}
                     alt="Evidencia Odómetro"
-                    className="w-24 h-24 rounded-xl object-cover border border-emerald-300 shrink-0 shadow-xs"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border-2 border-emerald-500 shrink-0 shadow-xs"
                   />
-                  <div className="space-y-1">
-                    <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                      <span className="w-3.5 h-3.5 rounded-full bg-[#16a34a] flex items-center justify-center shrink-0">
-                        <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                  <div className="space-y-1 min-w-0">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-black text-[#0A1525] bg-[#CCFF00] px-3 py-1 rounded-full border border-[#0A1525]/15 shadow-2xs">
+                      <span className="w-4 h-4 rounded-full bg-[#0A1525] flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 text-[#CCFF00] stroke-[3.5]" />
                       </span>
-                      Foto Capturada
+                      Foto del odómetro verificada
                     </span>
-                    <p className="text-xs font-bold text-[#0A1525]">
-                      Evidencia registrada
+                    <p className="text-xs font-bold text-[#0A1525] truncate">
+                      Evidencia en Supabase Storage
                     </p>
-                    <span className="text-[11px] text-slate-500 font-mono block">
+                    <span className="text-[11px] text-slate-600 font-mono block">
                       ⏱ {horaFoto || 'Hoy'}
                     </span>
                   </div>
                 </div>
 
-                {/* Botón de re-tomar */}
+                {/* Botón de re-tomar / cambiar */}
                 <button
                   type="button"
                   onClick={() => {
-                    setFotoOdometro(null);
-                    setHoraFoto(null);
+                    if (fileInputRef.current) {
+                      fileInputRef.current.click();
+                    }
                   }}
-                  className="h-10 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:text-[#0A1525] flex items-center gap-1 shadow-2xs shrink-0 cursor-pointer"
-                  title="Tomar otra foto"
+                  className="h-10 px-3 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer transition-colors active:scale-95 ml-2"
+                  title="Tomar otra foto de evidencia"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Cambiar</span>
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="hidden sm:inline">Cambiar</span>
                 </button>
               </motion.div>
             )}

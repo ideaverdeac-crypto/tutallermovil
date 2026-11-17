@@ -44,7 +44,10 @@ import {
   LogOut,
   HelpCircle,
   Inbox,
-  Ghost
+  Ghost,
+  Camera,
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
@@ -65,6 +68,7 @@ interface OrdenKanban {
   estado: string;
   mecanico_id?: string | null;
   created_at?: string;
+  foto_odometro_url?: string | null;
 }
 
 // Repuestos del catálogo oficial para integración en cotizador
@@ -424,6 +428,13 @@ export default function TableroDespachoPage() {
   const [modalMecanicoDetalleOpen, setModalMecanicoDetalleOpen] = useState(false);
   const [ordenParaAsignar, setOrdenParaAsignar] = useState<OrdenKanban | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState(false);
+  const [modalEvidenciaOpen, setModalEvidenciaOpen] = useState(false);
+  const [ordenParaEvidencia, setOrdenParaEvidencia] = useState<OrdenKanban | null>(null);
+
+  const handleAbrirEvidencia = (orden: OrdenKanban) => {
+    setOrdenParaEvidencia(orden);
+    setModalEvidenciaOpen(true);
+  };
 
   // Estados del Centro de Despacho Táctico
   const [sheetRadarMecanicosOpen, setSheetRadarMecanicosOpen] = useState(false);
@@ -1369,7 +1380,7 @@ export default function TableroDespachoPage() {
                             {/* Datos complementarios según columna */}
                             {columna.id === 'ASIGNADO' && (
                               <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs ml-5">
-                                <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
+                                <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
                               </div>
                             )}
 
@@ -1377,7 +1388,7 @@ export default function TableroDespachoPage() {
                             {columna.id === 'REPUESTOS_EN_RUTA' && (
                               <div className="space-y-1.5 ml-5">
                                 <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                  <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
+                                  <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
                                 </div>
 
                                 {runnersAsignados[orden.id] ? (
@@ -1419,7 +1430,7 @@ export default function TableroDespachoPage() {
                             {columna.id === 'EN_EJECUCION' && (
                               <div className="space-y-2 ml-5">
                                 <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                  <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
+                                  <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
                                 </div>
                                 <div className="pt-0.5">
                                   <Link
@@ -1467,10 +1478,28 @@ export default function TableroDespachoPage() {
                             <div className="pt-2 border-t border-slate-100 flex items-center justify-between pl-5">
                               <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
                                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span className="truncate max-w-[120px]">{orden.sector}</span>
+                                <span className="truncate max-w-[100px] sm:max-w-[120px]">{orden.sector}</span>
                               </div>
 
                               <div className="flex items-center gap-1.5">
+                                {/* Botón Ver Evidencia Odómetro */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAbrirEvidencia(orden);
+                                  }}
+                                  className={`h-7 px-2 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer shadow-2xs border active:scale-95 ${
+                                    orden.foto_odometro_url
+                                      ? 'bg-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/15'
+                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
+                                  }`}
+                                  title={orden.foto_odometro_url ? 'Foto de odómetro verificada (Clic para ver)' : 'Ver evidencia del odómetro'}
+                                >
+                                  <Camera className={`w-3 h-3 ${orden.foto_odometro_url ? 'text-[#1E56B0]' : 'text-slate-400'}`} />
+                                  <span>{orden.foto_odometro_url ? 'Evidencia ✓' : 'Evidencia'}</span>
+                                </button>
+
                                 {/* Botón de asignación táctica en columna diagnóstico */}
                                 {columna.id === 'DIAGNOSTICO_AGENDADO' && (
                                   <button
@@ -2242,6 +2271,19 @@ export default function TableroDespachoPage() {
                 </motion.div>
               </motion.div>
 
+              {/* Botón para ver Evidencia de Odómetro */}
+              <button
+                type="button"
+                onClick={() => {
+                  setModalMecanicoDetalleOpen(false);
+                  setModalEvidenciaOpen(true);
+                }}
+                className="w-full h-11 rounded-2xl bg-[#F8FAFC] hover:bg-[#CCFF00] text-[#0A1525] text-xs font-black flex items-center justify-center gap-2 border border-[#CBD5E1] transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <Camera className="w-4 h-4 text-[#1E56B0]" />
+                <span>Ver Foto del Odómetro {ordenParaEvidencia?.foto_odometro_url ? '(Foto Subida ✓)' : '(Pendiente)'}</span>
+              </button>
+
               {/* Botones de Acción Rápida (Footer del Modal) */}
               <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
                 <a
@@ -2523,6 +2565,117 @@ export default function TableroDespachoPage() {
               <X className="w-4 h-4" />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 9. MODAL VISOR DE EVIDENCIA DE ODÓMETRO (Zoom-in Framer) */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalEvidenciaOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 320 }}
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 relative overflow-hidden space-y-4"
+            >
+              {/* Botón de Cierre */}
+              <button
+                type="button"
+                onClick={() => setModalEvidenciaOpen(false)}
+                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
+                title="Cerrar visor"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Cabecera del Visor */}
+              <div className="flex items-center gap-3 pr-8">
+                <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs shrink-0">
+                  <Camera className="w-5 h-5 text-[#CCFF00]" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-black text-[#0A1525] tracking-tight truncate">
+                    Evidencia de Kilometraje (Odómetro)
+                  </h3>
+                  <p className="text-xs text-[#475569] font-medium truncate">
+                    {ordenParaEvidencia ? `${ordenParaEvidencia.vehiculo_modelo} • ${ordenParaEvidencia.cliente_nombre}` : 'Orden de Servicio'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Contenido: Foto o Advertencia */}
+              {ordenParaEvidencia?.foto_odometro_url ? (
+                <div className="space-y-3">
+                  <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-[#CBD5E1] bg-slate-900 group shadow-inner flex items-center justify-center">
+                    <motion.img
+                      initial={{ scale: 0.92 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                      src={ordenParaEvidencia.foto_odometro_url}
+                      alt="Foto de Odómetro"
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className="bg-[#16A34A] text-white text-[11px] font-black px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 border border-white/20">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Foto Verificada en Sitio</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-3.5 flex items-center justify-between text-xs">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        Almacenamiento Seguro
+                      </span>
+                      <span className="font-mono font-bold text-[#0A1525] text-[11px]">
+                        Bucket Supabase: evidencias
+                      </span>
+                    </div>
+                    <a
+                      href={ordenParaEvidencia.foto_odometro_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-9 px-3 rounded-xl bg-white hover:bg-slate-100 text-[#1E56B0] text-xs font-bold flex items-center gap-1.5 border border-[#CBD5E1] shadow-2xs transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Ver Original</span>
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                /* Estado cuando aún no se ha subido */
+                <div className="p-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 text-center space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center mx-auto text-amber-700 shadow-2xs">
+                    <AlertTriangle className="w-7 h-7 text-amber-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black text-amber-900">
+                      Evidencia Pendiente
+                    </h4>
+                    <p className="text-xs text-amber-800 font-bold max-w-sm mx-auto leading-relaxed">
+                      El mecánico aún no ha subido la evidencia del kilometraje.
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-slate-500 pt-1">
+                    🔒 La liquidación del servicio permanecerá bloqueada hasta que el técnico capture la fotografía del tablero desde su móvil.
+                  </p>
+                </div>
+              )}
+
+              {/* Botón de Aceptar */}
+              <button
+                type="button"
+                onClick={() => setModalEvidenciaOpen(false)}
+                className="w-full h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md cursor-pointer"
+              >
+                Cerrar Visor
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
