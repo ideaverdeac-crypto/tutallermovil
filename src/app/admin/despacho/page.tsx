@@ -657,6 +657,7 @@ export default function TableroDespachoPage() {
           detalles: `Servicio cerrado y conciliado por operadora ${miOperadora.nombre}`,
           foto_repuesto_nuevo_url: fotoRepuestoNuevo,
           foto_url: fotoRepuestoNuevo,
+          checklist_json: orden.diagnostico_json || null,
           created_at: new Date().toISOString()
         };
 

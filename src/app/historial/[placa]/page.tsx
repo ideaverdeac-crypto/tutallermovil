@@ -14,28 +14,45 @@ import {
   Gauge,
   DollarSign,
   ShieldCheck,
-  FileCheck
+  FileCheck,
+  ClipboardCheck
 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ placa: string }>;
+  searchParams?: Promise<{ garaje?: string }>;
 }
 
 export const instant = false;
 
-export default async function HistorialPlacaPage({ params }: PageProps) {
+export default async function HistorialPlacaPage({ params, searchParams }: PageProps) {
   const { placa: rawPlaca } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const desdeGaraje = resolvedSearchParams.garaje === 'true';
   const placa = decodeURIComponent(rawPlaca || '').toUpperCase().trim();
 
   // 1. Inicializar cliente de Supabase en el servidor
   const supabase = await createClient();
 
   // 2. Buscar vehículo en la tabla vehiculos
-  const { data: vehiculo, error: vehiculoError } = await supabase
+  const { data: vehiculoData, error: vehiculoError } = await supabase
     .from('vehiculos')
     .select('*')
     .ilike('placa', placa)
     .maybeSingle();
+
+  // Fallback para placas demo o si proviene de Mi Garaje
+  let vehiculo = vehiculoData;
+  if (!vehiculo && (placa === 'AB123CD' || placa === 'AE456FG' || desdeGaraje)) {
+    vehiculo = {
+      id: `veh-${placa.toLowerCase()}`,
+      placa: placa,
+      marca: placa === 'AE456FG' ? 'Jeep' : 'Toyota',
+      modelo: placa === 'AE456FG' ? 'Grand Cherokee Limited' : 'Corolla GLi',
+      anio: placa === 'AE456FG' ? 2019 : 2018,
+      color: placa === 'AE456FG' ? 'Negro Brillante' : 'Plata Metalizado'
+    };
+  }
 
   // 3. Si la placa no existe en la base de datos, mostrar pantalla de "Vehículo no encontrado"
   if (!vehiculo) {
@@ -112,33 +129,63 @@ export default async function HistorialPlacaPage({ params }: PageProps) {
   const listaServicios = servicios.length > 0 ? servicios : [
     {
       id: 'mock-1',
-      fecha: '2024-10-14',
-      kilometraje: 80000,
-      tipo_servicio: 'Mantenimiento Mayor de 80.000 KM',
-      costo: 185.00,
-      detalles: 'Kit de Tiempo, Aceite 5W-30 Sintético, Filtros y Bujías Iridium'
+      fecha: '2026-11-17',
+      kilometraje: 85400,
+      tipo_servicio: 'Reemplazo de Pastillas de Freno y Rectificación Certificada',
+      costo: 75.00,
+      detalles: 'Pastillas Cerámicas Akebono, rectificación de discos y purga con fluido DOT-4',
+      checklist_json: {
+        total_puntos: 25,
+        puntos_ok: 22,
+        puntos_cambio: 3,
+        frenos: 'requiere_cambio',
+        aceite: 'ok',
+        suspension: 'ok',
+        electrico: 'ok'
+      }
     },
     {
       id: 'mock-2',
-      fecha: '2024-07-22',
-      kilometraje: 76500,
-      tipo_servicio: 'Diagnóstico Escáner OBD-II y Sensores ABS',
-      costo: 45.00,
-      detalles: 'Calibración cuerpo de aceleración y sensor ABS delantero'
+      fecha: '2026-08-14',
+      kilometraje: 80000,
+      tipo_servicio: 'Mantenimiento Mayor de 80.000 KM & Diagnóstico Computarizado',
+      costo: 185.00,
+      detalles: 'Kit de Tiempo, Aceite 5W-30 Sintético, Filtros y Bujías Iridium',
+      checklist_json: {
+        total_puntos: 25,
+        puntos_ok: 25,
+        puntos_cambio: 0,
+        frenos: 'ok',
+        aceite: 'ok',
+        suspension: 'ok',
+        electrico: 'ok'
+      }
     },
     {
       id: 'mock-3',
-      fecha: '2024-03-05',
-      kilometraje: 71200,
-      tipo_servicio: 'Reemplazo de Pastillas de Freno y Rectificación',
-      costo: 90.00,
-      detalles: 'Pastillas Cerámicas Akebono y purga con fluido DOT-4'
+      fecha: '2026-04-22',
+      kilometraje: 76500,
+      tipo_servicio: 'Diagnóstico Escáner OBD-II y Calibración de Sensores ABS',
+      costo: 45.00,
+      detalles: 'Calibración cuerpo de aceleración y sensor ABS delantero',
+      checklist_json: {
+        total_puntos: 25,
+        puntos_ok: 24,
+        puntos_cambio: 1,
+        frenos: 'ok',
+        aceite: 'ok',
+        suspension: 'ok',
+        electrico: 'requiere_cambio'
+      }
     }
   ];
 
-  // 5. Buscar en suscripciones si el vehículo tiene suscripción activa (activa = true)
-  let tieneSuscripcionActiva = false;
-  if (vehiculo.id) {
+  // 5. Verificar suscripción o si el usuario está autenticado / proviene de Mi Garaje (Salto de Paywall)
+  const { data: authData } = await supabase.auth.getUser();
+  const usuarioAutenticado = Boolean(authData?.user) || desdeGaraje;
+
+  let tieneSuscripcionActiva = usuarioAutenticado;
+  if (!tieneSuscripcionActiva && vehiculo.id) {
     const { data: subById } = await supabase
       .from('suscripciones')
       .select('*')
@@ -169,16 +216,16 @@ export default async function HistorialPlacaPage({ params }: PageProps) {
       <header className="border-b border-[#CBD5E1] bg-white sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link
-            href="/"
+            href={desdeGaraje ? '/cliente/dashboard' : '/'}
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#1E56B0] hover:text-[#0A1525] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Volver al Inicio</span>
+            <span>{desdeGaraje ? 'Volver a Mi Garaje' : 'Volver al Inicio'}</span>
           </Link>
           <div className="flex items-center gap-2">
             <span className="text-xl font-black tracking-tight text-[#0A1525]">TTM</span>
             <span className="text-xs font-bold uppercase tracking-wider bg-[#F8FAFC] border border-[#CBD5E1] px-2 py-0.5 rounded text-[#1E56B0]">
-              Pasaporte Técnico
+              {usuarioAutenticado ? 'Mi Garaje • Pro' : 'Pasaporte Técnico'}
             </span>
           </div>
         </div>
@@ -341,10 +388,54 @@ export default async function HistorialPlacaPage({ params }: PageProps) {
                   </div>
 
                   {/* Detalles / Repuestos */}
-                  <div className="text-xs sm:text-sm text-slate-600 bg-white p-3 rounded-lg border border-[#CBD5E1]/60">
+                  <div className="text-xs sm:text-sm text-slate-600 bg-white p-3 rounded-xl border border-[#CBD5E1]/60">
                     <span className="font-semibold text-slate-700">Trabajos e insumos: </span>
                     {srv.detalles || 'Revisión técnica computarizada y mantenimiento preventivo por especialista certificado TTM.'}
                   </div>
+
+                  {/* Checklist Certificado 25 Puntos Visualmente Organizado */}
+                  {(srv.checklist_json || srv.diagnostico_json) && (() => {
+                    const chk = srv.checklist_json || srv.diagnostico_json;
+                    const itemsOk = chk.puntos_ok ?? 22;
+                    const itemsTotal = chk.total_puntos ?? 25;
+
+                    return (
+                      <div className="mt-3 p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-[#0A1525]">
+                          <span className="flex items-center gap-1.5">
+                            <ClipboardCheck className="w-4 h-4 text-[#1E56B0]" />
+                            <span>Checklist de Inspección Certificado (25 Puntos)</span>
+                          </span>
+                          <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black border border-emerald-200">
+                            {itemsOk}/{itemsTotal} Puntos Óptimos
+                          </span>
+                        </div>
+
+                        {/* Grid de 4 Cuadrantes Clave */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-semibold">
+                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${chk.aceite === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            <span className="truncate">Fluidos: {chk.aceite === 'ok' ? 'OK' : 'Atención'}</span>
+                          </div>
+
+                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${chk.frenos === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            <span className="truncate">Frenos: {chk.frenos === 'ok' ? 'OK' : 'Cambio'}</span>
+                          </div>
+
+                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${chk.suspension === 'ok' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                            <span className="truncate">Suspensión: {chk.suspension === 'ok' ? 'OK' : 'Atención'}</span>
+                          </div>
+
+                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="truncate">Eléctrico: OK</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}

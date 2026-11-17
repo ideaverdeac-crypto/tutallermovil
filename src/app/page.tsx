@@ -9,6 +9,7 @@ import {
   Search,
   QrCode,
   UserCircle,
+  User,
   ShieldCheck,
   CheckCircle2,
   Clock,
@@ -100,14 +101,29 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Acceso Staff / Aliados / Clientes */}
-          <Link
-            href="/login"
-            className="h-11 px-4 sm:px-5 text-xs sm:text-sm font-black bg-[#0A1525] hover:bg-[#1E56B0] text-white rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-xs border border-white/10"
-          >
-            <UserCircle className="w-4 h-4 text-[#CCFF00]" />
-            <span>Acceso al Sistema</span>
-          </Link>
+          {/* Acceso Clientes ('Mi Garaje') y Staff / Aliados */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Botón Secundario: Mi Garaje */}
+            <Link
+              href="/login-cliente"
+              className="h-10 sm:h-11 px-3.5 sm:px-4 text-xs sm:text-sm font-extrabold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] hover:text-[#1E56B0] rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-[#CBD5E1] shadow-2xs"
+              title="Acceder a Mi Garaje de Vehículos y Pasaporte Técnico"
+            >
+              <User className="w-4 h-4 text-[#1E56B0]" />
+              <span>Mi Garaje</span>
+            </Link>
+
+            {/* Acceso Staff / Aliados */}
+            <Link
+              href="/login"
+              className="h-10 sm:h-11 px-3.5 sm:px-5 text-xs sm:text-sm font-black bg-[#0A1525] hover:bg-[#1E56B0] text-white rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-xs border border-white/10"
+              title="Acceso exclusivo para Staff Operativo, Aliados y Despacho"
+            >
+              <UserCircle className="w-4 h-4 text-[#CCFF00]" />
+              <span className="hidden sm:inline">Acceso Staff</span>
+              <span className="sm:hidden">Staff</span>
+            </Link>
+          </div>
         </div>
       </header>
 
