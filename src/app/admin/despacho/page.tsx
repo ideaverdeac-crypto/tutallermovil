@@ -65,6 +65,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import FloatingSupportButton from '@/components/ui/floating-support-button';
 import CredencialesOperadorasModal from '@/components/CredencialesOperadorasModal';
 import { generarLinkWhatsApp } from '@/lib/utils';
+import { enviarEmailRecibo } from '@/lib/email';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -73,7 +74,9 @@ interface OrdenKanban {
   id: string;
   cliente_nombre: string;
   cliente_telefono?: string | null;
+  cliente_email?: string | null;
   vehiculo_id?: string | null;
+  vehiculo_placa?: string | null;
   vehiculo_marca?: string | null;
   vehiculo_modelo: string;
   vehiculo_anio?: number | string | null;
@@ -686,6 +689,17 @@ export default function TableroDespachoPage() {
       }
 
       await moverOrden(orden.id, 'PAGADO');
+
+      // Simulación de envío automático de correo con el recibo del servicio
+      enviarEmailRecibo({
+        correo: orden.cliente_email || 'cliente@tutallermovil.com',
+        clienteNombre: orden.cliente_nombre || 'Cliente',
+        ordenId: orden.id,
+        montoTotal: Number(orden.ganancia_estimada || 75),
+        servicioDescripcion: orden.falla_reportada || 'Servicio Mecánico TuTallerMóvil',
+        placaVehiculo: orden.vehiculo_placa || undefined
+      }).catch((e) => console.warn('Error simulando email:', e));
+
       setModalComprobanteOpen(false);
       setToastPagoExitoso(
         `¡Pago Aprobado y Conciliado! Orden #${orden.id.slice(0, 8)} cerrada oficialmente. Historial médico vehicular actualizado.`
@@ -2176,7 +2190,7 @@ export default function TableroDespachoPage() {
                                   title="Enviar carnet digital verificado del mecánico al WhatsApp del cliente"
                                 >
                                   <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
-                                  <span>Enviar Carnet por WhatsApp</span>
+                                  <span>Enviar Carnet</span>
                                 </button>
 
                                 <button

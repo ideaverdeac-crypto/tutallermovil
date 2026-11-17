@@ -642,7 +642,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
             <a
               href={generarLinkWhatsApp(
                 clienteTelefono || '0414-2314194',
-                `Hola ${clienteNombre || 'estimado cliente'}, soy tu especialista técnico de TuTallerMóvil. Me encuentro gestionando el servicio para tu vehículo ${vehiculo || ''}.`
+                `Hola ${clienteNombre || 'estimado cliente'}, soy tu mecánico de TuTallerMóvil, ya voy en camino a atender tu servicio.`
               )}
               target="_blank"
               rel="noopener noreferrer"

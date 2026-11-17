@@ -1127,16 +1127,20 @@ export function ClienteServicioClient({ id }: { id: string }) {
             </div>
           </Link>
 
-          {/* Botón de Soporte WhatsApp */}
+          {/* Botón de Soporte WhatsApp para contactar a la Operadora */}
           <a
-            href={`https://wa.me/${MECANICO_INFO.whatsapp}?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20servicio%20${orden.id}`}
+            href={generarLinkWhatsApp(
+              '04142314194',
+              `Hola, soy ${orden.cliente_nombre || 'cliente'} de TuTallerMóvil. Requiero asistencia de la operadora para mi servicio #${id.slice(0, 8)}.`
+            )}
             target="_blank"
             rel="noopener noreferrer"
-            className="h-9 px-3.5 rounded-full bg-[#F8FAFC] hover:bg-slate-100 border border-[#CBD5E1] text-[#0A1525] text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+            className="h-9 px-3.5 rounded-full bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-xs font-black flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="Contactar a la operadora de despacho por WhatsApp"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Soporte</span>
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>Operadora</span>
           </a>
 
         </div>
@@ -1600,16 +1604,33 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     </a>
                   </div>
 
-                  {/* Botón Gigante en Verde Lima: Verificar Carnet QR */}
-                  <button
-                    type="button"
-                    onClick={() => setModalCarnetOpen(true)}
-                    className="w-full h-12 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#CCFF00]/20 transition-all cursor-pointer active:scale-95 border border-[#0A1525]/10 relative z-10"
-                  >
-                    <QrCode className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
-                    <span>Verificar Carnet QR Oficial</span>
-                    <ShieldCheck className="w-4 h-4 text-[#0A1525]" />
-                  </button>
+                  {/* Acciones del Mecánico: WhatsApp Directo y Carnet QR Oficial */}
+                  <div className="space-y-2 relative z-10">
+                    <a
+                      href={generarLinkWhatsApp(
+                        MECANICO_INFO.telefono,
+                        `Hola ${MECANICO_INFO.nombre}, soy ${orden.cliente_nombre || 'tu cliente'}, estoy esperando en la dirección ${orden.sector || 'del servicio'}.`
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full h-11 bg-[#25D366] hover:bg-[#20ba5a] text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-[#25D366]/20 transition-all cursor-pointer active:scale-95 border border-white/10"
+                      title="Contactar al mecánico vía WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4 stroke-[2.5]" />
+                      <span>Contactar a mi Mecánico</span>
+                    </a>
+
+                    {/* Botón Gigante en Verde Lima: Verificar Carnet QR */}
+                    <button
+                      type="button"
+                      onClick={() => setModalCarnetOpen(true)}
+                      className="w-full h-11 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#CCFF00]/20 transition-all cursor-pointer active:scale-95 border border-[#0A1525]/10"
+                    >
+                      <QrCode className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
+                      <span>Verificar Carnet QR Oficial</span>
+                      <ShieldCheck className="w-4 h-4 text-[#0A1525]" />
+                    </button>
+                  </div>
                 </div>
               )}
 
