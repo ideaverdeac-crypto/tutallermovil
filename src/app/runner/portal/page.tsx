@@ -9,24 +9,19 @@ import {
   MapPin,
   Phone,
   Navigation,
-  Camera,
   Check,
-  ShieldCheck,
   Package,
   Store,
   DollarSign,
   Clock,
   X,
-  KeyRound,
   ExternalLink,
   RefreshCw,
-  AlertCircle,
   Sparkles,
-  ChevronRight,
   ArrowRight,
+  ArrowDown,
   CheckCircle2,
-  Layers,
-  Wrench
+  AlertCircle
 } from 'lucide-react';
 
 interface OrdenRunner {
@@ -47,29 +42,20 @@ interface OrdenRunner {
   mecanico_codigo?: string;
   distancia_km?: string;
   tiempo_estimado?: string;
-  paso_actual?: number; // 1: Retirar, 2: Iniciar Ruta, 3: Entregar
 }
+
+type SubEstadoRunner = 'POR_RETIRAR' | 'EN_RUTA' | 'LLEGADO';
 
 export default function RunnerPortalPage() {
   const [ordenes, setOrdenes] = useState<OrdenRunner[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
   const [recibiendoEntregas, setRecibiendoEntregas] = useState<boolean>(true);
   const [saldoHoy, setSaldoHoy] = useState<number>(12.50);
-  const [entregasHoy, setEntregasHoy] = useState<number>(3);
 
-  // Estados de sub-pasos por orden (1: Por retirar, 2: En ruta al mecánico, 3: Llegó al destino)
-  const [pasosPorOrden, setPasosPorOrden] = useState<Record<string, number>>({});
+  // Estados de los 3 pasos por cada orden: 'POR_RETIRAR' -> 'EN_RUTA' -> 'LLEGADO'
+  const [subEstadoPorOrden, setSubEstadoPorOrden] = useState<Record<string, SubEstadoRunner>>({});
 
-  // Modal de Retiro (Paso 1: Foto factura y PIN)
-  const [modalRetiroAbierto, setModalRetiroAbierto] = useState<boolean>(false);
-  const [ordenSeleccionadaParaRetiro, setOrdenSeleccionadaParaRetiro] = useState<OrdenRunner | null>(null);
-  const [fotoFacturaSubida, setFotoFacturaSubida] = useState<boolean>(false);
-  const [fotoFacturaUrl, setFotoFacturaUrl] = useState<string>('');
-  const [pinMayorista, setPinMayorista] = useState<string>('');
-  const [errorPin, setErrorPin] = useState<string | null>(null);
-  const cameraInputRef = React.useRef<HTMLInputElement>(null);
-
-  // Toast de Recompensa
+  // Toast de Éxito al Entregar
   const [toastExito, setToastExito] = useState<string | null>(null);
 
   // Cargar órdenes en REPUESTOS_EN_RUTA de Supabase
@@ -94,17 +80,16 @@ export default function RunnerPortalPage() {
           mayorista_direccion: 'Av. Francisco de Miranda, Edf. Chacao Center, Nivel 1',
           repuestos_lista: [
             'Pastillas de Freno Delanteras (Bosch)',
-            'Líquido de Frenos DOT 4 (Wagner)'
+            'Líquido de Frenos DOT 4'
           ],
-          mecanico_nombre: 'Carlos Mendoza',
-          mecanico_codigo: '#TTM-0842',
+          mecanico_nombre: 'Carlos Mendoza #TTM-0842',
           mecanico_telefono: '+584121234567',
-          distancia_km: '3.2 km',
-          tiempo_estimado: '11 min en moto'
+          distancia_km: '2.8 km',
+          tiempo_estimado: '12 min'
         }));
         setOrdenes(enriquecidas);
       } else {
-        // Mock fallback activo para demostración inmediata si no hay órdenes en REPUESTOS_EN_RUTA
+        // Mock fallback activo para demostración inmediata
         setOrdenes([
           {
             id: 'ord_runner_demo_1',
@@ -114,16 +99,15 @@ export default function RunnerPortalPage() {
             sector: 'Chacao — Calle El Retiro, Qta. Milagrosa',
             estado: 'REPUESTOS_EN_RUTA',
             mayorista_nombre: 'AutoPartes Chacao',
-            mayorista_direccion: 'Av. Francisco de Miranda, Edf. Chacao Center, Nivel PB',
+            mayorista_direccion: 'Av. Francisco de Miranda, Edf. Chacao Center',
             repuestos_lista: [
               'Pastillas de Freno Delanteras (Bosch)',
-              'Líquido de Frenos Sintético DOT 4'
+              'Líquido de Frenos DOT 4'
             ],
-            mecanico_nombre: 'Carlos Mendoza',
-            mecanico_codigo: '#TTM-0842',
+            mecanico_nombre: 'Carlos Mendoza #TTM-0842',
             mecanico_telefono: '+584121234567',
             distancia_km: '2.8 km',
-            tiempo_estimado: '9 min en moto'
+            tiempo_estimado: '12 min'
           }
         ]);
       }
@@ -137,15 +121,15 @@ export default function RunnerPortalPage() {
   useEffect(() => {
     cargarOrdenesRunner();
 
-    // Supabase Realtime para recibir entregas asignadas al instante
+    // Supabase Realtime: Suscripción para recibir órdenes asignadas en tiempo real
     const supabase = createClient();
     const canal = supabase
-      .channel('runner_portal_realtime')
+      .channel('runner_portal_realtime_stream')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'ordenes' },
         (payload) => {
-          console.log('⚡ Notificación en vivo para Runner:', payload);
+          console.log('⚡ Sincronización Realtime Runner:', payload);
           cargarOrdenesRunner();
         }
       )
@@ -156,68 +140,16 @@ export default function RunnerPortalPage() {
     };
   }, []);
 
-  // Obtener el paso actual de una orden (por defecto 1: Marcar como retirado)
-  const getPasoOrden = (id: string) => pasosPorOrden[id] || 1;
-
-  // Paso 1: Abrir Modal para Validar Retiro en Almacén
-  const iniciarPaso1Retiro = (orden: OrdenRunner) => {
-    setOrdenSeleccionadaParaRetiro(orden);
-    setFotoFacturaSubida(false);
-    setPinMayorista('');
-    setErrorPin(null);
-    setModalRetiroAbierto(true);
+  const getSubEstado = (id: string): SubEstadoRunner => {
+    return subEstadoPorOrden[id] || 'POR_RETIRAR';
   };
 
-  // Validar PIN y Foto de Factura
-  const confirmarRetiroEnMayorista = () => {
-    if (!fotoFacturaSubida) {
-      setErrorPin('Debes tomar o subir la foto de la factura del mayorista.');
-      return;
-    }
-    if (!pinMayorista || pinMayorista.trim().length < 4) {
-      setErrorPin('Ingresa el PIN de seguridad de 4 dígitos proporcionado por el mayorista.');
-      return;
-    }
-
-    if (ordenSeleccionadaParaRetiro) {
-      // Avanzar a Paso 2: Iniciar Ruta al Mecánico
-      setPasosPorOrden((prev) => ({
-        ...prev,
-        [ordenSeleccionadaParaRetiro.id]: 2
-      }));
-      setModalRetiroAbierto(false);
-
-      // Feedback audit log
-      console.log('[BITÁCORA INMUTABLE] Runner retiró repuestos en mayorista con PIN verificado', {
-        runner: 'Luis Pérez',
-        orden_id: ordenSeleccionadaParaRetiro.id,
-        mayorista: ordenSeleccionadaParaRetiro.mayorista_nombre,
-        pin: pinMayorista,
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
-
-  // Paso 2: Iniciar Ruta al Mecánico -> Avanza a Paso 3: Llegó al destino
-  const iniciarRutaAlMecanico = (ordenId: string) => {
-    setPasosPorOrden((prev) => ({
-      ...prev,
-      [ordenId]: 3
-    }));
-
-    console.log('[BITÁCORA INMUTABLE] Runner inició ruta GPS hacia el mecánico', {
-      runner: 'Luis Pérez',
-      orden_id: ordenId,
-      timestamp: new Date().toISOString()
-    });
-  };
-
-  // Paso 3: Entregado al Mecánico -> Actualiza Supabase a EN_EJECUCION y acredita saldo
+  // Paso 3: Entregado al Mecánico
   const entregarAlMecanico = async (orden: OrdenRunner) => {
     try {
       const supabase = createClient();
 
-      // 1. Actualizar estado en Supabase a EN_EJECUCION para que el mecánico comience
+      // 1. Actualizar orden en Supabase a EN_EJECUCION para que el Kanban se mueva automáticamente
       if (!orden.id.startsWith('ord_runner_demo')) {
         await supabase
           .from('ordenes')
@@ -225,50 +157,67 @@ export default function RunnerPortalPage() {
           .eq('id', orden.id);
       }
 
-      // 2. Registrar en consola bitácora inmutable
-      console.log('[BITÁCORA INMUTABLE] Runner entregó repuestos al mecánico. Estado: EN_EJECUCION', {
+      // 2. Bitácora inmutable en consola
+      console.log('[BITÁCORA INMUTABLE] Runner entregó repuestos. Estado de orden actualizado a EN_EJECUCION', {
         runner: 'Luis Pérez',
         orden_id: orden.id,
         mecanico: orden.mecanico_nombre,
-        monto_ganancia_runner: 4.00,
+        monto_acreditado: 4.00,
         nuevo_estado_orden: 'EN_EJECUCION',
         timestamp: new Date().toISOString()
       });
 
-      // 3. Acreditar saldo al runner (+ $4.00) y sumar entrega
+      // 3. Acreditar saldo al runner (+ $4.00)
       setSaldoHoy((prev) => prev + 4.00);
-      setEntregasHoy((prev) => prev + 1);
 
-      // 4. Quitar la tarjeta con animación
-      setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
+      // 4. Animación de éxito y remoción de la tarjeta
+      setToastExito(`¡Entregado a ${orden.mecanico_nombre}! +$4.00 acreditados a tu saldo.`);
+      setTimeout(() => {
+        setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
+      }, 350);
 
-      // 5. Toast animado de confirmación
-      setToastExito(`¡Entrega completada! +$4.00 USD acreditados. ${orden.mecanico_nombre} inició el servicio.`);
       setTimeout(() => setToastExito(null), 5000);
     } catch (err) {
       console.error('Error al marcar entrega como completada:', err);
     }
   };
 
-  // Simular una nueva orden en REPUESTOS_EN_RUTA para pruebas si está vacío
-  const simularNuevaEntrega = () => {
-    const nueva: OrdenRunner = {
-      id: `ord_runner_${Date.now()}`,
-      cliente_nombre: 'Carlos Ramos',
-      vehiculo_modelo: 'Ford Explorer 2016',
-      falla_reportada: 'Batería descargada y bornes sulfatados',
-      sector: 'Las Mercedes — Calle París, Torre Financiera',
-      estado: 'REPUESTOS_EN_RUTA',
-      mayorista_nombre: 'Mayorista Las Mercedes',
-      mayorista_direccion: 'Av. Principal de Las Mercedes, Edif. Caracas 2000',
-      repuestos_lista: ['Batería Optima 12V 650A'],
-      mecanico_nombre: 'Carlos Mendoza',
-      mecanico_codigo: '#TTM-0842',
-      mecanico_telefono: '+584121234567',
-      distancia_km: '1.9 km',
-      tiempo_estimado: '6 min en moto'
-    };
-    setOrdenes((prev) => [nueva, ...prev]);
+  // Simular orden en REPUESTOS_EN_RUTA en Supabase para pruebas en vivo
+  const moverOrdenASupabaseRepuestos = async () => {
+    try {
+      const supabase = createClient();
+      // Tomar una orden disponible y moverla a REPUESTOS_EN_RUTA
+      const { data } = await supabase
+        .from('ordenes')
+        .select('id')
+        .limit(1);
+
+      if (data && data.length > 0) {
+        await supabase
+          .from('ordenes')
+          .update({ estado: 'REPUESTOS_EN_RUTA' })
+          .eq('id', data[0].id);
+        await cargarOrdenesRunner();
+      } else {
+        const nueva: OrdenRunner = {
+          id: `ord_runner_${Date.now()}`,
+          cliente_nombre: 'Carlos Ramos',
+          vehiculo_modelo: 'Ford Explorer 2016',
+          falla_reportada: 'Batería descargada',
+          sector: 'Las Mercedes — Calle París',
+          estado: 'REPUESTOS_EN_RUTA',
+          mayorista_nombre: 'AutoPartes Chacao',
+          mayorista_direccion: 'Av. Francisco de Miranda, Edf. Chacao Center',
+          mecanico_nombre: 'Carlos Mendoza #TTM-0842',
+          mecanico_telefono: '+584121234567',
+          distancia_km: '3.1 km',
+          tiempo_estimado: '14 min'
+        };
+        setOrdenes((prev) => [nueva, ...prev]);
+      }
+    } catch (e) {
+      console.error('Error al simular orden:', e);
+    }
   };
 
   return (
@@ -282,24 +231,27 @@ export default function RunnerPortalPage() {
         }}
       />
 
-      <div className="relative z-10 max-w-md mx-auto px-4 pt-4 space-y-4">
-        
-        {/* ======================================================== */}
-        {/* 1. HEADER DE RENDIMIENTO & DISPONIBILIDAD (Mobile-First) */}
-        {/* ======================================================== */}
-        <header className="bg-white rounded-3xl border border-[#E2E8F0] p-4 sm:p-5 shadow-xs space-y-4">
+      {/* ======================================================== */}
+      {/* 1. HEADER PEGAJOSO (Sticky) Con Rendimiento & Switch iOS */}
+      {/* ======================================================== */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs">
+        <div className="max-w-md mx-auto px-4 py-3.5 space-y-3">
           
-          {/* Perfil del Runner */}
+          {/* Fila Superior: Perfil del Runner, Saldo y Enlace Despacho */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Avatar Squircle con 'LP' en verde neón */}
-              <div className="relative w-12 h-12 rounded-2xl bg-[#0A1525] border border-slate-700/60 flex items-center justify-center font-black text-sm text-[#CCFF00] shadow-sm select-none shrink-0">
-                <span>LP</span>
+              {/* Avatar circular con foto oficial */}
+              <div className="relative shrink-0">
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+                  alt="Luis Pérez"
+                  className="w-12 h-12 rounded-full object-cover ring-2 ring-[#CCFF00] shadow-xs"
+                />
                 <span
-                  className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-xs ${
+                  className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-white ${
                     recibiendoEntregas ? 'bg-[#16A34A]' : 'bg-slate-400'
                   }`}
-                  title={recibiendoEntregas ? 'En línea' : 'Desconectado'}
+                  title={recibiendoEntregas ? 'Activo en ruta' : 'Desconectado'}
                 />
               </div>
 
@@ -314,52 +266,28 @@ export default function RunnerPortalPage() {
                 </div>
                 <p className="text-xs text-[#475569] font-medium flex items-center gap-1">
                   <Bike className="w-3.5 h-3.5 text-[#1E56B0]" />
-                  <span>Moto Bera SBR • #RUN-02</span>
+                  <span>Runner • Moto Bera SBR</span>
                 </p>
               </div>
             </div>
 
-            <Link
-              href="/admin/despacho"
-              className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-1 bg-blue-50 px-2.5 py-1.5 rounded-xl border border-blue-100"
-            >
-              <span>Despacho</span>
-              <ExternalLink className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {/* Métricas de Rendimiento del Día */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-3">
+            {/* Recuadro Saldo Hoy: $12.50 */}
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-3.5 py-2 text-right shadow-2xs">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
-                Saldo de hoy
+                Saldo hoy:
               </span>
-              <p className="text-xl font-black text-[#1E56B0] font-mono tracking-tight pt-0.5">
+              <p className="text-base font-black text-[#1E56B0] font-mono tracking-tight leading-none pt-0.5">
                 ${saldoHoy.toFixed(2)}{' '}
                 <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
               </p>
             </div>
-
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-3">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
-                Entregas Hoy
-              </span>
-              <div className="flex items-center gap-1.5 pt-0.5">
-                <p className="text-xl font-black text-[#0A1525] font-mono tracking-tight">
-                  {entregasHoy}
-                </p>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
-                  +100% QA
-                </span>
-              </div>
-            </div>
           </div>
 
-          {/* Switch Grande de Disponibilidad */}
+          {/* Switch Grande tipo iOS de 'Recibiendo Entregas' (Verde Lima #CCFF00) */}
           <button
             type="button"
             onClick={() => setRecibiendoEntregas(!recibiendoEntregas)}
-            className={`w-full h-12 rounded-2xl px-4 flex items-center justify-between transition-all cursor-pointer border ${
+            className={`w-full h-13 rounded-2xl px-4 flex items-center justify-between transition-all cursor-pointer border ${
               recibiendoEntregas
                 ? 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border-[#0A1525]/10 shadow-sm'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-300'
@@ -372,33 +300,46 @@ export default function RunnerPortalPage() {
                 }`}
               />
               <span className="text-xs font-black uppercase tracking-wider">
-                {recibiendoEntregas ? 'Recibiendo Entregas Activo' : 'En Pausa / No Disponible'}
+                {recibiendoEntregas ? 'Recibiendo Entregas' : 'Pausado / No disponible'}
               </span>
             </div>
 
+            {/* Switch visual tipo iOS */}
             <div
-              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+              className={`w-12 h-6.5 rounded-full transition-colors relative p-0.5 shadow-inner ${
                 recibiendoEntregas ? 'bg-[#0A1525]' : 'bg-slate-300'
               }`}
             >
               <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  recibiendoEntregas ? 'translate-x-5' : 'translate-x-0'
+                className={`w-5.5 h-5.5 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                  recibiendoEntregas ? 'translate-x-5.5' : 'translate-x-0'
                 }`}
               />
             </div>
           </button>
-        </header>
+        </div>
+      </header>
 
-        {/* ======================================================== */}
-        {/* 2. FEED DE ENTREGAS: Tarjetas de Ruta (RECOGER & ENTREGAR) */}
-        {/* ======================================================== */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-black uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5 text-[#1E56B0]" />
-              <span>Rutas Asignadas ({ordenes.length})</span>
-            </h2>
+      {/* ======================================================== */}
+      {/* 2. FEED DE ENTREGAS: Tarjetas de Ruta con 2 Bloques      */}
+      {/* ======================================================== */}
+      <main className="relative z-10 max-w-md mx-auto px-4 pt-4 space-y-4">
+        
+        {/* Barra de Título */}
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-black uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5 text-[#1E56B0]" />
+            <span>Rutas Asignadas ({ordenes.length})</span>
+          </h2>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/despacho"
+              className="text-[11px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
+            >
+              <span>Kanban</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </Link>
             <button
               type="button"
               onClick={cargarOrdenesRunner}
@@ -408,451 +349,236 @@ export default function RunnerPortalPage() {
               <RefreshCw className={`w-3.5 h-3.5 ${cargando ? 'animate-spin' : ''}`} />
             </button>
           </div>
+        </div>
 
-          {ordenes.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-dashed border-[#CBD5E1] p-8 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                <Bike className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-black text-[#0A1525]">
-                  ¡Sin entregas pendientes!
-                </h3>
-                <p className="text-xs text-[#475569]">
-                  Mantén el switch activo. Recibirás una alerta en cuanto la operadora asigne repuestos.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={simularNuevaEntrega}
-                className="h-11 px-4 rounded-xl bg-[#0A1525] text-white text-xs font-black hover:bg-[#1E56B0] transition-colors cursor-pointer shadow-xs active:scale-95"
-              >
-                + Simular Entrega de Repuesto
-              </button>
+        {/* Estado Vacío */}
+        {ordenes.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-dashed border-[#CBD5E1] p-8 text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+              <Bike className="w-6 h-6" />
             </div>
-          ) : (
-            <div className="space-y-4">
-              <AnimatePresence>
-                {ordenes.map((orden) => {
-                  const paso = getPasoOrden(orden.id);
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-[#0A1525]">
+                ¡Sin entregas pendientes!
+              </h3>
+              <p className="text-xs text-[#475569]">
+                Mantén el switch activo. Las órdenes aparecerán automáticamente por Realtime.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={moverOrdenASupabaseRepuestos}
+              className="h-11 px-4 rounded-xl bg-[#0A1525] text-white text-xs font-black hover:bg-[#1E56B0] transition-colors cursor-pointer shadow-xs active:scale-95"
+            >
+              + Simular Despacho Inmediato
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <AnimatePresence>
+              {ordenes.map((orden) => {
+                const subEstado = getSubEstado(orden.id);
 
-                  return (
-                    <motion.div
-                      key={orden.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.94, y: 15 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, x: -100 }}
-                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                      className="bg-white rounded-3xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col justify-between"
-                    >
-                      {/* Cabecera de la Orden: Vehículo y Cliente */}
-                      <div className="p-4 bg-slate-50/80 border-b border-[#E2E8F0] flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] font-black uppercase tracking-wider text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                            Orden #{orden.id.slice(0, 6).toUpperCase()}
+                return (
+                  <motion.div
+                    key={orden.id}
+                    layout
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -30, opacity: 0, scale: 0.94 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden rounded-3xl shadow-md border border-[#E2E8F0] flex flex-col"
+                  >
+                    
+                    {/* ======================================================== */}
+                    {/* BLOQUE SUPERIOR (Recoger): Fondo Blanco, Borde Superior   */}
+                    {/* ======================================================== */}
+                    <div className="bg-white rounded-t-3xl p-4 sm:p-5 relative">
+                      <div className="flex items-center justify-between pb-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          RECOGER EN:
+                        </span>
+                        {subEstado !== 'POR_RETIRAR' && (
+                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            Retirado
                           </span>
-                          <h3 className="text-sm font-black text-[#0A1525] pt-1">
-                            {orden.vehiculo_modelo}
-                          </h3>
-                          <p className="text-xs font-semibold text-[#475569]">
-                            {orden.cliente_nombre}
+                        )}
+                      </div>
+
+                      <div className="flex items-start justify-between gap-3 pt-1">
+                        <div className="min-w-0">
+                          <h4 className="text-base font-black text-[#0A1525] truncate">
+                            {orden.mayorista_nombre || 'AutoPartes Chacao'}
+                          </h4>
+                          <p className="text-xs text-[#475569] font-medium pt-0.5 leading-relaxed">
+                            {orden.mayorista_direccion || 'Av. Francisco de Miranda, Edf. Chacao Center'}
                           </p>
                         </div>
 
-                        {/* Indicador de Estado del Flujo */}
-                        <div className="text-right">
-                          <span className="text-[10px] font-black uppercase text-slate-400 block">
-                            Paso {paso} de 3
-                          </span>
-                          <span
-                            className={`text-xs font-black font-mono ${
-                              paso === 1
-                                ? 'text-[#1E56B0]'
-                                : paso === 2
-                                ? 'text-amber-600'
-                                : 'text-emerald-600'
-                            }`}
-                          >
-                            {paso === 1
-                              ? 'Por Retirar'
-                              : paso === 2
-                              ? 'En Ruta'
-                              : 'Por Entregar'}
-                          </span>
-                        </div>
+                        {/* Botón de 'Abrir Mapa' (icono de Google Maps) */}
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            `${orden.mayorista_nombre || 'AutoPartes Chacao'} ${orden.mayorista_direccion || 'Caracas'}`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-9 px-3 rounded-xl bg-white hover:bg-slate-50 text-[#1E56B0] border border-[#CBD5E1] text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs shrink-0 cursor-pointer"
+                          title="Abrir en Google Maps"
+                        >
+                          <Navigation className="w-3.5 h-3.5 text-[#1E56B0]" />
+                          <span>Abrir Mapa</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* ======================================================== */}
+                    {/* ICONO CONECTOR EN EL MEDIO (Flecha hacia abajo animada)  */}
+                    {/* ======================================================== */}
+                    <div className="relative flex items-center justify-center -my-3.5 z-20">
+                      <div className="absolute inset-x-0 h-px border-t border-dashed border-slate-300 pointer-events-none" />
+                      <motion.div
+                        animate={{ y: [0, 4, 0] }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                        className="w-8 h-8 rounded-full bg-white border-2 border-[#1E56B0] shadow-md flex items-center justify-center text-[#1E56B0] shrink-0"
+                      >
+                        <ArrowDown className="w-4 h-4 stroke-[2.8]" />
+                      </motion.div>
+                    </div>
+
+                    {/* ======================================================== */}
+                    {/* BLOQUE INFERIOR (Entregar): Fondo #F1F5F9 (Gris Sutil)   */}
+                    {/* ======================================================== */}
+                    <div className="bg-[#F1F5F9] rounded-b-3xl p-4 sm:p-5 relative space-y-3 pt-5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                          ENTREGAR A:
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                          Orden #{orden.id.slice(0, 6).toUpperCase()}
+                        </span>
                       </div>
 
-                      {/* Cuerpo de la Tarjeta dividido en RECOGER y ENTREGAR */}
-                      <div className="p-4 space-y-4">
-                        
-                        {/* 1. SECCIÓN RECOGER (Punto A: Mayorista) */}
-                        <div className={`p-3.5 rounded-2xl border transition-all ${
-                          paso === 1
-                            ? 'bg-blue-50/50 border-blue-200'
-                            : 'bg-[#F8FAFC] border-[#E2E8F0] opacity-80'
-                        }`}>
-                          <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#1E56B0] flex items-center gap-1.5">
-                              <Store className="w-3.5 h-3.5" />
-                              <span>Punto A: Recoger en Mayorista</span>
-                            </span>
-                            {paso > 1 && (
-                              <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <Check className="w-2.5 h-2.5 stroke-[3]" />
-                                Retirado
-                              </span>
-                            )}
-                          </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h4 className="text-base font-black text-[#0A1525] truncate">
+                            {orden.mecanico_nombre || 'Carlos Mendoza #TTM-0842'}
+                          </h4>
+                          <p className="text-xs font-semibold text-slate-600 pt-0.5">
+                            {orden.vehiculo_modelo} • {orden.sector}
+                          </p>
 
-                          <div className="pt-2.5 space-y-2">
-                            <div>
-                              <p className="text-sm font-black text-[#0A1525]">
-                                {orden.mayorista_nombre}
-                              </p>
-                              <p className="text-xs text-[#475569] font-medium leading-relaxed">
-                                {orden.mayorista_direccion}
-                              </p>
-                            </div>
-
-                            {/* Lista de Repuestos a Retirar */}
-                            {orden.repuestos_lista && (
-                              <div className="bg-white border border-[#E2E8F0] rounded-xl p-2.5 space-y-1">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                                  Piezas a Retirar:
-                                </span>
-                                {orden.repuestos_lista.map((rep, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="text-xs font-bold text-[#0A1525] flex items-center gap-1.5"
-                                  >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0]" />
-                                    <span>{rep}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Botón para Abrir Google Maps / Waze */}
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                `${orden.mayorista_nombre} ${orden.mayorista_direccion}`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full h-10 rounded-xl bg-white hover:bg-slate-100 text-[#0A1525] border border-[#CBD5E1] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
-                            >
-                              <Navigation className="w-3.5 h-3.5 text-[#1E56B0]" />
-                              <span>Navegar a Mayorista (Google Maps)</span>
-                            </a>
-                          </div>
+                          {/* Paso 2: Llegada estimada: 12 min */}
+                          {subEstado === 'EN_RUTA' && (
+                            <p className="text-xs font-bold text-amber-700 pt-1.5 flex items-center gap-1.5 animate-pulse">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Llegada estimada: 12 min</span>
+                            </p>
+                          )}
                         </div>
 
-                        {/* 2. SECCIÓN ENTREGAR (Punto B: Mecánico en Servicio) */}
-                        <div className={`p-3.5 rounded-2xl border transition-all ${
-                          paso >= 2
-                            ? 'bg-emerald-50/50 border-emerald-200'
-                            : 'bg-[#F8FAFC] border-[#E2E8F0]'
-                        }`}>
-                          <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Punto B: Entregar al Mecánico</span>
-                            </span>
-                            <span className="text-[11px] font-mono font-bold text-[#1E56B0]">
-                              {orden.distancia_km} ({orden.tiempo_estimado})
-                            </span>
-                          </div>
-
-                          <div className="pt-2.5 space-y-2.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="flex items-center gap-1.5">
-                                  <p className="text-sm font-black text-[#0A1525]">
-                                    {orden.mecanico_nombre}
-                                  </p>
-                                  <span className="font-mono text-[10px] font-bold text-[#1E56B0] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
-                                    {orden.mecanico_codigo}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-[#475569] font-medium pt-0.5">
-                                  {orden.sector}
-                                </p>
-                              </div>
-
-                              {/* Botón de Llamada Rápida */}
-                              <a
-                                href={`tel:${orden.mecanico_telefono || '+584121234567'}`}
-                                className="w-9 h-9 rounded-xl bg-blue-50 hover:bg-[#1E56B0] text-[#1E56B0] hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs border border-blue-100"
-                                title="Llamar al Mecánico"
-                              >
-                                <Phone className="w-4 h-4" />
-                              </a>
-                            </div>
-
-                            {/* Botón de Navegación al Mecánico */}
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                `${orden.sector} Caracas Venezuela`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full h-10 rounded-xl bg-white hover:bg-slate-100 text-[#0A1525] border border-[#CBD5E1] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
-                            >
-                              <Navigation className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Navegar al Mecánico (Waze / Maps)</span>
-                            </a>
-                          </div>
-                        </div>
-
+                        {/* Botón de llamada rápida al Mecánico */}
+                        <a
+                          href={`tel:${orden.mecanico_telefono || '+584121234567'}`}
+                          className="h-10 px-3.5 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-xs shrink-0 active:scale-95 cursor-pointer"
+                          title="Llamar al Mecánico"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Llamar</span>
+                        </a>
                       </div>
 
                       {/* ======================================================== */}
-                      {/* 3. BOTÓN DE ACCIÓN GIGANTE (Mínimo h-14 - Mobile First) */}
+                      {/* 3. FLUJO DE ACCIÓN DE 3 PASOS (Un solo botón gigante)   */}
                       {/* ======================================================== */}
-                      <div className="p-4 pt-0">
+                      <div className="pt-2">
                         <AnimatePresence mode="wait">
-                          {paso === 1 && (
-                            /* PASO 1: Marcar como Retirado (#1E56B0) */
+                          {subEstado === 'POR_RETIRAR' && (
+                            /* Paso 1: 'Marcar como Retirado' (Fondo Azul Cobalto #1E56B0) */
                             <motion.button
-                              key="paso_1"
+                              key="btn_paso_1"
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.95 }}
                               whileTap={{ scale: 0.97 }}
                               type="button"
-                              onClick={() => iniciarPaso1Retiro(orden)}
-                              className="w-full h-15 rounded-2xl bg-[#1E56B0] hover:bg-[#15448c] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2.5 shadow-md active:scale-97 cursor-pointer transition-colors"
+                              onClick={() => {
+                                setSubEstadoPorOrden((prev) => ({
+                                  ...prev,
+                                  [orden.id]: 'EN_RUTA'
+                                }));
+                                console.log('[BITÁCORA INMUTABLE] Runner marcó como retirado los repuestos en mayorista', {
+                                  orden_id: orden.id,
+                                  runner: 'Luis Pérez',
+                                  timestamp: new Date().toISOString()
+                                });
+                              }}
+                              className="w-full h-14 rounded-2xl bg-[#1E56B0] hover:bg-[#15448c] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2 shadow-md active:scale-97 cursor-pointer transition-colors"
                             >
                               <Package className="w-5 h-5 text-[#CCFF00]" />
-                              <span>Paso 1: Marcar como Retirado</span>
-                              <ChevronRight className="w-4 h-4 opacity-70" />
+                              <span>Marcar como Retirado</span>
                             </motion.button>
                           )}
 
-                          {paso === 2 && (
-                            /* PASO 2: Iniciar Ruta al Mecánico (Naranja #EA580C) */
+                          {subEstado === 'EN_RUTA' && (
+                            /* Paso 2: 'Iniciar Ruta al Mecánico' (Fondo Naranja #F59E0B) */
                             <motion.button
-                              key="paso_2"
+                              key="btn_paso_2"
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.95 }}
                               whileTap={{ scale: 0.97 }}
                               type="button"
-                              onClick={() => iniciarRutaAlMecanico(orden.id)}
-                              className="w-full h-15 rounded-2xl bg-[#EA580C] hover:bg-[#c2410c] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2.5 shadow-md active:scale-97 cursor-pointer transition-colors"
+                              onClick={() => {
+                                setSubEstadoPorOrden((prev) => ({
+                                  ...prev,
+                                  [orden.id]: 'LLEGADO'
+                                }));
+                                console.log('[BITÁCORA INMUTABLE] Runner inició ruta GPS hacia el mecánico', {
+                                  orden_id: orden.id,
+                                  runner: 'Luis Pérez',
+                                  timestamp: new Date().toISOString()
+                                });
+                              }}
+                              className="w-full h-14 rounded-2xl bg-[#F59E0B] hover:bg-[#d97706] text-white font-black text-sm tracking-tight flex items-center justify-center gap-2 shadow-md active:scale-97 cursor-pointer transition-colors"
                             >
-                              <Bike className="w-5 h-5 text-[#CCFF00]" />
-                              <span>Paso 2: Iniciar Ruta al Mecánico</span>
-                              <ArrowRight className="w-4 h-4 opacity-70" />
+                              <Bike className="w-5 h-5 text-white" />
+                              <span>Iniciar Ruta al Mecánico</span>
                             </motion.button>
                           )}
 
-                          {paso === 3 && (
-                            /* PASO 3: Entregado al Mecánico (Verde Lima #CCFF00) */
+                          {subEstado === 'LLEGADO' && (
+                            /* Paso 3: 'Entregado al Mecánico' (Fondo Verde Lima #CCFF00, texto oscuro) */
                             <motion.button
-                              key="paso_3"
+                              key="btn_paso_3"
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
                               exit={{ opacity: 0, scale: 0.95 }}
                               whileTap={{ scale: 0.97 }}
                               type="button"
                               onClick={() => entregarAlMecanico(orden)}
-                              className="w-full h-16 rounded-2xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-base tracking-tight flex items-center justify-center gap-3 shadow-lg active:scale-97 cursor-pointer border border-[#0A1525]/10 transition-colors"
+                              className="w-full h-14 rounded-2xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-base tracking-tight flex items-center justify-center gap-2.5 shadow-lg active:scale-97 cursor-pointer border border-[#0A1525]/10 transition-colors"
                             >
                               <CheckCircle2 className="w-6 h-6 text-[#0A1525]" />
-                              <span>Paso 3: Entregado al Mecánico</span>
+                              <span>Entregado al Mecánico</span>
                             </motion.button>
                           )}
                         </AnimatePresence>
                       </div>
 
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </section>
-
-      </div>
-
-      {/* ======================================================== */}
-      {/* 4. MODAL DE VALIDACIÓN DE RETIRO (Paso 1: Foto & PIN)    */}
-      {/* ======================================================== */}
-      <AnimatePresence>
-        {modalRetiroAbierto && ordenSeleccionadaParaRetiro && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#0A1525]/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-              className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 space-y-5"
-            >
-              {/* Header Modal */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-[#1E56B0] text-[#CCFF00] flex items-center justify-center font-bold">
-                    <ShieldCheck className="w-5 h-5 text-[#CCFF00]" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-[#0A1525]">
-                      Validar Retiro en Mayorista
-                    </h3>
-                    <p className="text-xs text-[#475569] font-medium">
-                      {ordenSeleccionadaParaRetiro.mayorista_nombre}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setModalRetiroAbierto(false)}
-                  className="p-1.5 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Error si falta algún dato */}
-              {errorPin && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{errorPin}</span>
-                </div>
-              )}
-
-              {/* 1. Subida Real de la Foto de la Factura desde Cámara o Dispositivo */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-[#1E56B0]" />
-                  <span>Foto de la Factura / Despacho *</span>
-                </label>
-
-                {/* Input de archivo oculto para cámara nativa */}
-                <input
-                  type="file"
-                  ref={cameraInputRef}
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        setFotoFacturaUrl(event.target?.result as string);
-                        setFotoFacturaSubida(true);
-                        setErrorPin(null);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="hidden"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (cameraInputRef.current) {
-                      cameraInputRef.current.click();
-                    } else {
-                      setFotoFacturaSubida(true);
-                      setErrorPin(null);
-                    }
-                  }}
-                  className={`w-full h-28 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer overflow-hidden relative ${
-                    fotoFacturaSubida
-                      ? 'border-emerald-500 bg-emerald-50/70 text-emerald-800'
-                      : 'border-slate-300 hover:border-[#1E56B0] bg-[#F8FAFC] text-slate-500'
-                  }`}
-                >
-                  {fotoFacturaSubida ? (
-                    <div className="flex items-center gap-3 px-3">
-                      {fotoFacturaUrl ? (
-                        <img
-                          src={fotoFacturaUrl}
-                          alt="Factura"
-                          className="w-16 h-16 rounded-xl object-cover border border-emerald-300 shadow-2xs shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                          <Check className="w-6 h-6 stroke-[3]" />
-                        </div>
-                      )}
-                      <div className="text-left">
-                        <span className="text-xs font-black text-emerald-900 block">
-                          ✓ Foto de Factura Registrada
-                        </span>
-                        <span className="text-[11px] text-emerald-700 font-semibold underline">
-                          Toca aquí para volver a tomar o cambiar foto
-                        </span>
-                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[#1E56B0] shadow-2xs">
-                        <Camera className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold text-[#0A1525]">
-                        Tomar foto con la cámara del teléfono
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        O selecciona una foto de tu galería
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
 
-              {/* 2. PIN de Seguridad del Mayorista */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-[#1E56B0]" />
-                    <span>PIN de Seguridad del Mayorista *</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setPinMayorista('4488')}
-                    className="text-[10px] font-bold text-[#1E56B0] hover:underline"
-                  >
-                    Usar PIN 4488
-                  </button>
-                </div>
-
-                <input
-                  type="password"
-                  maxLength={4}
-                  value={pinMayorista}
-                  onChange={(e) => {
-                    setPinMayorista(e.target.value);
-                    setErrorPin(null);
-                  }}
-                  placeholder="PIN de 4 dígitos"
-                  className="w-full h-12 text-center text-xl font-mono font-black tracking-widest bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#1E56B0] rounded-xl outline-hidden text-[#0A1525]"
-                />
-                <p className="text-[11px] text-slate-400 text-center">
-                  El encargado del almacén te indicará el PIN de despacho.
-                </p>
-              </div>
-
-              {/* Botón de Confirmación */}
-              <button
-                type="button"
-                onClick={confirmarRetiroEnMayorista}
-                className="w-full h-14 rounded-2xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-sm font-black tracking-tight flex items-center justify-center gap-2 shadow-md cursor-pointer border border-[#0A1525]/10 active:scale-97 transition-all"
-              >
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Validar y Pasar a Ruta</span>
-              </button>
-            </motion.div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
-      </AnimatePresence>
+
+      </main>
 
       {/* ======================================================== */}
-      {/* 5. TOAST ANIMADO DE RECOMPENSA Y ÉXITO                   */}
+      {/* 4. TOAST ANIMADO DE ÉXITO                                */}
       {/* ======================================================== */}
       <AnimatePresence>
         {toastExito && (
@@ -869,13 +595,13 @@ export default function RunnerPortalPage() {
             <div className="space-y-0.5 min-w-0 flex-1">
               <p className="text-xs font-black text-white">{toastExito}</p>
               <p className="text-[10px] text-emerald-400 font-bold">
-                ✓ Estado actualizado en el Kanban a EN_EJECUCION
+                ✓ Estado en Supabase actualizado a EN_EJECUCION en tiempo real
               </p>
             </div>
             <button
               type="button"
               onClick={() => setToastExito(null)}
-              className="text-slate-400 hover:text-white p-1"
+              className="text-slate-400 hover:text-white p-1 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
