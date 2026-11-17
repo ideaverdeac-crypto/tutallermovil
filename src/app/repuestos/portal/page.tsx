@@ -367,10 +367,18 @@ export default function PortalRepuestosPage() {
           {/* Acciones del Header */}
           <div className="flex items-center gap-2.5 self-end sm:self-auto">
             <Link
+              href="/repuestos/pedidos"
+              className="h-10 px-3.5 rounded-xl border border-[#1E56B0]/20 bg-[#1E56B0]/10 hover:bg-[#1E56B0]/15 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs"
+            >
+              <Package className="w-4 h-4 text-[#1E56B0]" />
+              <span>Pedidos Entrantes</span>
+            </Link>
+
+            <Link
               href="/admin/despacho"
               className="h-10 px-3.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-2xs"
             >
-              <Bike className="w-4 h-4 text-[#1E56B0]" />
+              <Bike className="w-4 h-4 text-slate-600" />
               <span className="hidden sm:inline">Tablero Despacho</span>
             </Link>
 
