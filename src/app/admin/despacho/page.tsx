@@ -1529,23 +1529,15 @@ export default function TableroDespachoPage() {
                               </div>
                             )}
 
-                            {/* En EN_EJECUCION: Avatar del Mecánico Asignado + Botón sutil Ver Evidencias + Ver Checklist */}
+                            {/* En EN_EJECUCION: Avatar del Mecánico Asignado + Estado de Instalación + Ver Checklist */}
                             {columna.id === 'EN_EJECUCION' && (
                               <div className="space-y-2 ml-5">
                                 <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
                                   <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAbrirEvidencia(orden);
-                                    }}
-                                    className="h-7 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-black flex items-center gap-1 border border-emerald-200 transition-colors shadow-2xs cursor-pointer"
-                                    title="Ver las 3 fotos de evidencia subidas por el mecánico"
-                                  >
-                                    <Camera className="w-3 h-3 text-emerald-600" />
-                                    <span>Ver Evidencias</span>
-                                  </button>
+                                  <span className="text-[10px] font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse" />
+                                    En Ejecución
+                                  </span>
                                 </div>
                                 <div className="pt-0.5">
                                   <Link
@@ -1597,23 +1589,25 @@ export default function TableroDespachoPage() {
                               </div>
 
                               <div className="flex items-center gap-1.5">
-                                {/* Botón Ver Evidencia Odómetro */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAbrirEvidencia(orden);
-                                  }}
-                                  className={`h-7 px-2 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer shadow-2xs border active:scale-95 ${
-                                    orden.foto_odometro_url
-                                      ? 'bg-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/15'
-                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
-                                  }`}
-                                  title={orden.foto_odometro_url ? 'Foto de odómetro verificada (Clic para ver)' : 'Ver evidencia del odómetro'}
-                                >
-                                  <Camera className={`w-3 h-3 ${orden.foto_odometro_url ? 'text-[#1E56B0]' : 'text-slate-400'}`} />
-                                  <span>{orden.foto_odometro_url ? 'Evidencia ✓' : 'Evidencia'}</span>
-                                </button>
+                                {/* Botón Ver Evidencia: solo cuando el servicio llega a ejecución (o posterior) */}
+                                {(columna.id === 'EN_EJECUCION' || columna.id === 'PENDIENTE_PAGO' || orden.estado === 'EN_EJECUCION' || orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'TRABAJO_TERMINADO' || orden.estado === 'FINALIZADO') && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAbrirEvidencia(orden);
+                                    }}
+                                    className={`h-7 px-2 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer shadow-2xs border active:scale-95 ${
+                                      orden.foto_odometro_url || orden.foto_repuesto_viejo_url || orden.foto_repuesto_nuevo_url
+                                        ? 'bg-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/15'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
+                                    }`}
+                                    title={orden.foto_odometro_url ? 'Foto de odómetro y evidencias verificadas (Clic para ver)' : 'Ver evidencia del servicio'}
+                                  >
+                                    <Camera className={`w-3 h-3 ${orden.foto_odometro_url ? 'text-[#1E56B0]' : 'text-slate-400'}`} />
+                                    <span>{orden.foto_odometro_url ? 'Evidencia ✓' : 'Evidencia'}</span>
+                                  </button>
+                                )}
 
                                 {/* Botón de asignación táctica en columna lead nuevo */}
                                 {columna.id === 'LEAD_NUEVO' && (
