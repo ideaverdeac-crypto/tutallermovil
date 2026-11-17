@@ -553,17 +553,29 @@ export default function TableroDespachoPage() {
                                   </button>
                                 )}
 
-                                {/* Enlace carnet en ejecución */}
+                                {/* Enlaces en ejecución: Consola de Mecánico y Carnet */}
                                 {columna.id === 'EN_EJECUCION' && (
-                                  <Link
-                                    href="/carnet/TTM-0842"
-                                    target="_blank"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5 mr-1"
-                                  >
-                                    <span>Carnet</span>
-                                    <ExternalLink className="w-3 h-3" />
-                                  </Link>
+                                  <div className="flex items-center gap-2 mr-1">
+                                    <Link
+                                      href={`/aliados/servicio/${orden.id}`}
+                                      target="_blank"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md hover:bg-emerald-100 flex items-center gap-1 transition-colors"
+                                      title="Abrir vista de ejecución del mecánico"
+                                    >
+                                      <span>Consola</span>
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </Link>
+                                    <Link
+                                      href="/carnet/TTM-0842"
+                                      target="_blank"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-[11px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
+                                    >
+                                      <span>Carnet</span>
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </Link>
+                                  </div>
                                 )}
 
                                 {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente */}

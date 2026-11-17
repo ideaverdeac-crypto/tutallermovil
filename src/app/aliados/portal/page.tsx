@@ -440,6 +440,43 @@ export default function PortalAliadosPage() {
           </div>
         </section>
 
+        {/* Banner Destacado: Servicio Activo en Ejecución */}
+        {estado === 'EN_SERVICIO' && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-[#0A1525] text-white rounded-2xl p-4 border-2 border-[#CCFF00] shadow-md flex flex-col sm:flex-row items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shrink-0">
+                <Wrench className="w-5 h-5 text-[#0A1525]" />
+              </div>
+              <div className="text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#CCFF00]">
+                    Servicio en Ejecución Activa
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-white">
+                  Toyota Corolla 2018 • Placa AB123CD
+                </h3>
+                <p className="text-xs text-slate-300">
+                  María Rodríguez • Diagnóstico OBD2 y Checklist de 25 Puntos
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/aliados/servicio/TTM-0842"
+              className="h-11 px-5 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
+            >
+              <span>Abrir Consola de Ejecución</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
+        )}
+
         {/* 3. Tablero de Rendimiento (KPIs) */}
         <section>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
