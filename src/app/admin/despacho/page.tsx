@@ -38,8 +38,11 @@ import {
   Trash2,
   Plus,
   Minus,
-  Package
+  Package,
+  FileDown
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface OrdenKanban {
   id: string;
@@ -429,6 +432,7 @@ export default function TableroDespachoPage() {
   const [busquedaRepuesto, setBusquedaRepuesto] = useState<string>('');
   const [repuestosSeleccionados, setRepuestosSeleccionados] = useState<RepuestoSeleccionado[]>([]);
   const [guardandoCotizacion, setGuardandoCotizacion] = useState<boolean>(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [toastCotizacion, setToastCotizacion] = useState<string | null>(null);
 
   // 1. Cargar Órdenes y Catálogo de Repuestos de Supabase
@@ -856,6 +860,236 @@ export default function TableroDespachoPage() {
       console.error('Error al guardar cotización:', err);
     } finally {
       setGuardandoCotizacion(false);
+    }
+  };
+
+  // 6. Exportación de Cotización a PDF (jsPDF + AutoTable)
+  const handleExportarPDF = async () => {
+    const orden = ordenParaCotizar || ordenes[0];
+    if (!orden) {
+      alert('No hay una orden seleccionada para exportar.');
+      return;
+    }
+
+    try {
+      setIsGeneratingPdf(true);
+
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = 210;
+      const margin = 14;
+
+      // 1. Cabecera (#0A1525)
+      doc.setFillColor(10, 21, 37); // #0A1525
+      doc.rect(0, 0, pageWidth, 26, 'F');
+
+      // Acento verde lima (#CCFF00)
+      doc.setFillColor(204, 255, 0); // #CCFF00
+      doc.rect(0, 26, pageWidth, 3, 'F');
+
+      // Textos en cabecera
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.text('TTM TuTallerMóvil', margin, 17);
+
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text('COTIZACIÓN DE SERVICIO', pageWidth - margin, 17, { align: 'right' });
+
+      // 2. Datos del Cliente y Vehículo
+      const startY = 40;
+
+      // Bloque Cliente (Izquierda)
+      doc.setTextColor(71, 85, 105); // #475569
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DATOS DEL CLIENTE', margin, startY);
+
+      doc.setTextColor(10, 21, 37); // #0A1525
+      doc.setFontSize(9.5);
+      doc.text(`Cliente: ${orden.cliente_nombre || 'Cliente General'}`, margin, startY + 6);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Sector: ${orden.sector || 'Chacao, Caracas'}`, margin, startY + 11);
+      doc.text(`Teléfono: +58 412-1234567`, margin, startY + 16);
+      doc.text(`Fecha: ${new Date().toLocaleDateString('es-VE')}`, margin, startY + 21);
+
+      // Bloque Vehículo (Derecha)
+      const colRight = 115;
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DATOS DEL VEHÍCULO', colRight, startY);
+
+      doc.setTextColor(10, 21, 37);
+      doc.setFontSize(9.5);
+      const modelo = orden.vehiculo_modelo || 'Vehículo';
+      const marca = orden.vehiculo_marca ? `${orden.vehiculo_marca} ` : '';
+      const anio = orden.vehiculo_anio ? ` (${orden.vehiculo_anio})` : '';
+      doc.text(`${marca}${modelo}${anio}`.trim(), colRight, startY + 6);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      const placaVehiculo = (
+        (orden as any).placa ||
+        (orden as any).vehiculo_placa ||
+        'AB123CD'
+      ).toUpperCase();
+      doc.text(`Placa: ${placaVehiculo}`, colRight, startY + 11);
+      doc.text(
+        `Falla: ${orden.falla_reportada.slice(0, 38)}${
+          orden.falla_reportada.length > 38 ? '...' : ''
+        }`,
+        colRight,
+        startY + 16
+      );
+      doc.text(
+        `Código Orden: #${orden.id.replace('ord_', '').slice(0, 8).toUpperCase()}`,
+        colRight,
+        startY + 21
+      );
+
+      // Línea divisoria
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.4);
+      doc.line(margin, startY + 26, pageWidth - margin, startY + 26);
+
+      // 3. Tabla de Repuestos (jspdf-autotable)
+      // Columnas: Cantidad, Repuesto, Marca, Precio Unitario, Total
+      const tableRows =
+        repuestosSeleccionados.length > 0
+          ? repuestosSeleccionados.map((rep) => [
+              rep.cantidad.toString(),
+              rep.nombre_repuesto,
+              rep.marca || 'Original/Homologado',
+              `$${rep.precio_usd.toFixed(2)}`,
+              `$${(rep.precio_usd * rep.cantidad).toFixed(2)}`
+            ])
+          : [
+              ['1', 'Inspección y Diagnóstico Técnico In Situ', 'TuTallerMóvil', `$${numManoObra.toFixed(2)}`, `$${numManoObra.toFixed(2)}`]
+            ];
+
+      autoTable(doc, {
+        startY: startY + 30,
+        head: [['Cantidad', 'Repuesto', 'Marca', 'Precio Unitario', 'Total']],
+        body: tableRows,
+        margin: { left: margin, right: margin },
+        headStyles: {
+          fillColor: [10, 21, 37],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 8.5
+        },
+        bodyStyles: {
+          textColor: [10, 21, 37],
+          fontSize: 8
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
+        columnStyles: {
+          0: { cellWidth: 20, halign: 'center' },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 28, halign: 'right' },
+          4: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
+        }
+      });
+
+      // 4. Resumen Financiero
+      const finalY = (doc as any).lastAutoTable
+        ? (doc as any).lastAutoTable.finalY + 8
+        : startY + 80;
+      const rightAlignX = pageWidth - margin;
+
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Mano de Obra: $${numManoObra.toFixed(2)}`, rightAlignX, finalY, { align: 'right' });
+      doc.text(`Repuestos: $${totalRepuestosCatalogo.toFixed(2)}`, rightAlignX, finalY + 5, { align: 'right' });
+      if (numRepuestosManual > 0) {
+        doc.text(`Insumos Adicionales: $${numRepuestosManual.toFixed(2)}`, rightAlignX, finalY + 10, { align: 'right' });
+      }
+
+      const subtotalY = finalY + (numRepuestosManual > 0 ? 15 : 10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(10, 21, 37);
+      doc.text(`Subtotal: $${subtotalServicio.toFixed(2)}`, rightAlignX, subtotalY, { align: 'right' });
+
+      let totalY = subtotalY + 6;
+      // Regla de Negocio: Si el subtotal > $40, añade una línea con texto en verde: 'Diagnóstico Exonerado: -$15.00'
+      if (exoneraDiagnostico) {
+        doc.setTextColor(22, 163, 74); // Verde #16A34A
+        doc.setFont('helvetica', 'bold');
+        doc.text('Diagnóstico Exonerado: -$15.00', rightAlignX, totalY, { align: 'right' });
+        totalY += 6;
+      } else if (subtotalServicio > 0) {
+        doc.setTextColor(180, 83, 9); // Amber
+        doc.setFont('helvetica', 'bold');
+        doc.text('Cobro de Diagnóstico: +$15.00', rightAlignX, totalY, { align: 'right' });
+        totalY += 6;
+      }
+
+      // Total a Pagar
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 86, 176); // Azul #1E56B0
+      doc.text(`Total a Pagar: $${totalCotizacion.toFixed(2)} USD`, rightAlignX, totalY, { align: 'right' });
+
+      // Notas si existen
+      if (notasCotizacion.trim()) {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Nota: ${notasCotizacion.trim()}`, margin, totalY, { maxWidth: 100 });
+      }
+
+      // 5. Footer al pie de página (A4 height is 297mm)
+      const footerY = 282;
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.4);
+      doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        'Cotización válida por 24 horas. Sujeto a disponibilidad de inventario. Garantía Total TuTallerMóvil.',
+        pageWidth / 2,
+        footerY,
+        { align: 'center' }
+      );
+      doc.text(
+        'TuTallerMóvil C.A. • RIF J-50493821-0 • Caracas, Venezuela • soporte@tutallermovil.com',
+        pageWidth / 2,
+        footerY + 4,
+        { align: 'center' }
+      );
+
+      // 6. Guardar y Descargar con nombre dinámico
+      const fechaHoy = new Date().toISOString().slice(0, 10);
+      const placaLimpia = placaVehiculo.replace(/[^a-zA-Z0-9]/g, '') || 'VEHICULO';
+      const nombreArchivo = `Cotizacion_${placaLimpia}_${fechaHoy}.pdf`;
+
+      doc.save(nombreArchivo);
+
+      // Toast de éxito
+      setToastCotizacion('PDF generado con éxito');
+      setTimeout(() => {
+        setToastCotizacion(null);
+      }, 4000);
+    } catch (err) {
+      console.error('Error al generar PDF de cotización:', err);
+      alert('Ocurrió un error al generar el PDF. Por favor intenta de nuevo.');
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -1599,7 +1833,7 @@ export default function TableroDespachoPage() {
               </div>
 
               {/* Botones de Acción (Footer del Modal) */}
-              <div className="pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row gap-3 shrink-0">
+              <div className="pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -1614,11 +1848,33 @@ export default function TableroDespachoPage() {
                     navigator.clipboard.writeText(text);
                     alert('¡Presupuesto copiado al portapapeles!');
                   }}
-                  className="sm:w-1/3 h-11 text-xs font-bold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] border border-[#E2E8F0] rounded-xl transition-colors cursor-pointer"
+                  className="sm:w-auto px-4 h-11 text-xs font-bold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] border border-[#E2E8F0] rounded-xl transition-colors cursor-pointer"
                 >
                   Copiar WhatsApp
                 </button>
 
+                {/* Botón Secundario: Exportar PDF */}
+                <button
+                  type="button"
+                  disabled={isGeneratingPdf}
+                  onClick={handleExportarPDF}
+                  className="sm:w-auto px-4.5 h-11 text-xs font-bold bg-white hover:bg-slate-50 text-[#0A1525] border border-[#CBD5E1] rounded-xl transition-all cursor-pointer shadow-2xs flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                  title="Descargar cotización formal en PDF"
+                >
+                  {isGeneratingPdf ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1E56B0]" />
+                      <span>Generando PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="w-4 h-4 text-[#1E56B0]" />
+                      <span>Exportar PDF</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Botón Principal: Guardar Cotización */}
                 <button
                   type="button"
                   disabled={guardandoCotizacion}
