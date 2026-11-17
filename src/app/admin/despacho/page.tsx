@@ -41,6 +41,7 @@ import {
   Package,
   FileDown,
   Landmark,
+  KeyRound,
   LogOut,
   HelpCircle,
   Inbox,
@@ -62,6 +63,7 @@ import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import FloatingSupportButton from '@/components/ui/floating-support-button';
+import CredencialesOperadorasModal from '@/components/CredencialesOperadorasModal';
 import { generarLinkWhatsApp } from '@/lib/utils';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
 import jsPDF from 'jspdf';
@@ -509,6 +511,7 @@ export default function TableroDespachoPage() {
 
   // Estados de Modales y Paneles Tácticos
   const [modalCotizadorOpen, setModalCotizadorOpen] = useState(false);
+  const [modalOperadorasOpen, setModalOperadorasOpen] = useState(false);
   const [modalAsignarOpen, setModalAsignarOpen] = useState(false);
   const [modalMecanicoDetalleOpen, setModalMecanicoDetalleOpen] = useState(false);
   const [ordenParaAsignar, setOrdenParaAsignar] = useState<OrdenKanban | null>(null);
@@ -1762,16 +1765,30 @@ export default function TableroDespachoPage() {
 
           {/* Acciones de Cabecera */}
           <div className="flex items-center gap-3">
-            {/* Acceso a Finanzas & QA: Estrictamente Exclusivo para el Dueño / ADMIN */}
+            {/* Acceso a Finanzas & QA y Gestión de Operadoras: Estrictamente Exclusivo para el Dueño / ADMIN */}
             {esDuenio && (
-              <Link
-                href="/admin/finanzas"
-                className="h-10 px-3.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-2xs"
-                title="Panel Financiero y Administrativo (Exclusivo Dueño / Admin)"
-              >
-                <Landmark className="w-4 h-4 text-[#1E56B0]" />
-                <span className="hidden md:inline">Finanzas & QA</span>
-              </Link>
+              <>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setModalOperadorasOpen(true)}
+                  className="h-10 px-3.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                  title="Credenciales de Operadoras de Despacho (Exclusivo Dueño / Admin)"
+                >
+                  <KeyRound className="w-4 h-4 text-amber-500" />
+                  <span className="hidden md:inline">Operadoras</span>
+                </motion.button>
+
+                <Link
+                  href="/admin/finanzas"
+                  className="h-10 px-3.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-2xs"
+                  title="Panel Financiero y Administrativo (Exclusivo Dueño / Admin)"
+                >
+                  <Landmark className="w-4 h-4 text-[#1E56B0]" />
+                  <span className="hidden md:inline">Finanzas & QA</span>
+                </Link>
+              </>
             )}
 
             {/* Botón Cotizador Orden con Tooltip explicativo */}
@@ -3982,6 +3999,12 @@ export default function TableroDespachoPage() {
           );
         })()}
       </AnimatePresence>
+
+      {/* Modal de Gestión de Credenciales de Operadoras (Solo Dueño Admin) */}
+      <CredencialesOperadorasModal
+        isOpen={modalOperadorasOpen}
+        onClose={() => setModalOperadorasOpen(false)}
+      />
 
       {/* Onboarding Modal de Bienvenida para Operadora */}
       <OnboardingModal
