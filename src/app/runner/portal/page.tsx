@@ -64,8 +64,10 @@ export default function RunnerPortalPage() {
   const [modalRetiroAbierto, setModalRetiroAbierto] = useState<boolean>(false);
   const [ordenSeleccionadaParaRetiro, setOrdenSeleccionadaParaRetiro] = useState<OrdenRunner | null>(null);
   const [fotoFacturaSubida, setFotoFacturaSubida] = useState<boolean>(false);
+  const [fotoFacturaUrl, setFotoFacturaUrl] = useState<string>('');
   const [pinMayorista, setPinMayorista] = useState<string>('');
   const [errorPin, setErrorPin] = useState<string | null>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
 
   // Toast de Recompensa
   const [toastExito, setToastExito] = useState<string | null>(null);
@@ -721,45 +723,82 @@ export default function RunnerPortalPage() {
                 </div>
               )}
 
-              {/* 1. Subida Simulada de la Foto de la Factura */}
+              {/* 1. Subida Real de la Foto de la Factura desde Cámara o Dispositivo */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
                   <Camera className="w-3.5 h-3.5 text-[#1E56B0]" />
                   <span>Foto de la Factura / Despacho *</span>
                 </label>
 
+                {/* Input de archivo oculto para cámara nativa */}
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setFotoFacturaUrl(event.target?.result as string);
+                        setFotoFacturaSubida(true);
+                        setErrorPin(null);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+
                 <button
                   type="button"
                   onClick={() => {
-                    setFotoFacturaSubida(!fotoFacturaSubida);
-                    setErrorPin(null);
+                    if (cameraInputRef.current) {
+                      cameraInputRef.current.click();
+                    } else {
+                      setFotoFacturaSubida(true);
+                      setErrorPin(null);
+                    }
                   }}
-                  className={`w-full h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`w-full h-28 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer overflow-hidden relative ${
                     fotoFacturaSubida
                       ? 'border-emerald-500 bg-emerald-50/70 text-emerald-800'
                       : 'border-slate-300 hover:border-[#1E56B0] bg-[#F8FAFC] text-slate-500'
                   }`}
                 >
                   {fotoFacturaSubida ? (
-                    <>
-                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                        <Check className="w-4 h-4 stroke-[3]" />
+                    <div className="flex items-center gap-3 px-3">
+                      {fotoFacturaUrl ? (
+                        <img
+                          src={fotoFacturaUrl}
+                          alt="Factura"
+                          className="w-16 h-16 rounded-xl object-cover border border-emerald-300 shadow-2xs shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                          <Check className="w-6 h-6 stroke-[3]" />
+                        </div>
+                      )}
+                      <div className="text-left">
+                        <span className="text-xs font-black text-emerald-900 block">
+                          ✓ Foto de Factura Registrada
+                        </span>
+                        <span className="text-[11px] text-emerald-700 font-semibold underline">
+                          Toca aquí para volver a tomar o cambiar foto
+                        </span>
                       </div>
-                      <span className="text-xs font-black text-emerald-800">
-                        ✓ Foto de Factura Cargada
-                      </span>
-                      <span className="text-[10px] text-emerald-600 font-medium underline">
-                        Toca para cambiar
-                      </span>
-                    </>
+                    </div>
                   ) : (
                     <>
-                      <Camera className="w-6 h-6 text-[#1E56B0]" />
+                      <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[#1E56B0] shadow-2xs">
+                        <Camera className="w-5 h-5" />
+                      </div>
                       <span className="text-xs font-bold text-[#0A1525]">
-                        Tomar foto de la factura del repuesto
+                        Tomar foto con la cámara del teléfono
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        Toca para simular captura de cámara
+                        O selecciona una foto de tu galería
                       </span>
                     </>
                   )}
