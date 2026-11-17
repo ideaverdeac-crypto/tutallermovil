@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
 import {
   Star,
   Wrench,
@@ -22,84 +23,74 @@ import {
   ArrowLeft,
   Navigation,
   Car,
-  AlertTriangle
+  Loader2,
+  RefreshCw,
+  Inbox
 } from 'lucide-react';
 
 type EstadoMecanico = 'DISPONIBLE' | 'EN_SERVICIO' | 'INACTIVO';
 
-interface OrdenServicio {
+interface OrdenSupabase {
   id: string;
-  falla: string;
-  modelo: string;
+  cliente_nombre: string;
+  vehiculo_modelo: string;
+  falla_reportada: string;
   sector: string;
-  distancia: string;
-  ganancia: string;
-  tiempoEstimado: string;
-  urgencia: 'ALTA' | 'ESTANDAR';
-  cliente: string;
+  ganancia_estimada: number | string;
+  estado: string;
+  latitud?: number;
+  longitud?: number;
+  created_at?: string;
 }
-
-const ORDENES_DEMO: OrdenServicio[] = [
-  {
-    id: 'ORD-8412',
-    falla: 'Frenos chirriando al frenar en bajada',
-    modelo: 'Toyota Corolla 2018',
-    sector: 'Chacao',
-    distancia: '3.2 km',
-    ganancia: '$45.00 USD',
-    tiempoEstimado: '15 min de llegada',
-    urgencia: 'ALTA',
-    cliente: 'Andrés V.'
-  },
-  {
-    id: 'ORD-8413',
-    falla: 'Batería descargada / No enciende motor',
-    modelo: 'Ford Fiesta 2014',
-    sector: 'Las Mercedes',
-    distancia: '1.8 km',
-    ganancia: '$30.00 USD',
-    tiempoEstimado: '8 min de llegada',
-    urgencia: 'ALTA',
-    cliente: 'Mariana G.'
-  },
-  {
-    id: 'ORD-8414',
-    falla: 'Escaneo OBD-II Check Engine parpadea',
-    modelo: 'Chevrolet Cruze 2015',
-    sector: 'Altamira',
-    distancia: '4.5 km',
-    ganancia: '$40.00 USD',
-    tiempoEstimado: '20 min de llegada',
-    urgencia: 'ESTANDAR',
-    cliente: 'Roberto C.'
-  },
-  {
-    id: 'ORD-8415',
-    falla: 'Cambio de aceite sintético 5W-30 y filtros',
-    modelo: 'Jeep Grand Cherokee 2019',
-    sector: 'El Cafetal',
-    distancia: '5.1 km',
-    ganancia: '$60.00 USD',
-    tiempoEstimado: '25 min de llegada',
-    urgencia: 'ESTANDAR',
-    cliente: 'Valeria S.'
-  }
-];
 
 export default function PortalAliadosPage() {
   const [estado, setEstado] = useState<EstadoMecanico>('DISPONIBLE');
   const [activeTab, setActiveTab] = useState<'inicio' | 'historial' | 'billetera' | 'perfil'>('inicio');
-  const [ordenesAceptadas, setOrdenesAceptadas] = useState<Record<string, boolean>>({});
+  
+  // Órdenes reales desde Supabase
+  const [ordenes, setOrdenes] = useState<OrdenSupabase[]>([]);
+  const [cargando, setCargando] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  const handleAceptarServicio = (id: string) => {
-    setOrdenesAceptadas((prev) => ({ ...prev, [id]: true }));
-    setEstado('EN_SERVICIO');
+  // 1. Consulta a Supabase para traer todas las órdenes donde estado = 'DISPONIBLE'
+  const cargarOrdenes = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setCargando(true);
+
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('ordenes')
+        .select('*')
+        .eq('estado', 'DISPONIBLE')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error consultando tabla ordenes:', error);
+      } else if (data) {
+        setOrdenes(data);
+      }
+    } catch (err) {
+      console.error('Excepción al cargar ordenes:', err);
+    } finally {
+      setCargando(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarOrdenes();
+  }, []);
+
+  // 3. Manejar botón "Aceptar Servicio"
+  const handleAceptarServicio = (orden: OrdenSupabase) => {
+    alert('¡Servicio aceptado!');
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col font-sans pb-28 md:pb-12 selection:bg-[#CCFF00] selection:text-[#0A1525]">
       
-      {/* Barra Superior con Notificaciones y Enlace a Home */}
+      {/* Barra Superior */}
       <header className="bg-white border-b border-[#CBD5E1] sticky top-0 z-30 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -123,9 +114,18 @@ export default function PortalAliadosPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => cargarOrdenes(true)}
+              disabled={refreshing}
+              className="p-2 rounded-lg border border-[#CBD5E1] text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              title="Actualizar Órdenes"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-[#1E56B0]' : ''}`} />
+            </button>
+            <button
+              type="button"
               className="relative p-2 rounded-lg border border-[#CBD5E1] text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#CCFF00] ring-2 ring-white"></span>
             </button>
           </div>
@@ -191,7 +191,7 @@ export default function PortalAliadosPage() {
               </div>
             </div>
 
-            {/* Ubicación y zona operativa */}
+            {/* Zona de Cobertura */}
             <div className="flex sm:flex-col items-center sm:items-end justify-center gap-1 text-xs text-slate-500 bg-[#F8FAFC] border border-[#CBD5E1] p-3 rounded-xl sm:min-w-[160px]">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
                 Zona de Cobertura
@@ -215,7 +215,7 @@ export default function PortalAliadosPage() {
               </span>
             </div>
 
-            {/* Botones de Selección de Estado */}
+            {/* Botones de Selección */}
             <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto bg-[#F8FAFC] p-1 rounded-xl border border-[#CBD5E1]">
               
               {/* DISPONIBLE */}
@@ -355,26 +355,29 @@ export default function PortalAliadosPage() {
           </div>
         </section>
 
-        {/* 4. Feed de Servicios (Órdenes Disponibles en Tiempo Real) */}
+        {/* 4. Feed de Servicios (Conectado a la tabla ordenes en Supabase) */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#0A1525]">
                 Órdenes Cercanas Disponibles
               </h2>
-              <span className="bg-[#CCFF00] text-[#0A1525] font-extrabold text-xs px-2 py-0.5 rounded-full">
-                {ORDENES_DEMO.length} activas
-              </span>
+              {!cargando && (
+                <span className="bg-[#CCFF00] text-[#0A1525] font-extrabold text-xs px-2.5 py-0.5 rounded-full">
+                  {ordenes.length} en base de datos
+                </span>
+              )}
             </div>
 
-            <span className="text-xs text-slate-500 flex items-center gap-1">
+            <span className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              GPS en vivo
+              Supabase en vivo
             </span>
           </div>
 
+          {/* Estado Inactivo */}
           {estado === 'INACTIVO' ? (
-            <div className="bg-white border border-[#CBD5E1] rounded-2xl p-8 text-center space-y-3">
+            <div className="bg-white border border-[#CBD5E1] rounded-2xl p-8 text-center space-y-3 shadow-xs">
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                 <Radio className="w-6 h-6" />
               </div>
@@ -390,10 +393,33 @@ export default function PortalAliadosPage() {
                 Activar Disponibilidad
               </button>
             </div>
+          ) : cargando ? (
+            /* Estado de Carga */
+            <div className="bg-white border border-[#CBD5E1] rounded-2xl p-12 text-center space-y-3 shadow-xs">
+              <Loader2 className="w-8 h-8 animate-spin text-[#1E56B0] mx-auto" />
+              <p className="text-sm font-semibold text-slate-600">
+                Consultando órdenes disponibles en Supabase...
+              </p>
+            </div>
+          ) : ordenes.length === 0 ? (
+            /* 5. Mensaje Vacío si no hay órdenes */
+            <div className="bg-white border border-[#CBD5E1] rounded-2xl p-12 text-center space-y-3 shadow-xs">
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-400">
+                <Inbox className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-[#0A1525]">
+                No hay servicios disponibles en tu zona por ahora
+              </h3>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Las nuevas solicitudes de auxilio mecánico y diagnóstico aparecerán aquí automáticamente.
+              </p>
+            </div>
           ) : (
+            /* 2. Feed de Servicios con Datos Reales de la BD */
             <div className="space-y-4">
-              {ORDENES_DEMO.map((orden, index) => {
-                const yaAceptada = Boolean(ordenesAceptadas[orden.id]);
+              {ordenes.map((orden, index) => {
+                const gananciaFormatted = `$${Number(orden.ganancia_estimada || 0).toFixed(2)} USD`;
+                const shortId = orden.id ? `#${orden.id.slice(0, 8).toUpperCase()}` : `#ORD-${index + 1}`;
 
                 return (
                   <motion.div
@@ -403,86 +429,71 @@ export default function PortalAliadosPage() {
                     viewport={{ once: true, margin: '-20px' }}
                     transition={{ duration: 0.45, delay: index * 0.08, ease: 'easeOut' }}
                     whileHover={{ scale: 1.01 }}
-                    className={`bg-white border-2 rounded-2xl p-5 sm:p-6 shadow-sm transition-all ${
-                      yaAceptada
-                        ? 'border-emerald-500 bg-emerald-50/20'
-                        : 'border-[#CBD5E1] hover:border-[#1E56B0]'
-                    }`}
+                    className="bg-white border-2 border-[#CBD5E1] hover:border-[#1E56B0] rounded-2xl p-5 sm:p-6 shadow-sm transition-all"
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       
-                      {/* Datos de la Orden */}
+                      {/* Datos de la Orden (Falla, Modelo, Sector) */}
                       <div className="space-y-2 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                            {orden.id}
+                            {shortId}
                           </span>
-                          {orden.urgencia === 'ALTA' && (
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping"></span>
-                              Urgencia Inmediata
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                            {orden.estado}
+                          </span>
+                          {orden.cliente_nombre && (
+                            <span className="text-[11px] text-slate-400">
+                              Cliente: <strong className="text-slate-600">{orden.cliente_nombre}</strong>
                             </span>
                           )}
-                          <span className="text-[11px] text-slate-400">
-                            Cliente: <strong className="text-slate-600">{orden.cliente}</strong>
-                          </span>
                         </div>
 
-                        {/* Falla Reportada en Grande */}
+                        {/* Falla Reportada Real */}
                         <h3 className="text-lg sm:text-xl font-extrabold text-[#0A1525] tracking-tight">
-                          {orden.falla}
+                          {orden.falla_reportada}
                         </h3>
 
-                        {/* Modelo de Carro y Sector */}
+                        {/* Modelo de Carro y Sector Reales */}
                         <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-600 pt-1">
                           <span className="inline-flex items-center gap-1.5 font-bold text-[#0A1525]">
                             <Car className="w-4 h-4 text-[#1E56B0]" />
-                            {orden.modelo}
+                            {orden.vehiculo_modelo}
                           </span>
                           <span>•</span>
                           <span className="inline-flex items-center gap-1 text-slate-600">
                             <MapPin className="w-4 h-4 text-slate-400" />
-                            {orden.sector} <strong className="text-[#1E56B0]">({orden.distancia})</strong>
-                          </span>
-                          <span>•</span>
-                          <span className="inline-flex items-center gap-1 text-slate-500">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            {orden.tiempoEstimado}
+                            {orden.sector}
                           </span>
                         </div>
                       </div>
 
-                      {/* Ganancia y Botón de Aceptar */}
+                      {/* Ganancia Real y Botón de Aceptar */}
                       <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                         <div className="text-left lg:text-right">
                           <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
                             Tu Ganancia
                           </span>
                           <span className="text-2xl sm:text-3xl font-black text-[#0A1525] tracking-tight">
-                            {orden.ganancia}
+                            {gananciaFormatted}
                           </span>
                           <span className="text-[10px] text-emerald-700 font-semibold block">
                             Pago garantizado
                           </span>
                         </div>
 
-                        {yaAceptada ? (
-                          <div className="w-full lg:w-44 h-12 bg-emerald-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-sm">
-                            <CheckCircle2 className="w-5 h-5 text-white" />
-                            <span>En Ruta al Cliente</span>
-                          </div>
-                        ) : (
-                          <motion.button
-                            type="button"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleAceptarServicio(orden.id)}
-                            className="w-full lg:w-44 h-12 text-base font-extrabold bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10"
-                          >
-                            <Navigation className="w-4 h-4 text-[#0A1525]" />
-                            <span>Aceptar Servicio</span>
-                          </motion.button>
-                        )}
+                        {/* 3. Botón "Aceptar Servicio" con alert('¡Servicio aceptado!') */}
+                        <motion.button
+                          type="button"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleAceptarServicio(orden)}
+                          className="w-full lg:w-44 h-12 text-base font-extrabold bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10"
+                        >
+                          <Navigation className="w-4 h-4 text-[#0A1525]" />
+                          <span>Aceptar Servicio</span>
+                        </motion.button>
                       </div>
 
                     </div>
