@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type TargetAndTransition } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
+import confetti from 'canvas-confetti';
 import { createClient } from '@/lib/supabase/client';
 import {
   Car,
@@ -33,7 +34,13 @@ import {
   Shield,
   Star,
   Receipt,
-  CheckCircle
+  CheckCircle,
+  Settings,
+  Bike,
+  Loader2,
+  HelpCircle,
+  ThumbsUp,
+  CreditCard
 } from 'lucide-react';
 
 interface OrdenCliente {
@@ -63,7 +70,7 @@ const DATOS_DEFAULT: OrdenCliente = {
   placa: 'AB123CD',
   falla_reportada: 'Chirrido agudo al frenar y pedal de freno esponjoso',
   sector: 'Chacao — Calle El Retiro, Qta. Milagrosa',
-  estado: 'EN_EJECUCION',
+  estado: 'COTIZADO',
   ganancia_estimada: 65.0,
   foto_odometro_url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
   created_at: new Date().toISOString()
@@ -103,16 +110,30 @@ export function ClienteServicioClient({ id }: { id: string }) {
   const [orden, setOrden] = useState<OrdenCliente>({ ...DATOS_DEFAULT, id });
   const [cargando, setCargando] = useState<boolean>(true);
   const [scrolled, setScrolled] = useState<boolean>(false);
-  const [minutosLlegada, setMinutosLlegada] = useState<number>(18);
-  const [segundosLlegada, setSegundosLlegada] = useState<number>(42);
+  const [minutosLlegada, setMinutosLlegada] = useState<number>(14);
+  const [segundosLlegada, setSegundosLlegada] = useState<number>(30);
 
-  // Modales
+  // Modales y paneles interactivos
   const [modalCarnetOpen, setModalCarnetOpen] = useState<boolean>(false);
   const [modalFotoZoom, setModalFotoZoom] = useState<string | null>(null);
   const [modalAprobarPresupuesto, setModalAprobarPresupuesto] = useState<boolean>(false);
   const [modalPagoOpen, setModalPagoOpen] = useState<boolean>(false);
-  const [presupuestoAprobado, setPresupuestoAprobado] = useState<boolean>(false);
-  const [pagoEnviado, setPagoEnviado] = useState<boolean>(false);
+  const [modalCalificacionOpen, setModalCalificacionOpen] = useState<boolean>(false);
+
+  // Estados de acciones
+  const [guardandoAprobacion, setGuardandoAprobacion] = useState<boolean>(false);
+  const [presupuestoRechazado, setPresupuestoRechazado] = useState<boolean>(false);
+  const [subiendoComprobante, setSubiendoComprobante] = useState<boolean>(false);
+  const [comprobanteUrl, setComprobanteUrl] = useState<string | null>(null);
+  const [confirmandoPago, setConfirmandoPago] = useState<boolean>(false);
+
+  // Encuesta de calificación
+  const [calificacionEstrellas, setCalificacionEstrellas] = useState<number>(5);
+  const [comentarioCalificacion, setComentarioCalificacion] = useState<string>('');
+  const [calificacionEnviada, setCalificacionEnviada] = useState<boolean>(false);
+
+  // Referencia para input de archivo comprobante
+  const inputComprobanteRef = useRef<HTMLInputElement>(null);
 
   // 1. Detección de Scroll para Header con Glassmorphism Dinámico
   useEffect(() => {
@@ -135,7 +156,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
     return () => clearInterval(timer);
   }, []);
 
-  // 3. Consulta y Realtime con Supabase
+  // 3. Conexión en Tiempo Real con Supabase Realtime
   useEffect(() => {
     const cargarOrden = async () => {
       try {
@@ -144,7 +165,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
           .from('ordenes')
           .select('*')
           .eq('id', id)
-          .single();
+          .maybeSingle();
 
         if (!error && data) {
           setOrden({
@@ -155,9 +176,9 @@ export function ClienteServicioClient({ id }: { id: string }) {
             vehiculo_modelo: data.vehiculo_modelo || 'Toyota Corolla',
             vehiculo_anio: data.vehiculo_anio || 2018,
             placa: data.placa || 'AB123CD',
-            falla_reportada: data.falla_reportada || 'Servicio de mantenimiento',
+            falla_reportada: data.falla_reportada || 'Servicio de mantenimiento automotriz',
             sector: data.sector || 'Caracas',
-            estado: data.estado || 'EN_EJECUCION',
+            estado: data.estado || 'COTIZADO',
             ganancia_estimada: data.ganancia_estimada || 65.0,
             foto_odometro_url: data.foto_odometro_url || null,
             created_at: data.created_at || new Date().toISOString(),
@@ -173,10 +194,10 @@ export function ClienteServicioClient({ id }: { id: string }) {
 
     cargarOrden();
 
-    // Supabase Realtime para cambios de estado en vivo
+    // Supabase Realtime: Escuchar cambios de estado ejecutados por Operadora / Mecánico / Runner
     const supabase = createClient();
     const channel = supabase
-      .channel(`cliente_orden_${id}`)
+      .channel(`cliente_realtime_orden_${id}`)
       .on(
         'postgres_changes',
         {
@@ -186,7 +207,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
           filter: `id=eq.${id}`
         },
         (payload) => {
-          console.log('⚡ Actualización de orden en tiempo real:', payload);
+          console.log('⚡ Actualización en vivo recibida en Portal Cliente:', payload);
           if (payload.new) {
             setOrden((prev) => ({
               ...prev,
@@ -202,78 +223,110 @@ export function ClienteServicioClient({ id }: { id: string }) {
     };
   }, [id]);
 
-  // Mapeo del estado a etapas de la línea de tiempo
-  const etapaActiva = useMemo(() => {
-    switch (orden.estado) {
-      case 'LEAD_NUEVO':
-      case 'DISPONIBLE':
-      case 'DIAGNOSTICO_AGENDADO':
-        return 0; // Confirmado / Buscando
-      case 'ASIGNADO':
-      case 'REPUESTOS_EN_RUTA':
-        return 1; // En Ruta
-      case 'EN_EJECUCION':
-      case 'EN_SERVICIO':
-        return 2; // En Reparación
-      case 'PENDIENTE_PAGO':
-      case 'LIQUIDACION_PENDIENTE':
-      case 'FINALIZADO':
-        return 3; // Listo
-      default:
-        return 2;
-    }
-  }, [orden.estado]);
+  // Cálculos de Cotización
+  const totalCotizado = useMemo(() => {
+    const val = typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0
+      ? Number(orden.ganancia_estimada)
+      : parseFloat(String(orden.ganancia_estimada || '65')) || 65.0;
+    return val;
+  }, [orden.ganancia_estimada]);
 
-  // Título e indicador Hero
-  const estadoHero = useMemo(() => {
+  const manoDeObra = useMemo(() => Math.round(totalCotizado * 0.45 * 100) / 100, [totalCotizado]);
+  const repuestos = useMemo(() => Math.round((totalCotizado - manoDeObra) * 100) / 100, [totalCotizado, manoDeObra]);
+  const exoneraDiagnostico = totalCotizado > 40;
+
+  // Mapeo dinámico del estado según regla de negocio
+  const configuracionEstado = useMemo(() => {
     switch (orden.estado) {
-      case 'LEAD_NUEVO':
-      case 'DISPONIBLE':
-        return {
-          titulo: 'Buscando Especialista',
-          subtitulo: 'Localizando el taller móvil más cercano a tu ubicación...',
-          colorBadge: 'bg-amber-100 text-amber-900 border-amber-300'
-        };
+      case 'EN_INSPECCION':
       case 'ASIGNADO':
+      case 'DIAGNOSTICO_AGENDADO':
         return {
-          titulo: 'Especialista en Camino',
-          subtitulo: `${MECANICO_INFO.nombre} va en ruta hacia ${orden.sector}`,
+          etapaIndex: 0,
+          titulo: 'El mecánico está revisando tu vehículo',
+          subtitulo: `${MECANICO_INFO.nombre} está en sitio realizando la inspección técnica de 25 puntos y captura del odómetro.`,
+          icono: Wrench,
+          iconoAnimacion: {
+            rotate: [-10, 10, -10],
+            transition: { repeat: Infinity, duration: 2, ease: 'easeInOut' }
+          } as TargetAndTransition,
           colorBadge: 'bg-blue-100 text-[#1E56B0] border-blue-200'
         };
-      case 'REPUESTOS_EN_RUTA':
+      case 'COTIZADO':
+      case 'ESPERANDO_APROBACION':
         return {
-          titulo: 'Repuestos en Ruta',
-          subtitulo: 'Runner TTM despachando repuestos originales certificados',
+          etapaIndex: 1,
+          titulo: '¡Tu presupuesto está listo!',
+          subtitulo: 'Revisa el desglose de mano de obra y repuestos originales. Tu aprobación inicia el despacho.',
+          icono: FileText,
+          iconoAnimacion: {
+            scale: [1, 1.08, 1],
+            transition: { repeat: Infinity, duration: 2.2, ease: 'easeInOut' }
+          } as TargetAndTransition,
+          colorBadge: 'bg-amber-100 text-amber-900 border-amber-300'
+        };
+      case 'REPUESTOS_EN_RUTA':
+      case 'RUNNER_ASIGNADO':
+      case 'APROBADO':
+        return {
+          etapaIndex: 2,
+          titulo: 'Buscando tus repuestos',
+          subtitulo: 'El runner oficial va en ruta trasladando los repuestos certificados al punto de servicio.',
+          icono: Bike,
+          iconoAnimacion: {
+            x: [-4, 4, -4],
+            transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' }
+          } as TargetAndTransition,
           colorBadge: 'bg-sky-100 text-sky-800 border-sky-300'
         };
       case 'EN_EJECUCION':
       case 'EN_SERVICIO':
         return {
-          titulo: 'Servicio en Ejecución',
-          subtitulo: 'Diagnóstico en sitio e inspección técnica de 25 puntos activa',
+          etapaIndex: 3,
+          titulo: 'Reparando tu vehículo',
+          subtitulo: 'El técnico especialista está instalando las piezas nuevas bajo protocolo de garantía QA.',
+          icono: Settings,
+          iconoAnimacion: {
+            rotate: 360,
+            transition: { repeat: Infinity, duration: 4.5, ease: 'linear' }
+          } as TargetAndTransition,
           colorBadge: 'bg-emerald-100 text-emerald-900 border-emerald-300'
         };
       case 'PENDIENTE_PAGO':
       case 'LIQUIDACION_PENDIENTE':
+      case 'TRABAJO_TERMINADO':
         return {
-          titulo: 'Servicio Finalizado',
-          subtitulo: 'Revisa tu diagnóstico y aprueba el comprobante de pago',
-          colorBadge: 'bg-amber-100 text-amber-900 border-amber-300'
+          etapaIndex: 4,
+          titulo: '¡Tu vehículo está listo!',
+          subtitulo: 'La reparación y prueba de ruta han culminado exitosamente. Realiza el pago para liberar la garantía oficial.',
+          icono: CheckCircle,
+          iconoAnimacion: {
+            scale: [1, 1.1, 1],
+            transition: { repeat: Infinity, duration: 2 }
+          } as TargetAndTransition,
+          colorBadge: 'bg-purple-100 text-purple-900 border-purple-300'
         };
+      case 'PAGADO':
       case 'FINALIZADO':
         return {
-          titulo: '¡Servicio Garantizado!',
-          subtitulo: 'Tu vehículo ha sido reparado con garantía de satisfacción',
+          etapaIndex: 4,
+          titulo: '¡Servicio Pagado y Garantizado!',
+          subtitulo: 'Gracias por confiar en TuTallerMóvil. Tu garantía QA del 3% está respaldada por 90 días.',
+          icono: ShieldCheck,
+          iconoAnimacion: { scale: 1 } as TargetAndTransition,
           colorBadge: 'bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/20'
         };
       default:
         return {
-          titulo: 'Servicio en Proceso',
-          subtitulo: 'Tu vehículo está siendo atendido por profesionales certificados',
+          etapaIndex: 0,
+          titulo: 'Buscando Especialista',
+          subtitulo: 'Asignando el taller móvil con mejor puntuación disponible en tu zona.',
+          icono: Car,
+          iconoAnimacion: { y: [0, -6, 0] } as TargetAndTransition,
           colorBadge: 'bg-slate-100 text-slate-800 border-slate-300'
         };
     }
-  }, [orden.estado, orden.sector]);
+  }, [orden.estado]);
 
   // Lista de fotos de evidencias combinadas (odómetro real + fotos técnicas)
   const listaEvidencias = useMemo(() => {
@@ -288,8 +341,131 @@ export function ClienteServicioClient({ id }: { id: string }) {
     return list;
   }, [orden.foto_odometro_url]);
 
+  // Lógica de Aprobación de Cotización (UPDATE a ordenes con estado: APROBADO)
+  const handleAprobarPresupuesto = async () => {
+    setGuardandoAprobacion(true);
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('ordenes')
+        .update({ estado: 'APROBADO' })
+        .eq('id', id);
+
+      setOrden((prev) => ({ ...prev, estado: 'APROBADO' }));
+      setModalAprobarPresupuesto(false);
+
+      // Pequeño confeti de confirmación
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#CCFF00', '#1E56B0', '#0A1525']
+        });
+      } catch (e) {
+        // Fallback silencioso si el canvas no está montado
+      }
+    } catch (err) {
+      console.error('Error al aprobar presupuesto en Supabase:', err);
+    } finally {
+      setGuardandoAprobacion(false);
+    }
+  };
+
+  const handleRechazarPresupuesto = () => {
+    setPresupuestoRechazado(true);
+    setModalAprobarPresupuesto(false);
+  };
+
+  // Subir Comprobante al bucket 'evidencias'
+  const handleSubirComprobante = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSubiendoComprobante(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const cleanId = id ? id.replace(/[^a-zA-Z0-9_-]/g, '_') : 'orden';
+      const fileName = `comprobante_pago_${cleanId}_${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('evidencias')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || 'Error al subir comprobante');
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('evidencias')
+        .getPublicUrl(fileName);
+
+      if (publicUrlData?.publicUrl) {
+        setComprobanteUrl(publicUrlData.publicUrl);
+      }
+    } catch (err: any) {
+      console.error('Error al subir comprobante:', err);
+      alert('No se pudo subir la imagen. Por favor intenta de nuevo.');
+    } finally {
+      setSubiendoComprobante(false);
+    }
+  };
+
+  // Confirmar Pago (Pasa a PAGADO, dispara Confeti y abre Encuesta 5 estrellas)
+  const handleConfirmarPago = async () => {
+    setConfirmandoPago(true);
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('ordenes')
+        .update({ estado: 'PAGADO' })
+        .eq('id', id);
+
+      setOrden((prev) => ({ ...prev, estado: 'PAGADO' }));
+      setModalPagoOpen(false);
+
+      // Lanzar Confeti Festivo
+      try {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.55 },
+          colors: ['#CCFF00', '#1E56B0', '#0A1525', '#16A34A', '#F59E0B']
+        });
+      } catch (e) {
+        console.warn('Confetti trigger:', e);
+      }
+
+      // Abrir encuesta de satisfacción de 5 estrellas
+      setModalCalificacionOpen(true);
+    } catch (err) {
+      console.error('Error al confirmar pago en Supabase:', err);
+    } finally {
+      setConfirmandoPago(false);
+    }
+  };
+
+  // Enviar Calificación del Mecánico
+  const handleEnviarCalificacion = () => {
+    setCalificacionEnviada(true);
+    console.log('[CLIENTE CALIFICACIÓN] Mecánico evaluado exitosamente:', {
+      ordenId: id,
+      mecanico: MECANICO_INFO.nombre,
+      estrellas: calificacionEstrellas,
+      comentario: comentarioCalificacion,
+      timestamp: new Date().toISOString()
+    });
+
+    setTimeout(() => {
+      setModalCalificacionOpen(false);
+    }, 2200);
+  };
+
+  const IconoHero = configuracionEstado.icono;
+
   return (
-    <div className="min-h-screen bg-[#FFFFFF] text-[#0A1525] font-sans antialiased selection:bg-[#CCFF00] selection:text-[#0A1525] pb-40">
+    <div className="min-h-screen bg-[#FFFFFF] text-[#0A1525] font-sans antialiased selection:bg-[#CCFF00] selection:text-[#0A1525] pb-44">
       
       {/* ======================================================== */}
       {/* 1. HEADER INMERSIVO (Glassmorphism + Parallax Scroll)   */}
@@ -318,7 +494,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
             </div>
           </Link>
 
-          {/* Botón de Soporte */}
+          {/* Botón de Soporte WhatsApp */}
           <a
             href={`https://wa.me/${MECANICO_INFO.whatsapp}?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20servicio%20${orden.id}`}
             target="_blank"
@@ -334,11 +510,11 @@ export function ClienteServicioClient({ id }: { id: string }) {
       </header>
 
       {/* ======================================================== */}
-      {/* 2. HERO SECTION: Estado Actual Dinámico y Auto 3D Flotante */}
+      {/* 2. HERO SECTION: Estado Actual Dinámico e Icono Animado  */}
       {/* ======================================================== */}
       <section className="max-w-md mx-auto px-4 pt-4 pb-6 text-center space-y-4">
         
-        {/* Ilustración 3D de Auto Flotante en Bucle Suave */}
+        {/* Ilustración 3D de Auto / Icono Flotante en Bucle Suave */}
         <div className="relative py-2 flex items-center justify-center">
           
           {/* Resplandor de Fondo */}
@@ -347,7 +523,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
           <motion.div
             animate={{ y: [0, -10, 0] }}
             transition={{
-              duration: 3.8,
+              duration: 3.6,
               repeat: Infinity,
               ease: 'easeInOut'
             }}
@@ -355,7 +531,9 @@ export function ClienteServicioClient({ id }: { id: string }) {
           >
             <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-br from-[#0A1525] via-[#1E56B0] to-[#0A1525] p-1 shadow-2xl flex items-center justify-center border-2 border-white/40">
               <div className="w-full h-full rounded-[22px] bg-[#0A1525] flex flex-col items-center justify-center relative overflow-hidden">
-                <Car className="w-14 h-14 text-[#CCFF00] stroke-[1.8] drop-shadow-md" />
+                <motion.div animate={configuracionEstado.iconoAnimacion}>
+                  <IconoHero className="w-13 h-13 text-[#CCFF00] stroke-[2] drop-shadow-md" />
+                </motion.div>
                 <span className="absolute bottom-2 text-[9px] font-mono font-black uppercase text-white/70 tracking-widest">
                   TTM • GPS
                 </span>
@@ -366,7 +544,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
             <motion.div
               animate={{ scale: [1, 0.85, 1], opacity: [0.35, 0.2, 0.35] }}
               transition={{
-                duration: 3.8,
+                duration: 3.6,
                 repeat: Infinity,
                 ease: 'easeInOut'
               }}
@@ -375,125 +553,94 @@ export function ClienteServicioClient({ id }: { id: string }) {
           </motion.div>
         </div>
 
-        {/* Textos de Estado con Efecto Cascada (Stagger) */}
+        {/* Textos de Estado Dinámicos */}
         <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.12
-              }
-            }
-          }}
+          key={orden.estado}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
           className="space-y-2"
         >
           {/* Badge del Estado */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 15 },
-              visible: { opacity: 1, y: 0 }
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border shadow-2xs"
-          >
-            <span className={`px-3 py-1 rounded-full border ${estadoHero.colorBadge}`}>
-              {estadoHero.titulo}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border shadow-2xs">
+            <span className={`px-3 py-1 rounded-full border ${configuracionEstado.colorBadge}`}>
+              {orden.estado.replace(/_/g, ' ')}
             </span>
-          </motion.div>
+          </div>
 
           {/* Tipografía Extra Grande para el Estado */}
-          <motion.h1
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 }
-            }}
-            className="text-3xl sm:text-4xl font-black tracking-tight text-[#0A1525] leading-tight"
-          >
-            {estadoHero.titulo}
-          </motion.h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#0A1525] leading-tight px-2">
+            {configuracionEstado.titulo}
+          </h1>
 
           {/* Subtítulo Descriptivo */}
-          <motion.p
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 }
-            }}
-            className="text-xs sm:text-sm text-slate-600 font-medium max-w-xs mx-auto leading-relaxed"
-          >
-            {estadoHero.subtitulo}
-          </motion.p>
+          <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-xs mx-auto leading-relaxed">
+            {configuracionEstado.subtitulo}
+          </p>
 
           {/* Cronómetro en Vivo de Llegada Estimada */}
-          {orden.estado !== 'FINALIZADO' && (
-            <motion.div
-              variants={{
-                hidden: { opacity: 0, scale: 0.95 },
-                visible: { opacity: 1, scale: 1 }
-              }}
-              className="pt-1"
-            >
+          {orden.estado !== 'FINALIZADO' && orden.estado !== 'PAGADO' && (
+            <div className="pt-1">
               <div className="inline-flex items-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] px-4 py-2 rounded-2xl shadow-2xs">
                 <Clock className="w-4 h-4 text-[#1E56B0] animate-spin" style={{ animationDuration: '8s' }} />
                 <span className="text-xs font-bold text-slate-700">
-                  Llegada estimada:{' '}
+                  Tiempo estimado:{' '}
                   <strong className="text-[#0A1525] font-mono font-black text-sm">
                     {minutosLlegada}:{segundosLlegada < 10 ? `0${segundosLlegada}` : segundosLlegada} min
                   </strong>
                 </span>
               </div>
-            </motion.div>
+            </div>
           )}
-
         </motion.div>
       </section>
 
       {/* ======================================================== */}
-      {/* 4. LÍNEA DE TIEMPO VISUAL: Progreso Horizontal Interactivo */}
+      {/* 3. LÍNEA DE TIEMPO VISUAL: 5 Pasos del Ciclo de Vida     */}
       {/* ======================================================== */}
-      <section className="max-w-md mx-auto px-4 py-4">
+      <section className="max-w-md mx-auto px-4 py-2">
         <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs">
           
           <div className="flex items-center justify-between mb-4 px-1">
             <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-              Progreso del Servicio
+              Progreso Operativo
             </span>
             <span className="text-xs font-mono font-bold text-[#1E56B0]">
-              Paso {etapaActiva + 1} de 4
+              Fase {configuracionEstado.etapaIndex + 1} de 5
             </span>
           </div>
 
           <div className="relative flex items-center justify-between">
             
             {/* Barra de Fondo */}
-            <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-1.5 bg-slate-200 rounded-full z-0" />
+            <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-1.5 bg-slate-200 rounded-full z-0" />
 
-            {/* Barra de Progreso Dinámica con Rayo de Luz */}
+            {/* Barra de Progreso Dinámica */}
             <motion.div
               initial={{ width: '0%' }}
               animate={{
-                width: `${(etapaActiva / 3) * 100}%`
+                width: `${(configuracionEstado.etapaIndex / 4) * 100}%`
               }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-[#1E56B0] via-[#3B82F6] to-[#CCFF00] rounded-full z-0 shadow-xs"
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-[#1E56B0] via-[#3B82F6] to-[#CCFF00] rounded-full z-0 shadow-xs"
             />
 
-            {/* 4 Pasos */}
+            {/* 5 Pasos */}
             {[
-              { id: 0, label: 'Confirmado', icon: CheckCircle2 },
-              { id: 1, label: 'En Ruta', icon: Navigation },
-              { id: 2, label: 'Reparación', icon: Wrench },
-              { id: 3, label: 'Listo', icon: Sparkles }
+              { id: 0, label: 'Inspección', icon: Wrench },
+              { id: 1, label: 'Presupuesto', icon: FileText },
+              { id: 2, label: 'Repuestos', icon: Bike },
+              { id: 3, label: 'Reparación', icon: Settings },
+              { id: 4, label: 'Listo', icon: CheckCircle2 }
             ].map((paso) => {
-              const isPassed = etapaActiva > paso.id;
-              const isActive = etapaActiva === paso.id;
+              const isPassed = configuracionEstado.etapaIndex > paso.id;
+              const isActive = configuracionEstado.etapaIndex === paso.id;
               const IconComponent = paso.icon;
 
               return (
                 <div key={paso.id} className="relative z-10 flex flex-col items-center gap-1.5">
                   <div
-                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
                       isActive
                         ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-lg scale-110'
                         : isPassed
@@ -502,17 +649,15 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     }`}
                   >
                     {isActive ? (
-                      <span className="relative flex h-full w-full items-center justify-center">
-                        <IconComponent className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
-                      </span>
+                      <IconComponent className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
                     ) : isPassed ? (
-                      <Check className="w-4 h-4 stroke-[3]" />
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
                     ) : (
-                      <IconComponent className="w-4 h-4 stroke-[2]" />
+                      <IconComponent className="w-3.5 h-3.5 stroke-[2]" />
                     )}
                   </div>
                   <span
-                    className={`text-[10px] font-extrabold tracking-tight text-center ${
+                    className={`text-[9px] sm:text-[10px] font-extrabold tracking-tight text-center ${
                       isActive
                         ? 'text-[#0A1525] font-black'
                         : isPassed
@@ -531,7 +676,198 @@ export function ClienteServicioClient({ id }: { id: string }) {
       </section>
 
       {/* ======================================================== */}
-      {/* 3. BENTO GRID: La Información del Servicio               */}
+      {/* 4. TARJETA FLOTANTE GIGANTE: Aprobación de Cotización    */}
+      {/* (Visible destacada en estado COTIZADO)                   */}
+      {/* ======================================================== */}
+      {(orden.estado === 'COTIZADO' || orden.estado === 'ESPERANDO_APROBACION') && !presupuestoRechazado && (
+        <section className="max-w-md mx-auto px-4 py-2">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl p-5 border-2 border-[#1E56B0] shadow-xl space-y-4 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/20 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs">
+                  <FileText className="w-5 h-5 text-[#CCFF00]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1E56B0] block">
+                    Cotización Lista para Aprobación
+                  </span>
+                  <h3 className="text-base font-black text-[#0A1525]">
+                    Presupuesto Oficial de Servicio
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            {/* Desglose Financiero */}
+            <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-600 font-semibold">Mano de Obra Certificada</span>
+                <span className="font-mono font-bold text-[#0A1525]">${manoDeObra.toFixed(2)} USD</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-600 font-semibold">Repuestos Originales</span>
+                <span className="font-mono font-bold text-[#0A1525]">${repuestos.toFixed(2)} USD</span>
+              </div>
+              
+              {exoneraDiagnostico && (
+                <div className="flex items-center justify-between py-1 text-emerald-800 bg-emerald-50 px-2 rounded-lg border border-emerald-200 font-bold">
+                  <span>Diagnóstico OBD2 (Regla &gt;$40)</span>
+                  <span>✓ Exonerado ($15 GRATIS)</span>
+                </div>
+              )}
+
+              <div className="flex justify-between pt-2 border-t border-slate-300 text-sm font-black text-[#0A1525]">
+                <span>Total Facturable:</span>
+                <span className="font-mono text-lg text-[#1E56B0]">
+                  ${totalCotizado.toFixed(2)} USD
+                </span>
+              </div>
+            </div>
+
+            {/* Dos Botones Gigantes: Aprobar y Reparar (#CCFF00) vs Rechazar */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                disabled={guardandoAprobacion}
+                onClick={handleAprobarPresupuesto}
+                className="w-full h-13 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#CCFF00]/30 transition-all cursor-pointer active:scale-95 border border-[#0A1525]/10"
+              >
+                {guardandoAprobacion ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-[#0A1525]" />
+                ) : (
+                  <>
+                    <Check className="w-5 h-5 stroke-[3]" />
+                    <span>Aprobar y Reparar (${totalCotizado.toFixed(2)} USD)</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRechazarPresupuesto}
+                className="w-full h-11 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Rechazar o Modificar Cotización
+              </button>
+            </div>
+          </motion.div>
+        </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* 5. PANEL DE PAGO (Estado PENDIENTE_PAGO)                  */}
+      {/* ======================================================== */}
+      {(orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'LIQUIDACION_PENDIENTE' || orden.estado === 'TRABAJO_TERMINADO') && (
+        <section className="max-w-md mx-auto px-4 py-2">
+          <div className="bg-white rounded-3xl p-5 border-2 border-[#1E56B0] shadow-xl space-y-4">
+            
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#1E56B0] text-white flex items-center justify-center font-black shadow-xs">
+                <Receipt className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  Pago Requerido para Entrega
+                </span>
+                <h3 className="text-base font-black text-[#0A1525]">
+                  Liquidación Final del Servicio
+                </h3>
+              </div>
+            </div>
+
+            {/* Datos Bancarios Pago Móvil y Zelle */}
+            <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 text-xs space-y-2">
+              <div className="flex justify-between items-baseline pb-2 border-b border-slate-200">
+                <span className="font-extrabold text-slate-700">Monto Total a Conciliar:</span>
+                <span className="font-mono text-base font-black text-[#0A1525]">
+                  ${totalCotizado.toFixed(2)} USD
+                </span>
+              </div>
+              <div className="space-y-1 text-slate-600 pt-1">
+                <p className="font-bold text-[#0A1525]">Pago Móvil Banesco (0134)</p>
+                <p>CI/RIF: <strong className="text-slate-800">J-501234567</strong></p>
+                <p>Teléfono: <strong className="text-slate-800">0414-9876543</strong></p>
+                <p className="text-[11px] text-slate-500 pt-0.5">Zelle: <strong className="text-slate-800">pagos@tutallermovil.com</strong></p>
+              </div>
+            </div>
+
+            {/* Input escondido y Botón de Subir Comprobante */}
+            <input
+              type="file"
+              ref={inputComprobanteRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleSubirComprobante}
+            />
+
+            {subiendoComprobante ? (
+              <div className="h-20 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 text-[#1E56B0] animate-spin" />
+                <span className="text-xs font-bold text-[#0A1525]">Subiendo comprobante al bucket evidencias...</span>
+              </div>
+            ) : comprobanteUrl ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={comprobanteUrl}
+                    alt="Comprobante"
+                    className="w-14 h-14 rounded-xl object-cover border border-emerald-400"
+                  />
+                  <div>
+                    <span className="text-xs font-black text-emerald-900 block">✓ Comprobante Cargado</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Bucket: evidencias</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => inputComprobanteRef.current?.click()}
+                  className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
+                >
+                  Cambiar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => inputComprobanteRef.current?.click()}
+                className="w-full h-16 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
+              >
+                <Upload className="w-5 h-5 text-[#1E56B0]" />
+                <div className="text-left">
+                  <span className="text-xs font-black text-[#0A1525] block">Subir Comprobante de Pago</span>
+                  <span className="text-[10px] text-slate-400">Captura de pantalla o recibo bancario</span>
+                </div>
+              </button>
+            )}
+
+            {/* Botón Confirmar Pago */}
+            <button
+              type="button"
+              disabled={confirmandoPago}
+              onClick={handleConfirmarPago}
+              className="w-full h-12 bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+            >
+              {confirmandoPago ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] group-hover:text-[#0A1525]" />
+                  <span>Confirmar Pago y Liberar Vehículo</span>
+                </>
+              )}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* 6. BENTO GRID: La Tarjeta del Mecánico + Vehículo         */}
       {/* ======================================================== */}
       <section className="max-w-md mx-auto px-4 py-2 space-y-3.5">
         
@@ -608,11 +944,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
           </motion.div>
 
           {/* Tarjeta Pequeña 1: Vehículo */}
-          <motion.div
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 shadow-2xs hover:border-[#1E56B0] transition-all flex flex-col justify-between"
-          >
+          <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 shadow-2xs flex flex-col justify-between">
             <div className="w-9 h-9 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center mb-3 shadow-2xs">
               <Car className="w-4 h-4" />
             </div>
@@ -629,14 +961,10 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 Placa: <strong className="text-[#0A1525]">{orden.placa || 'AB123CD'}</strong>
               </p>
             </div>
-          </motion.div>
+          </div>
 
           {/* Tarjeta Pequeña 2: Falla Reportada */}
-          <motion.div
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 shadow-2xs hover:border-[#1E56B0] transition-all flex flex-col justify-between"
-          >
+          <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 shadow-2xs flex flex-col justify-between">
             <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 shadow-2xs">
               <Wrench className="w-4 h-4" />
             </div>
@@ -651,13 +979,13 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 ✓ Garantía QA 3% activa
               </span>
             </div>
-          </motion.div>
+          </div>
 
         </div>
       </section>
 
       {/* ======================================================== */}
-      {/* 5. GALERÍA DE EVIDENCIAS: Carrusel Horizontal Snap       */}
+      {/* 7. GALERÍA DE EVIDENCIAS: Carrusel Snap                   */}
       {/* ======================================================== */}
       <section className="max-w-md mx-auto px-4 py-4 space-y-3">
         <div className="flex items-center justify-between px-1">
@@ -708,13 +1036,13 @@ export function ClienteServicioClient({ id }: { id: string }) {
       </section>
 
       {/* ======================================================== */}
-      {/* 6. BOTTOM ACTION BAR: Fijo e Inmersivo (Glassmorphism)   */}
+      {/* 8. BOTTOM ACTION BAR: Fijo e Inmersivo (Glassmorphism)   */}
       {/* ======================================================== */}
       <nav className="fixed bottom-0 inset-x-0 z-40 backdrop-blur-xl bg-white/90 border-t border-slate-200/80 shadow-2xl rounded-t-3xl p-4 pb-8 sm:pb-6">
         <div className="max-w-md mx-auto flex items-center justify-between gap-3">
           
-          {/* Si está pendiente de pago */}
-          {orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'LIQUIDACION_PENDIENTE' ? (
+          {/* Si está en PENDIENTE_PAGO */}
+          {orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'LIQUIDACION_PENDIENTE' || orden.estado === 'TRABAJO_TERMINADO' ? (
             <motion.button
               type="button"
               whileHover={{ scale: 1.02 }}
@@ -722,12 +1050,12 @@ export function ClienteServicioClient({ id }: { id: string }) {
               onClick={() => setModalPagoOpen(true)}
               className="w-full h-14 bg-[#1E56B0] hover:bg-[#164388] text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 transition-all cursor-pointer border border-blue-500/30"
             >
-              <Receipt className="w-5 h-5" />
-              <span>Subir Comprobante de Pago</span>
-              <ChevronRight className="w-4 h-4 text-blue-200" />
+              <CreditCard className="w-5 h-5 text-[#CCFF00]" />
+              <span>Pagar Servicio (${totalCotizado.toFixed(2)} USD)</span>
+              <ChevronRight className="w-4 h-4 text-white" />
             </motion.button>
-          ) : !presupuestoAprobado ? (
-            /* Botón Principal: Aprobar Presupuesto con Brillo Verde Lima */
+          ) : orden.estado === 'COTIZADO' || orden.estado === 'ESPERANDO_APROBACION' ? (
+            /* Botón de Presupuesto Listo */
             <motion.button
               type="button"
               whileHover={{ scale: 1.02 }}
@@ -736,20 +1064,36 @@ export function ClienteServicioClient({ id }: { id: string }) {
               className="w-full h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[#CCFF00]/40 transition-all cursor-pointer border border-[#0A1525]/10 animate-pulse-subtle"
             >
               <Sparkles className="w-5 h-5 text-[#0A1525]" />
-              <span>Aprobar Presupuesto ($65.00 USD)</span>
+              <span>Ver y Aprobar Presupuesto (${totalCotizado.toFixed(2)} USD)</span>
               <ChevronRight className="w-4 h-4 text-[#0A1525]" />
             </motion.button>
+          ) : orden.estado === 'PAGADO' || orden.estado === 'FINALIZADO' ? (
+            /* Servicio Pagado y Garantizado */
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex-1 h-14 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-center gap-2 text-emerald-800 font-extrabold text-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                <span>Pago Conciliado • Garantía 90 Días</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalCalificacionOpen(true)}
+                className="h-14 px-4 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <Star className="w-4 h-4 text-amber-300 fill-amber-300" />
+                <span>Calificar</span>
+              </button>
+            </div>
           ) : (
-            /* Presupuesto Ya Aprobado: Contactar y Ver Estado */
+            /* Estado en curso (Inspección, Runner o Reparación) */
             <div className="flex items-center gap-2 w-full">
               <a
-                href={`https://wa.me/${MECANICO_INFO.whatsapp}?text=Hola%20Carlos,%20he%20aprobado%20el%20presupuesto%20de%20mi%20servicio%20${orden.id}`}
+                href={`https://wa.me/${MECANICO_INFO.whatsapp}?text=Hola%20Carlos,%20quisiera%20consultar%20el%20avance%20de%20mi%20servicio%20${orden.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 h-14 bg-[#0A1525] hover:bg-slate-800 text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
               >
                 <MessageCircle className="w-4 h-4 text-[#CCFF00]" />
-                <span>Chat con Carlos</span>
+                <span>Chat con {MECANICO_INFO.nombre.split(' ')[0]}</span>
               </a>
 
               <button
@@ -900,42 +1244,48 @@ export function ClienteServicioClient({ id }: { id: string }) {
 
               <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 text-left space-y-2 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-200">
-                  <span className="text-slate-600">Pastillas de Freno Delanteras (Bosch)</span>
-                  <span className="font-mono font-bold text-[#0A1525]">$35.00</span>
+                  <span className="text-slate-600 font-semibold">Mano de Obra Certificada</span>
+                  <span className="font-mono font-bold text-[#0A1525]">${manoDeObra.toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200">
-                  <span className="text-slate-600">Mano de Obra Certificada</span>
-                  <span className="font-mono font-bold text-[#0A1525]">$30.00</span>
+                  <span className="text-slate-600 font-semibold">Repuestos Originales</span>
+                  <span className="font-mono font-bold text-[#0A1525]">${repuestos.toFixed(2)} USD</span>
                 </div>
-                <div className="flex justify-between py-1 text-emerald-700 font-semibold">
-                  <span>Diagnóstico Inicial</span>
-                  <span>GRATIS (Exonerado)</span>
-                </div>
+                {exoneraDiagnostico && (
+                  <div className="flex items-center justify-between py-1 text-emerald-800 bg-emerald-50 px-2 rounded-lg border border-emerald-200 font-bold">
+                    <span>Diagnóstico Inicial (Regla &gt;$40)</span>
+                    <span>✓ Exonerado ($15 GRATIS)</span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-2 border-t border-slate-300 text-sm font-black text-[#0A1525]">
                   <span>Total Final:</span>
-                  <span className="font-mono text-base text-[#1E56B0]">$65.00 USD</span>
+                  <span className="font-mono text-base text-[#1E56B0]">${totalCotizado.toFixed(2)} USD</span>
                 </div>
               </div>
 
               <div className="space-y-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setPresupuestoAprobado(true);
-                    setModalAprobarPresupuesto(false);
-                  }}
-                  className="w-full h-12 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-sm rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
+                  disabled={guardandoAprobacion}
+                  onClick={handleAprobarPresupuesto}
+                  className="w-full h-12 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-sm rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95 border border-[#0A1525]/10"
                 >
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Confirmar y Autorizar</span>
+                  {guardandoAprobacion ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-[#0A1525]" />
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Aprobar y Reparar</span>
+                    </>
+                  )}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setModalAprobarPresupuesto(false)}
+                  onClick={handleRechazarPresupuesto}
                   className="w-full h-10 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors"
                 >
-                  Revisar después
+                  Rechazar
                 </button>
               </div>
             </motion.div>
@@ -972,7 +1322,11 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   Reportar Pago
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Monto a pagar: <strong className="text-[#0A1525] font-mono text-sm">$65.00 USD</strong> (o en Bs tasa BCV)
+                  Monto a pagar:{' '}
+                  <strong className="text-[#0A1525] font-mono text-sm">
+                    ${totalCotizado.toFixed(2)} USD
+                  </strong>{' '}
+                  (o al cambio en Bs tasa oficial)
                 </p>
               </div>
 
@@ -981,34 +1335,156 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 <p className="font-bold text-[#0A1525]">Pago Móvil Banesco (0134)</p>
                 <p className="text-slate-600">CI/RIF: <strong className="text-slate-800">J-501234567</strong></p>
                 <p className="text-slate-600">Teléfono: <strong className="text-slate-800">0414-9876543</strong></p>
-                <p className="text-[11px] text-slate-400 pt-0.5">Zelle: pagos@tutallermovil.com</p>
+                <p className="text-[11px] text-slate-400 pt-0.5">Zelle: <strong className="text-slate-700">pagos@tutallermovil.com</strong></p>
               </div>
 
-              {/* Selector de Archivo de Comprobante */}
-              <div className="border-2 border-dashed border-slate-300 rounded-2xl p-4 hover:border-[#1E56B0] transition-colors cursor-pointer bg-slate-50">
-                <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-                <span className="text-xs font-bold text-[#0A1525] block">
-                  Adjuntar captura de pantalla
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  PNG, JPG o PDF de la transferencia
-                </span>
-              </div>
+              {/* Botón de Selección de Comprobante */}
+              {subiendoComprobante ? (
+                <div className="h-20 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 text-[#1E56B0] animate-spin" />
+                  <span className="text-xs font-bold text-[#0A1525]">Subiendo comprobante...</span>
+                </div>
+              ) : comprobanteUrl ? (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={comprobanteUrl}
+                      alt="Comprobante"
+                      className="w-12 h-12 rounded-xl object-cover border border-emerald-400"
+                    />
+                    <div className="text-left">
+                      <span className="text-xs font-black text-emerald-900 block">✓ Comprobante Cargado</span>
+                      <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => inputComprobanteRef.current?.click()}
+                    className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => inputComprobanteRef.current?.click()}
+                  className="border-2 border-dashed border-slate-300 rounded-2xl p-4 hover:border-[#1E56B0] transition-colors cursor-pointer bg-slate-50"
+                >
+                  <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                  <span className="text-xs font-bold text-[#0A1525] block">
+                    Subir Comprobante (Evidencias)
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Captura JPG o PNG de la transferencia
+                  </span>
+                </div>
+              )}
 
               <div className="space-y-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    setPagoEnviado(true);
-                    setModalPagoOpen(false);
-                    alert('¡Comprobante enviado con éxito! Despacho central confirmará tu pago en breve.');
-                  }}
+                  disabled={confirmandoPago}
+                  onClick={handleConfirmarPago}
                   className="w-full h-12 bg-[#1E56B0] hover:bg-[#164388] text-white font-black text-sm rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
                 >
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Enviar Comprobante</span>
+                  {confirmandoPago ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Confirmar Pago</span>
+                    </>
+                  )}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL 5: CELEBRACIÓN CON CONFETI Y ENCUESTA 5 ESTRELLAS  */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalCalificacionOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: 30 }}
+              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/30 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="w-16 h-16 rounded-3xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-lg shadow-[#CCFF00]/40">
+                <Sparkles className="w-8 h-8 text-[#0A1525] stroke-[2.2]" />
+              </div>
+
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  ¡Pago Verificado y Conciliado!
+                </span>
+                <h3 className="text-xl font-black text-[#0A1525] tracking-tight mt-1.5">
+                  ¿Cómo estuvo tu experiencia con {MECANICO_INFO.nombre}?
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Tu calificación ayuda a premiar a los mejores técnicos certificados de Caracas.
+                </p>
+              </div>
+
+              {/* Selector Interactivo de 5 Estrellas */}
+              <div className="flex items-center justify-center gap-2 py-2">
+                {[1, 2, 3, 4, 5].map((estrella) => (
+                  <button
+                    key={estrella}
+                    type="button"
+                    onClick={() => setCalificacionEstrellas(estrella)}
+                    className="p-1 transition-transform hover:scale-125 active:scale-95 cursor-pointer"
+                  >
+                    <Star
+                      className={`w-8 h-8 ${
+                        estrella <= calificacionEstrellas
+                          ? 'text-amber-400 fill-amber-400 filter drop-shadow-xs'
+                          : 'text-slate-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {/* Caja de Comentario */}
+              <textarea
+                value={comentarioCalificacion}
+                onChange={(e) => setComentarioCalificacion(e.target.value)}
+                placeholder="Deja un comentario para Carlos Mendoza (opcional)..."
+                rows={2}
+                className="w-full rounded-2xl border border-slate-200 p-3 text-xs text-[#0A1525] focus:outline-none focus:border-[#1E56B0] resize-none"
+              />
+
+              {calificacionEnviada ? (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-center gap-2 text-emerald-800 font-extrabold text-xs">
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>¡Gracias! Tu reseña ha sido registrada.</span>
+                </div>
+              ) : (
+                <div className="space-y-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleEnviarCalificacion}
+                    className="w-full h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                  >
+                    Enviar Calificación
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setModalCalificacionOpen(false)}
+                    className="w-full h-9 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
+                  >
+                    Omitir por ahora
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
@@ -1017,4 +1493,5 @@ export function ClienteServicioClient({ id }: { id: string }) {
     </div>
   );
 }
+
 export default ClienteServicioClient;
