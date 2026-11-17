@@ -192,36 +192,106 @@ export default function ClienteDashboardPage() {
           telefono: telefonoUsuario
         });
 
-        // Consultar vehículos en Supabase asociados al email o teléfono
-        const { data: vehiculosData, error } = await supabase
+        // 1. Consultar vehículos en Supabase asociados al email o teléfono del cliente
+        const { data: vehiculosData } = await supabase
           .from('vehiculos')
           .select('*')
-          .or(`cliente_email.eq.${emailUsuario},cliente_telefono.eq.${telefonoUsuario}`);
+          .or(`cliente_email.ilike.%${emailUsuario}%,cliente_telefono.eq.${telefonoUsuario}`);
 
+        // 2. Consultar órdenes de servicio previas asociadas al correo (para vincular servicios pedidos como invitado)
+        const { data: ordenesData } = await supabase
+          .from('ordenes')
+          .select('*')
+          .ilike('cliente_email', emailUsuario);
+
+        const mapaVehiculos = new Map<string, VehiculoGaraje>();
+
+        // Incorporar vehículos registrados en la tabla 'vehiculos'
         if (vehiculosData && vehiculosData.length > 0) {
-          const parseados: VehiculoGaraje[] = vehiculosData.map((v: any) => ({
-            id: v.id,
-            marca: v.marca || 'Vehículo',
-            modelo: v.modelo || 'Automóvil',
-            anio: v.anio ?? v.año ?? 2019,
-            placa: v.placa || 'PLACA',
-            color: v.color || 'No especificado',
-            kilometraje: v.kilometraje || 80000,
-            ultimoServicio: v.updated_at ? new Date(v.updated_at).toLocaleDateString('es-VE') : 'Reciente',
-            tipoUltimoServicio: 'Inspección TTM Protocol 2027',
-            estadoSalud: 'optimo',
-            fotoUrl: v.foto_url || 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80'
-          }));
-          setVehiculos(parseados);
-        } else {
-          // Si no hay en BD para ese correo, mantener los vehículos del garaje demo y chequear localStorage
-          if (typeof window !== 'undefined') {
-            const garajeLocal = localStorage.getItem('ttm_garaje_vehiculos');
-            if (garajeLocal) {
-              try {
-                setVehiculos(JSON.parse(garajeLocal));
-              } catch (e) {}
+          vehiculosData.forEach((v: any) => {
+            const placa = (v.placa || 'PLACA').toUpperCase().trim();
+            mapaVehiculos.set(placa, {
+              id: v.id,
+              marca: v.marca || 'Vehículo',
+              modelo: v.modelo || 'Automóvil',
+              anio: v.anio ?? v.año ?? 2019,
+              placa: placa,
+              color: v.color || 'No especificado',
+              kilometraje: v.kilometraje || 80000,
+              ultimoServicio: v.updated_at ? new Date(v.updated_at).toLocaleDateString('es-VE') : 'Reciente',
+              tipoUltimoServicio: 'Inspección TTM Protocol 2027',
+              estadoSalud: 'optimo',
+              fotoUrl: v.foto_url || 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
+              checklist25: {
+                puntos_ok: 25,
+                puntos_cambio: 0,
+                frenos: 'ok',
+                aceite: 'ok',
+                suspension: 'ok',
+                electrico: 'ok'
+              }
+            });
+          });
+        }
+
+        // Incorporar vehículos de órdenes previas de invitado que coincidan con su correo
+        if (ordenesData && ordenesData.length > 0) {
+          ordenesData.forEach((ord: any) => {
+            const placaOrd = (
+              ord.placa_flota ||
+              ord.vehiculo_modelo?.match(/\[([A-Z0-9-]+)\]/)?.[1] ||
+              `ORD-${ord.id.slice(0, 5).toUpperCase()}`
+            ).toUpperCase().trim();
+
+            if (!mapaVehiculos.has(placaOrd)) {
+              mapaVehiculos.set(placaOrd, {
+                id: `veh_ord_${ord.id}`,
+                marca: ord.vehiculo_marca || 'Automóvil',
+                modelo: ord.vehiculo_modelo?.replace(/\[.*?\]/, '').trim() || 'Vehículo Particular',
+                anio: ord.vehiculo_anio || 2020,
+                placa: placaOrd,
+                kilometraje: ord.kilometraje_actual || 85400,
+                ultimoServicio: ord.created_at ? new Date(ord.created_at).toLocaleDateString('es-VE') : 'Reciente',
+                tipoUltimoServicio: ord.falla_reportada || 'Servicio Técnico TuTallerMóvil',
+                estadoSalud: ord.diagnostico_json?.frenos === 'requiere_cambio' ? 'atencion' : 'optimo',
+                fotoUrl: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
+                checklist25: ord.diagnostico_json || {
+                  puntos_ok: 22,
+                  puntos_cambio: 3,
+                  frenos: 'requiere_cambio',
+                  aceite: 'ok',
+                  suspension: 'ok',
+                  electrico: 'ok'
+                }
+              });
             }
+          });
+        }
+
+        const listaFinal = Array.from(mapaVehiculos.values());
+
+        if (listaFinal.length > 0) {
+          setVehiculos(listaFinal);
+        } else {
+          // Si es cuenta demo o precargada, mostrar vehículos demo
+          if (emailUsuario.includes('demo') || emailUsuario.includes('maria')) {
+            setVehiculos(VEHICULOS_DEFAULT);
+          } else {
+            // Verificar localStorage
+            if (typeof window !== 'undefined') {
+              const garajeLocal = localStorage.getItem('ttm_garaje_vehiculos');
+              if (garajeLocal) {
+                try {
+                  const parseLocal = JSON.parse(garajeLocal);
+                  if (parseLocal && parseLocal.length > 0) {
+                    setVehiculos(parseLocal);
+                    return;
+                  }
+                } catch (e) {}
+              }
+            }
+            // Usuario nuevo sin vehículos registrados: estado vacío para registrar
+            setVehiculos([]);
           }
         }
 
@@ -413,13 +483,46 @@ export default function ClienteDashboardPage() {
             </button>
           </div>
 
-          {/* Grid de Tarjetas de Vehículos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {vehiculos.map((v) => (
-              <div
-                key={v.id}
-                className="bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between space-y-4 group"
-              >
+          {/* Grid de Tarjetas de Vehículos o Estado Vacío */}
+          {vehiculos.length === 0 ? (
+            <div className="bg-white rounded-3xl border-2 border-dashed border-slate-300 p-8 sm:p-12 text-center space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center mx-auto shadow-xs">
+                <Car className="w-8 h-8 text-[#1E56B0]" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1">
+                <h3 className="text-lg font-black text-[#0A1525]">
+                  Aún no tienes vehículos en tu Garaje
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Registra tu automóvil para consultar su historial médico en cualquier momento, o pide tu primer servicio a domicilio y se vinculará automáticamente con tu correo <strong>{usuario.email}</strong>.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalNuevoVehiculo(true)}
+                  className="h-11 px-5 rounded-xl bg-white hover:bg-slate-50 text-[#0A1525] font-black text-xs border border-slate-300 flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Plus className="w-4 h-4 text-[#1E56B0]" />
+                  <span>Registrar mi Vehículo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalSolicitarOpen(true)}
+                  className="h-11 px-5 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
+                >
+                  <Wrench className="w-4 h-4 text-[#CCFF00]" />
+                  <span>Pedir mi primer servicio</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {vehiculos.map((v) => (
+                <div
+                  key={v.id}
+                  className="bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between space-y-4 group"
+                >
                 <div>
                   {/* Fila Superior: Foto / Silueta y Placa Venezolana */}
                   <div className="flex items-start justify-between gap-4">
@@ -514,7 +617,8 @@ export default function ClienteDashboardPage() {
               </div>
             ))}
           </div>
-        </div>
+        )}
+      </div>
 
       </main>
 

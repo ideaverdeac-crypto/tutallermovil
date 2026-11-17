@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { ReportarPagoButton } from '@/components/ReportarPagoButton';
+import { HistorialChecklistButton } from '@/components/HistorialChecklistModal';
 import {
   Lock,
   CheckCircle2,
@@ -433,6 +434,16 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
                             <span className="truncate">Eléctrico: OK</span>
                           </div>
                         </div>
+
+                        {/* Botón para Abrir Modal Interactivo con los 25 Puntos Completos */}
+                        <HistorialChecklistButton
+                          tipoServicio={tipo}
+                          fecha={fechaStr}
+                          kilometraje={km}
+                          checklistJson={chk}
+                          placa={placa}
+                          modelo={modelo}
+                        />
                       </div>
                     );
                   })()}

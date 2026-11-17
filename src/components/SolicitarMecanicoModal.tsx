@@ -14,7 +14,8 @@ import {
   Loader2,
   CheckCircle2,
   Sparkles,
-  Calendar
+  Calendar,
+  Mail
 } from 'lucide-react';
 
 interface SolicitarMecanicoModalProps {
@@ -29,6 +30,7 @@ export function SolicitarMecanicoModal({
   onSuccessToast
 }: SolicitarMecanicoModalProps) {
   const [nombre, setNombre] = useState('');
+  const [email, setEmail] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
   const [anio, setAnio] = useState('');
@@ -62,6 +64,7 @@ export function SolicitarMecanicoModal({
       const { data, error } = await supabase.from('ordenes').insert([
         {
           cliente_nombre: nombre.trim(),
+          cliente_email: email.trim() || null,
           vehiculo_marca: marca.trim(),
           vehiculo_modelo: modelo.trim(),
           vehiculo_anio: anioNum,
@@ -83,6 +86,7 @@ export function SolicitarMecanicoModal({
 
       // Éxito: limpiar campos, cerrar modal y disparar toast
       setNombre('');
+      setEmail('');
       setMarca('');
       setModelo('');
       setAnio('');
@@ -172,7 +176,7 @@ export function SolicitarMecanicoModal({
                     {/* Campo 1: Nombre */}
                     <div>
                       <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                        Tu Nombre Completo
+                        Tu Nombre Completo <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
                         <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -182,6 +186,28 @@ export function SolicitarMecanicoModal({
                           value={nombre}
                           onChange={(e) => setNombre(e.target.value)}
                           placeholder="Ej. Roberto Sánchez"
+                          className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Campo 1.5: Correo Electrónico (Opcional para recibo y Mi Garaje) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider">
+                          Correo Electrónico
+                        </label>
+                        <span className="text-[10px] text-[#1E56B0] font-bold">
+                          Opcional • Para recibo y vincular a Mi Garaje
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="ej. roberto@gmail.com"
                           className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
                         />
                       </div>
