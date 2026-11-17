@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -41,6 +41,10 @@ import {
   Eye,
   EyeOff,
   Smartphone,
+  Camera,
+  Upload,
+  Pencil,
+  RotateCcw,
   X
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
@@ -58,6 +62,7 @@ export interface CredencialOperadora {
   telefono?: string;
   fechaCreacion: string;
   estado: 'ACTIVA' | 'SUSPENDIDA';
+  fotoUrl?: string;
 }
 
 const OPERADORAS_INICIALES: CredencialOperadora[] = [
@@ -69,7 +74,8 @@ const OPERADORAS_INICIALES: CredencialOperadora[] = [
     turno: 'Turno Mañana (07:00 AM - 03:00 PM)',
     telefono: '+58 412 1234567',
     fechaCreacion: '10 Nov 2026',
-    estado: 'ACTIVA'
+    estado: 'ACTIVA',
+    fotoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'
   },
   {
     id: 'op_2',
@@ -79,7 +85,8 @@ const OPERADORAS_INICIALES: CredencialOperadora[] = [
     turno: 'Turno Tarde (02:00 PM - 10:00 PM)',
     telefono: '+58 414 7654321',
     fechaCreacion: '12 Nov 2026',
-    estado: 'ACTIVA'
+    estado: 'ACTIVA',
+    fotoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
   }
 ];
 
@@ -234,6 +241,10 @@ export default function FinanzasAdminPage() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
   const [mensajeOperadora, setMensajeOperadora] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+  const [nuevaFotoUrl, setNuevaFotoUrl] = useState<string>('');
+  const [subiendoFoto, setSubiendoFoto] = useState<boolean>(false);
+  const [editandoOperadoraId, setEditandoOperadoraId] = useState<string | null>(null);
+  const fileInputOperadoraRef = useRef<HTMLInputElement>(null);
 
   // Estado de Bitácora de Auditoría Conectada a Supabase Realtime
   const [bitacoraItems, setBitacoraItems] = useState<any[]>(BITACORA_AUDITORIA);
@@ -334,7 +345,57 @@ export default function FinanzasAdminPage() {
     setNuevaPassword(pass);
   };
 
-  const handleCrearOperadora = (e: React.FormEvent) => {
+  const handleCargarFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido (JPG, PNG).');
+      return;
+    }
+
+    setSubiendoFoto(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setNuevaFotoUrl(result);
+      setSubiendoFoto(false);
+    };
+    reader.onerror = () => {
+      setSubiendoFoto(false);
+      alert('Error al leer el archivo de imagen.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleIniciarEdicion = (op: CredencialOperadora) => {
+    setEditandoOperadoraId(op.id);
+    setNuevaNombre(op.nombre);
+    setNuevaEmail(op.email);
+    setNuevaPassword(op.passwordTemporal);
+    setNuevaTurno(op.turno);
+    setNuevaTelefono(op.telefono || '');
+    setNuevaFotoUrl(op.fotoUrl || '');
+    setMensajeOperadora({
+      tipo: 'ok',
+      texto: `✏️ Editando los datos de ${op.nombre}. Realiza los cambios y pulsa "Guardar Cambios".`
+    });
+  };
+
+  const handleCancelarEdicion = () => {
+    setEditandoOperadoraId(null);
+    setNuevaNombre('');
+    setNuevaEmail('');
+    setNuevaPassword('');
+    setNuevaTelefono('');
+    setNuevaFotoUrl('');
+    setMensajeOperadora(null);
+    if (fileInputOperadoraRef.current) {
+      fileInputOperadoraRef.current.value = '';
+    }
+  };
+
+  const handleGuardarOperadora = (e: React.FormEvent) => {
     e.preventDefault();
     setMensajeOperadora(null);
 
@@ -349,6 +410,41 @@ export default function FinanzasAdminPage() {
     }
 
     const emailNorm = nuevaEmail.trim().toLowerCase();
+
+    // Modo Edición: Actualizar operadora existente
+    if (editandoOperadoraId) {
+      if (operadoras.some((o) => o.id !== editandoOperadoraId && o.email.toLowerCase() === emailNorm)) {
+        setMensajeOperadora({ tipo: 'error', texto: 'Ya existe otra operadora registrada con este correo.' });
+        return;
+      }
+
+      const actualizadas = operadoras.map((op) => {
+        if (op.id === editandoOperadoraId) {
+          return {
+            ...op,
+            nombre: nuevaNombre.trim(),
+            email: emailNorm,
+            passwordTemporal: nuevaPassword.trim() || op.passwordTemporal,
+            turno: nuevaTurno,
+            telefono: nuevaTelefono.trim() || undefined,
+            fotoUrl: nuevaFotoUrl || op.fotoUrl
+          };
+        }
+        return op;
+      });
+
+      guardarOperadoras(actualizadas);
+      setToastNotificacion(`✓ Datos de ${nuevaNombre.trim()} actualizados correctamente.`);
+      setTimeout(() => setToastNotificacion(null), 4000);
+      handleCancelarEdicion();
+      setMensajeOperadora({
+        tipo: 'ok',
+        texto: `✅ ¡Datos de ${nuevaNombre.trim()} actualizados exitosamente!`
+      });
+      return;
+    }
+
+    // Modo Creación: Registrar nueva operadora
     if (operadoras.some((o) => o.email.toLowerCase() === emailNorm)) {
       setMensajeOperadora({ tipo: 'error', texto: 'Ya existe una operadora registrada con este correo.' });
       return;
@@ -364,17 +460,14 @@ export default function FinanzasAdminPage() {
       turno: nuevaTurno,
       telefono: nuevaTelefono.trim() || undefined,
       fechaCreacion: new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }),
-      estado: 'ACTIVA'
+      estado: 'ACTIVA',
+      fotoUrl: nuevaFotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
     };
 
     const actualizadas = [nueva, ...operadoras];
     guardarOperadoras(actualizadas);
 
-    // Limpiar campos
-    setNuevaNombre('');
-    setNuevaEmail('');
-    setNuevaPassword('');
-    setNuevaTelefono('');
+    handleCancelarEdicion();
     setMensajeOperadora({
       tipo: 'ok',
       texto: `✅ ¡Operadora ${nueva.nombre} dada de alta exitosamente! Ya puedes copiar sus credenciales.`
@@ -1254,11 +1347,27 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
                 {/* COLUMNA 1: FORMULARIO DE ALTA (5 cols en desktop) */}
                 <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-100">
-                      <UserPlus className="w-4 h-4 text-[#1E56B0]" />
-                      <h4 className="text-sm font-black text-[#0A1525]">
-                        Emitir Nueva Credencial
-                      </h4>
+                    <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        {editandoOperadoraId ? (
+                          <Pencil className="w-4 h-4 text-blue-600" />
+                        ) : (
+                          <UserPlus className="w-4 h-4 text-[#1E56B0]" />
+                        )}
+                        <h4 className="text-sm font-black text-[#0A1525]">
+                          {editandoOperadoraId ? 'Editar Datos de Operadora' : 'Emitir Nueva Credencial'}
+                        </h4>
+                      </div>
+                      {editandoOperadoraId && (
+                        <button
+                          type="button"
+                          onClick={handleCancelarEdicion}
+                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Cancelar Edición</span>
+                        </button>
+                      )}
                     </div>
 
                     {mensajeOperadora && (
@@ -1278,7 +1387,70 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
                       </div>
                     )}
 
-                    <form onSubmit={handleCrearOperadora} className="space-y-3.5">
+                    <form onSubmit={handleGuardarOperadora} className="space-y-3.5">
+                      {/* Foto de Perfil de la Operadora */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Foto de Perfil <span className="text-slate-400 font-normal">(Dispositivo o Cámara)</span>
+                        </label>
+                        <div className="flex items-center gap-3.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                          <div className="relative group shrink-0">
+                            {nuevaFotoUrl ? (
+                              <img
+                                src={nuevaFotoUrl}
+                                alt="Foto de perfil"
+                                className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-xs"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-white flex items-center justify-center text-slate-400 shadow-xs">
+                                <Users className="w-6 h-6 text-slate-400" />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => fileInputOperadoraRef.current?.click()}
+                              className="absolute inset-0 bg-black/40 text-white rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                              title="Cambiar foto"
+                            >
+                              <Camera className="w-5 h-5 text-white" />
+                            </button>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="file"
+                              ref={fileInputOperadoraRef}
+                              accept="image/*"
+                              onChange={handleCargarFoto}
+                              className="hidden"
+                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => fileInputOperadoraRef.current?.click()}
+                                disabled={subiendoFoto}
+                                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                              >
+                                <Upload className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                <span>{nuevaFotoUrl ? 'Cambiar Foto' : 'Cargar desde Dispositivo'}</span>
+                              </button>
+                              {nuevaFotoUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setNuevaFotoUrl('')}
+                                  className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                                >
+                                  Quitar
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1 truncate">
+                              JPG, PNG o WebP desde tu galería o cámara
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Nombre y Apellido */}
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -1388,13 +1560,26 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
                         </div>
                       </div>
 
-                      {/* Botón Guardar */}
+                      {/* Botón Guardar / Actualizar */}
                       <button
                         type="submit"
-                        className="w-full mt-2 py-3 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black tracking-wide flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:shadow-lg"
+                        className={`w-full mt-2 py-3 rounded-xl text-white text-xs font-black tracking-wide flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:shadow-lg ${
+                          editandoOperadoraId
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : 'bg-[#0A1525] hover:bg-[#1E56B0]'
+                        }`}
                       >
-                        <UserPlus className="w-4 h-4 text-[#CCFF00]" />
-                        <span>Dar de Alta & Emitir Acceso</span>
+                        {editandoOperadoraId ? (
+                          <>
+                            <Check className="w-4 h-4 text-[#CCFF00]" />
+                            <span>Guardar Cambios de Operadora</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4 text-[#CCFF00]" />
+                            <span>Dar de Alta & Emitir Acceso</span>
+                          </>
+                        )}
                       </button>
                     </form>
                   </div>
@@ -1434,41 +1619,84 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
                       {operadoras.map((op) => (
                         <div
                           key={op.id}
-                          className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                          className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                            editandoOperadoraId === op.id
+                              ? 'bg-blue-50/50 border-blue-300 ring-2 ring-blue-500/20 shadow-xs'
+                              : 'bg-white border-slate-200 shadow-2xs hover:shadow-sm'
+                          }`}
                         >
-                          {/* Datos de la Operadora */}
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-[#0A1525]">
-                                {op.nombre}
-                              </span>
+                          {/* Avatar y Datos de la Operadora */}
+                          <div className="flex items-center gap-3.5">
+                            {/* Avatar con foto y dot de estado */}
+                            <div className="relative shrink-0">
+                              {op.fotoUrl ? (
+                                <img
+                                  src={op.fotoUrl}
+                                  alt={op.nombre}
+                                  className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-2xs"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center font-black text-slate-600 text-sm">
+                                  {op.nombre.slice(0, 2).toUpperCase()}
+                                </div>
+                              )}
                               <span
-                                className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
-                                  op.estado === 'ACTIVA'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                                  op.estado === 'ACTIVA' ? 'bg-emerald-500' : 'bg-rose-500'
                                 }`}
-                              >
-                                {op.estado}
-                              </span>
+                                title={op.estado === 'ACTIVA' ? 'En línea / Activa' : 'Suspendida'}
+                              />
                             </div>
 
-                            <p className="text-[11px] font-mono text-slate-600">
-                              {op.email}
-                            </p>
+                            {/* Datos */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-[#0A1525]">
+                                  {op.nombre}
+                                </span>
+                                <span
+                                  className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                                    op.estado === 'ACTIVA'
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  }`}
+                                >
+                                  {op.estado}
+                                </span>
+                              </div>
 
-                            <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium pt-0.5">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-[#1E56B0]" />
-                                {op.turno}
-                              </span>
-                              <span>•</span>
-                              <span>Creado: {op.fechaCreacion}</span>
+                              <p className="text-[11px] font-mono text-slate-600">
+                                {op.email}
+                              </p>
+
+                              <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium pt-0.5">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-[#1E56B0]" />
+                                  {op.turno}
+                                </span>
+                                <span>•</span>
+                                <span>Creado: {op.fechaCreacion}</span>
+                              </div>
                             </div>
                           </div>
 
                           {/* Acciones para el Dueño */}
-                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                            {/* Editar datos y foto */}
+                            <button
+                              type="button"
+                              onClick={() => handleIniciarEdicion(op)}
+                              className={`h-8 px-2.5 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                                editandoOperadoraId === op.id
+                                  ? 'border-blue-300 bg-blue-100 text-blue-900'
+                                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-blue-700'
+                              }`}
+                              title="Editar datos y foto de la operadora"
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Editar</span>
+                            </button>
+
                             {/* Copiar para WhatsApp */}
                             <button
                               type="button"
