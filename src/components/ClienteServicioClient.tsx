@@ -43,8 +43,11 @@ import {
   CreditCard,
   Layers,
   PackageCheck,
-  Tag
+  Tag,
+  Copy,
+  Lock
 } from 'lucide-react';
+import { generarLinkWhatsApp } from '@/lib/utils';
 
 export interface RepuestoDetallado {
   id: string;
@@ -88,6 +91,18 @@ const REPUESTOS_FALLBACK_DEFAULT: RepuestoDetallado[] = [
     estado_pieza: 'Insumo Nuevo Grado Automotriz'
   }
 ];
+
+export const DATOS_BANCARIOS = {
+  zelle: {
+    correo: 'correo@tutallermovil.com',
+    titular: 'TuTallerMóvil C.A.'
+  },
+  pagoMovil: {
+    banco: 'Banco de Venezuela (0102)',
+    rif: 'V-1786991',
+    telefono: '0414-2314194'
+  }
+};
 
 interface OrdenCliente {
   id: string;
@@ -172,6 +187,20 @@ export function ClienteServicioClient({ id }: { id: string }) {
   const [subiendoComprobante, setSubiendoComprobante] = useState<boolean>(false);
   const [comprobanteUrl, setComprobanteUrl] = useState<string | null>(null);
   const [confirmandoPago, setConfirmandoPago] = useState<boolean>(false);
+  const [pantallaExitoReportado, setPantallaExitoReportado] = useState<boolean>(false);
+  const [toastNotificacion, setToastNotificacion] = useState<string | null>(null);
+  const [copiadoKey, setCopiadoKey] = useState<string | null>(null);
+
+  // Copiar dato con micro-interacción de check verde y toast
+  const copiarDato = (texto: string, key: string, label: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(texto);
+      setCopiadoKey(key);
+      setToastNotificacion(`✓ ${label} copiado`);
+      setTimeout(() => setCopiadoKey(null), 2500);
+      setTimeout(() => setToastNotificacion(null), 3000);
+    }
+  };
 
   // Encuesta de calificación
   const [calificacionEstrellas, setCalificacionEstrellas] = useState<number>(5);
@@ -389,6 +418,18 @@ export function ClienteServicioClient({ id }: { id: string }) {
           } as TargetAndTransition,
           colorBadge: 'bg-purple-100 text-purple-900 border-purple-300'
         };
+      case 'PAGO_REPORTADO':
+        return {
+          etapaIndex: 4,
+          titulo: 'Comprobante en Verificación',
+          subtitulo: 'Hemos recibido tu comprobante de pago. La operadora de despacho lo está validando para liberar tu garantía.',
+          icono: Clock,
+          iconoAnimacion: {
+            scale: [1, 1.08, 1],
+            transition: { repeat: Infinity, duration: 2.2, ease: 'easeInOut' }
+          } as TargetAndTransition,
+          colorBadge: 'bg-emerald-100 text-emerald-900 border-emerald-300'
+        };
       case 'PAGADO':
       case 'FINALIZADO':
         return {
@@ -495,35 +536,40 @@ export function ClienteServicioClient({ id }: { id: string }) {
     }
   };
 
-  // Confirmar Pago (Pasa a PAGADO, dispara Confeti y abre Encuesta 5 estrellas)
+  // Confirmar Pago y Notificar a la Operadora (Pasa a PAGO_REPORTADO y muestra pantalla de éxito)
   const handleConfirmarPago = async () => {
+    if (!comprobanteUrl) {
+      alert('Por favor sube primero el comprobante de pago.');
+      return;
+    }
+
     setConfirmandoPago(true);
     try {
       const supabase = createClient();
       await supabase
         .from('ordenes')
-        .update({ estado: 'PAGADO' })
+        .update({
+          estado: 'PAGO_REPORTADO'
+        })
         .eq('id', id);
 
-      setOrden((prev) => ({ ...prev, estado: 'PAGADO' }));
+      setOrden((prev) => ({ ...prev, estado: 'PAGO_REPORTADO' }));
       setModalPagoOpen(false);
+      setPantallaExitoReportado(true);
 
-      // Lanzar Confeti Festivo
+      // Lanzar Confeti Festivo con partículas verdes
       try {
         confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.55 },
-          colors: ['#CCFF00', '#1E56B0', '#0A1525', '#16A34A', '#F59E0B']
+          particleCount: 140,
+          spread: 90,
+          origin: { y: 0.5 },
+          colors: ['#16A34A', '#CCFF00', '#1E56B0', '#10B981', '#0A1525']
         });
       } catch (e) {
         console.warn('Confetti trigger:', e);
       }
-
-      // Abrir encuesta de satisfacción de 5 estrellas
-      setModalCalificacionOpen(true);
     } catch (err) {
-      console.error('Error al confirmar pago en Supabase:', err);
+      console.error('Error al reportar pago en Supabase:', err);
     } finally {
       setConfirmandoPago(false);
     }
@@ -919,43 +965,150 @@ export function ClienteServicioClient({ id }: { id: string }) {
       )}
 
       {/* ======================================================== */}
-      {/* 5. PANEL DE PAGO (Estado PENDIENTE_PAGO)                  */}
+      {/* 5. PANEL DE PAGO PREMIUM (Glassmorphism & Ultra-Seguro)   */}
       {/* ======================================================== */}
-      {(orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'LIQUIDACION_PENDIENTE' || orden.estado === 'TRABAJO_TERMINADO') && (
+      {(orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'LIQUIDACION_PENDIENTE' || orden.estado === 'TRABAJO_TERMINADO' || orden.estado === 'PAGO_REPORTADO') && (
         <section className="max-w-md mx-auto px-4 py-2">
-          <div className="bg-white rounded-3xl p-5 border-2 border-[#1E56B0] shadow-xl space-y-4">
-            
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#1E56B0] text-white flex items-center justify-center font-black shadow-xs">
-                <Receipt className="w-5 h-5 text-white" />
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 border border-slate-200/90 shadow-2xl space-y-4 relative overflow-hidden"
+          >
+            {/* Acento Sutil de Luz */}
+            <div className="absolute top-0 right-0 w-36 h-36 bg-[#16A34A]/10 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Cabecera del Panel con Sellos de Seguridad */}
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs shrink-0">
+                  <Receipt className="w-5 h-5 text-[#CCFF00]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm font-black text-[#0A1525]">
+                      {orden.estado === 'PAGO_REPORTADO' ? 'Comprobante en Validación' : 'Reportar Pago del Servicio'}
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {orden.estado === 'PAGO_REPORTADO' ? 'Operadora conciliando transferencia' : 'Transferencia bancaria o digital'}
+                  </p>
+                </div>
               </div>
+
+              <div className="flex items-center gap-1 text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                <Lock className="w-3 h-3 text-emerald-600" />
+                <span>SSL 256-Bit</span>
+              </div>
+            </div>
+
+            {/* Monto Total a Conciliar */}
+            <div className="p-3.5 bg-gradient-to-r from-slate-900 via-[#0A1525] to-slate-900 text-white rounded-2xl shadow-inner flex items-baseline justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                  Pago Requerido para Entrega
+                <span className="text-[10px] text-slate-300 uppercase font-black tracking-wider block">
+                  Total Facturable:
                 </span>
-                <h3 className="text-base font-black text-[#0A1525]">
-                  Liquidación Final del Servicio
-                </h3>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Diagnóstico + Reparación QA
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-mono font-black text-[#CCFF00] tracking-tight">
+                  ${totalCotizado.toFixed(2)}
+                </span>
+                <span className="text-[11px] font-mono text-slate-300 ml-1">USD</span>
               </div>
             </div>
 
-            {/* Datos Bancarios Pago Móvil y Zelle */}
-            <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 text-xs space-y-2">
-              <div className="flex justify-between items-baseline pb-2 border-b border-slate-200">
-                <span className="font-extrabold text-slate-700">Monto Total a Conciliar:</span>
-                <span className="font-mono text-base font-black text-[#0A1525]">
-                  ${totalCotizado.toFixed(2)} USD
-                </span>
+            {/* Datos Bancarios Reales con Micro-Interacciones de Copiado */}
+            <div className="space-y-2.5">
+              
+              {/* Opción 1: Zelle */}
+              <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3.5 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-600" />
+                    <span className="text-xs font-black text-[#0A1525]">Zelle</span>
+                    <span className="text-[10px] text-slate-400">({DATOS_BANCARIOS.zelle.titular})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copiarDato(DATOS_BANCARIOS.zelle.correo, 'zelle_correo', 'Correo Zelle')}
+                    className={`h-7 px-2.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                      copiadoKey === 'zelle_correo'
+                        ? 'bg-[#16A34A] text-white shadow-xs'
+                        : 'bg-slate-200/70 hover:bg-slate-300 text-slate-800'
+                    }`}
+                  >
+                    {copiadoKey === 'zelle_correo' ? (
+                      <>
+                        <Check className="w-3 h-3 stroke-[3]" />
+                        <span>¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-slate-600" />
+                        <span>Copiar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs font-mono font-bold text-slate-700 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 break-all select-all">
+                  {DATOS_BANCARIOS.zelle.correo}
+                </p>
               </div>
-              <div className="space-y-1 text-slate-600 pt-1">
-                <p className="font-bold text-[#0A1525]">Pago Móvil Banesco (0134)</p>
-                <p>CI/RIF: <strong className="text-slate-800">J-501234567</strong></p>
-                <p>Teléfono: <strong className="text-slate-800">0414-9876543</strong></p>
-                <p className="text-[11px] text-slate-500 pt-0.5">Zelle: <strong className="text-slate-800">pagos@tutallermovil.com</strong></p>
+
+              {/* Opción 2: Pago Móvil */}
+              <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-600" />
+                    <span className="text-xs font-black text-[#0A1525]">Pago Móvil</span>
+                    <span className="text-[10px] text-slate-500 font-semibold">• {DATOS_BANCARIOS.pagoMovil.banco}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {/* RIF */}
+                  <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase font-black block">RIF / CI</span>
+                      <span className="font-mono font-bold text-slate-800">{DATOS_BANCARIOS.pagoMovil.rif}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copiarDato(DATOS_BANCARIOS.pagoMovil.rif, 'pm_rif', 'RIF')}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        copiadoKey === 'pm_rif' ? 'bg-[#16A34A] text-white' : 'hover:bg-slate-100 text-slate-600'
+                      }`}
+                      title="Copiar RIF"
+                    >
+                      {copiadoKey === 'pm_rif' ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  {/* Teléfono */}
+                  <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase font-black block">Teléfono</span>
+                      <span className="font-mono font-bold text-slate-800">{DATOS_BANCARIOS.pagoMovil.telefono}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copiarDato(DATOS_BANCARIOS.pagoMovil.telefono, 'pm_tel', 'Teléfono')}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        copiadoKey === 'pm_tel' ? 'bg-[#16A34A] text-white' : 'hover:bg-slate-100 text-slate-600'
+                      }`}
+                      title="Copiar teléfono"
+                    >
+                      {copiadoKey === 'pm_tel' ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
               </div>
+
             </div>
 
-            {/* Input escondido y Botón de Subir Comprobante */}
+            {/* Input escondido para carga */}
             <input
               type="file"
               ref={inputComprobanteRef}
@@ -964,6 +1117,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
               onChange={handleSubirComprobante}
             />
 
+            {/* Área de Carga de Comprobante (Bucket 'evidencias') */}
             {subiendoComprobante ? (
               <div className="h-20 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 text-[#1E56B0] animate-spin" />
@@ -975,52 +1129,85 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   <img
                     src={comprobanteUrl}
                     alt="Comprobante"
-                    className="w-14 h-14 rounded-xl object-cover border border-emerald-400"
+                    className="w-14 h-14 rounded-xl object-cover border border-emerald-400 shadow-xs"
                   />
                   <div>
-                    <span className="text-xs font-black text-emerald-900 block">✓ Comprobante Cargado</span>
+                    <span className="text-xs font-black text-emerald-900 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      Comprobante Listo
+                    </span>
                     <span className="text-[10px] text-slate-500 font-mono">Bucket: evidencias</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => inputComprobanteRef.current?.click()}
-                  className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
-                >
-                  Cambiar
-                </button>
+                {orden.estado !== 'PAGO_REPORTADO' && (
+                  <button
+                    type="button"
+                    onClick={() => inputComprobanteRef.current?.click()}
+                    className="text-xs font-bold text-slate-600 underline cursor-pointer p-1 hover:text-[#0A1525]"
+                  >
+                    Cambiar
+                  </button>
+                )}
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => inputComprobanteRef.current?.click()}
-                className="w-full h-16 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
+                className="w-full h-18 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex items-center justify-center gap-2.5 cursor-pointer transition-all active:scale-98"
               >
-                <Upload className="w-5 h-5 text-[#1E56B0]" />
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#1E56B0] flex items-center justify-center shrink-0">
+                  <Upload className="w-5 h-5 text-[#1E56B0]" />
+                </div>
                 <div className="text-left">
-                  <span className="text-xs font-black text-[#0A1525] block">Subir Comprobante de Pago</span>
-                  <span className="text-[10px] text-slate-400">Captura de pantalla o recibo bancario</span>
+                  <span className="text-xs font-black text-[#0A1525] block">Sube tu comprobante de pago</span>
+                  <span className="text-[10px] text-slate-400">Captura de pantalla JPG o PNG de la transferencia</span>
                 </div>
               </button>
             )}
 
-            {/* Botón Confirmar Pago */}
-            <button
-              type="button"
-              disabled={confirmandoPago}
-              onClick={handleConfirmarPago}
-              className="w-full h-12 bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 active:scale-95"
-            >
-              {confirmandoPago ? (
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] group-hover:text-[#0A1525]" />
-                  <span>Confirmar Pago y Liberar Vehículo</span>
-                </>
-              )}
-            </button>
-          </div>
+            {/* Botón de Confirmación o Estado Reportado */}
+            {orden.estado === 'PAGO_REPORTADO' ? (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-1">
+                <span className="text-xs font-black text-emerald-800 flex items-center justify-center gap-1.5">
+                  <Clock className="w-4 h-4 text-emerald-600 animate-spin" />
+                  Comprobante Enviado a la Operadora
+                </span>
+                <p className="text-[11px] text-slate-600">
+                  Estamos validando tu pago en tesorería. Te notificaremos al liberar la garantía de 90 días.
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={confirmandoPago || !comprobanteUrl}
+                onClick={handleConfirmarPago}
+                className={`w-full h-12 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 ${
+                  comprobanteUrl
+                    ? 'bg-[#16A34A] hover:bg-[#15803d] text-white cursor-pointer active:scale-95 shadow-emerald-600/30'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                {confirmandoPago ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Confirmar Pago y Notificar</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Sello de Garantía Inferior */}
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-semibold">
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                Garantía TuTallerMóvil 90 días
+              </span>
+              <span>Bóveda QA Conciliada</span>
+            </div>
+
+          </motion.div>
         </section>
       )}
 
@@ -1538,67 +1725,126 @@ export function ClienteServicioClient({ id }: { id: string }) {
       </AnimatePresence>
 
       {/* ======================================================== */}
-      {/* MODAL 4: SUBIR COMPROBANTE DE PAGO                       */}
+      {/* MODAL 4: SUBIR COMPROBANTE DE PAGO (GLASSMORPHISM)       */}
       {/* ======================================================== */}
       <AnimatePresence>
         {modalPagoOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/75 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative"
+              className="w-full max-w-sm bg-white/95 backdrop-blur-xl rounded-3xl p-6 text-center space-y-4 border border-slate-200 shadow-2xl relative overflow-hidden"
             >
+              {/* Luz decorativa */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#16A34A]/10 rounded-full blur-2xl pointer-events-none" />
+
               <button
                 type="button"
                 onClick={() => setModalPagoOpen(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="w-14 h-14 rounded-2xl bg-[#1E56B0] text-white flex items-center justify-center mx-auto shadow-md">
+              <div className="w-14 h-14 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center mx-auto shadow-md">
                 <Receipt className="w-7 h-7 stroke-[2.5]" />
               </div>
 
               <div>
+                <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-flex mb-1">
+                  <Lock className="w-3 h-3 text-emerald-600" />
+                  <span>Bóveda Segura SSL 256-Bit</span>
+                </div>
                 <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
                   Reportar Pago
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Monto a pagar:{' '}
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Monto a conciliar:{' '}
                   <strong className="text-[#0A1525] font-mono text-sm">
                     ${totalCotizado.toFixed(2)} USD
-                  </strong>{' '}
-                  (o al cambio en Bs tasa oficial)
+                  </strong>
                 </p>
               </div>
 
-              {/* Datos Bancarios TTM */}
-              <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3.5 text-left text-xs space-y-1">
-                <p className="font-bold text-[#0A1525]">Pago Móvil Banesco (0134)</p>
-                <p className="text-slate-600">CI/RIF: <strong className="text-slate-800">J-501234567</strong></p>
-                <p className="text-slate-600">Teléfono: <strong className="text-slate-800">0414-9876543</strong></p>
-                <p className="text-[11px] text-slate-400 pt-0.5">Zelle: <strong className="text-slate-700">pagos@tutallermovil.com</strong></p>
+              {/* Datos Bancarios Reales con Botones de Copiar */}
+              <div className="space-y-2 text-left">
+                {/* Zelle */}
+                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-[#0A1525]">Zelle ({DATOS_BANCARIOS.zelle.titular})</span>
+                    <button
+                      type="button"
+                      onClick={() => copiarDato(DATOS_BANCARIOS.zelle.correo, 'modal_zelle', 'Correo Zelle')}
+                      className={`h-6 px-2 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                        copiadoKey === 'modal_zelle'
+                          ? 'bg-[#16A34A] text-white'
+                          : 'bg-slate-200/80 hover:bg-slate-300 text-slate-800'
+                      }`}
+                    >
+                      {copiadoKey === 'modal_zelle' ? <Check className="w-3 h-3 stroke-[3]" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiadoKey === 'modal_zelle' ? 'Copiado' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                  <p className="text-xs font-mono font-bold text-slate-700 bg-white px-2 py-1 rounded-lg border border-slate-200 break-all select-all">
+                    {DATOS_BANCARIOS.zelle.correo}
+                  </p>
+                </div>
+
+                {/* Pago Móvil */}
+                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3 space-y-1.5">
+                  <span className="text-[11px] font-black text-[#0A1525] block">
+                    Pago Móvil • {DATOS_BANCARIOS.pagoMovil.banco}
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <div className="bg-white p-1.5 rounded-lg border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <span className="text-[8px] text-slate-400 font-black block">RIF / CI</span>
+                        <span className="font-mono font-bold text-slate-800 text-[11px]">{DATOS_BANCARIOS.pagoMovil.rif}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copiarDato(DATOS_BANCARIOS.pagoMovil.rif, 'modal_pm_rif', 'RIF')}
+                        className={`p-1 rounded transition-colors ${copiadoKey === 'modal_pm_rif' ? 'bg-[#16A34A] text-white' : 'hover:bg-slate-100 text-slate-600'}`}
+                      >
+                        {copiadoKey === 'modal_pm_rif' ? <Check className="w-3 h-3 stroke-[3]" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+
+                    <div className="bg-white p-1.5 rounded-lg border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <span className="text-[8px] text-slate-400 font-black block">Teléfono</span>
+                        <span className="font-mono font-bold text-slate-800 text-[11px]">{DATOS_BANCARIOS.pagoMovil.telefono}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copiarDato(DATOS_BANCARIOS.pagoMovil.telefono, 'modal_pm_tel', 'Teléfono')}
+                        className={`p-1 rounded transition-colors ${copiadoKey === 'modal_pm_tel' ? 'bg-[#16A34A] text-white' : 'hover:bg-slate-100 text-slate-600'}`}
+                      >
+                        {copiadoKey === 'modal_pm_tel' ? <Check className="w-3 h-3 stroke-[3]" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Botón de Selección de Comprobante */}
               {subiendoComprobante ? (
-                <div className="h-20 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex items-center justify-center gap-2">
+                <div className="h-18 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex items-center justify-center gap-2">
                   <Loader2 className="w-5 h-5 text-[#1E56B0] animate-spin" />
                   <span className="text-xs font-bold text-[#0A1525]">Subiendo comprobante...</span>
                 </div>
               ) : comprobanteUrl ? (
-                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <img
                       src={comprobanteUrl}
                       alt="Comprobante"
-                      className="w-12 h-12 rounded-xl object-cover border border-emerald-400"
+                      className="w-12 h-12 rounded-xl object-cover border border-emerald-400 shadow-2xs"
                     />
                     <div className="text-left">
                       <span className="text-xs font-black text-emerald-900 block">✓ Comprobante Cargado</span>
-                      <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Bucket: evidencias</span>
                     </div>
                   </div>
                   <button
@@ -1612,11 +1858,11 @@ export function ClienteServicioClient({ id }: { id: string }) {
               ) : (
                 <div
                   onClick={() => inputComprobanteRef.current?.click()}
-                  className="border-2 border-dashed border-slate-300 rounded-2xl p-4 hover:border-[#1E56B0] transition-colors cursor-pointer bg-slate-50"
+                  className="border-2 border-dashed border-slate-300 rounded-2xl p-3 hover:border-[#1E56B0] transition-colors cursor-pointer bg-slate-50"
                 >
-                  <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                  <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
                   <span className="text-xs font-bold text-[#0A1525] block">
-                    Subir Comprobante (Evidencias)
+                    Sube tu comprobante de pago
                   </span>
                   <span className="text-[10px] text-slate-400">
                     Captura JPG o PNG de la transferencia
@@ -1627,22 +1873,109 @@ export function ClienteServicioClient({ id }: { id: string }) {
               <div className="space-y-2 pt-1">
                 <button
                   type="button"
-                  disabled={confirmandoPago}
+                  disabled={confirmandoPago || !comprobanteUrl}
                   onClick={handleConfirmarPago}
-                  className="w-full h-12 bg-[#1E56B0] hover:bg-[#164388] text-white font-black text-sm rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
+                  className={`w-full h-12 font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all shadow-md ${
+                    comprobanteUrl
+                      ? 'bg-[#16A34A] hover:bg-[#15803d] text-white cursor-pointer active:scale-95 shadow-emerald-600/30'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
                 >
                   {confirmandoPago ? (
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
                   ) : (
                     <>
-                      <Check className="w-4 h-4 stroke-[3]" />
-                      <span>Confirmar Pago</span>
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Confirmar Pago y Notificar</span>
                     </>
                   )}
                 </button>
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL CELEBRATORIO: COMPROBANTE NOTIFICADO CON ÉXITO     */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {pantallaExitoReportado && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 30 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-36 h-36 bg-[#16A34A]/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-36 h-36 bg-[#CCFF00]/20 rounded-full blur-2xl pointer-events-none" />
+
+              <motion.div
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: [0, 1.25, 1], rotate: 0 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#16A34A] to-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 relative"
+              >
+                <Check className="w-10 h-10 stroke-[3.5] text-[#0A1525]" />
+                <span className="absolute inset-0 rounded-3xl border-2 border-[#16A34A] animate-ping opacity-30" />
+              </motion.div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  ✓ Comprobante Notificado
+                </span>
+                <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
+                  ¡Pago en Validación!
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Tu comprobante ha sido enviado a la operadora de despacho. En unos minutos tu orden pasará a <strong>PAGADO</strong> y se liberará tu certificado de garantía.
+                </p>
+              </div>
+
+              {comprobanteUrl && (
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
+                  <img
+                    src={comprobanteUrl}
+                    alt="Ticket"
+                    className="w-12 h-12 rounded-xl object-cover border border-emerald-400"
+                  />
+                  <div className="text-left text-xs">
+                    <span className="font-bold text-[#0A1525] block">Comprobante Recibido</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Bucket: evidencias</span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setPantallaExitoReportado(false)}
+                className="w-full h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                Entendido, Continuar
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* TOAST FLOTANTE DE CONFIRMACIÓN DE COPIADO                 */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {toastNotificacion && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.9 }}
+            className="fixed bottom-24 inset-x-0 z-50 flex justify-center pointer-events-none px-4"
+          >
+            <div className="bg-[#0A1525] text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
+              <span>{toastNotificacion}</span>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

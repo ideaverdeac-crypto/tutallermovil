@@ -51,18 +51,22 @@ import {
   Hourglass,
   Gauge,
   Layers,
-  PackageCheck
+  PackageCheck,
+  MessageCircle,
+  Receipt
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import FloatingSupportButton from '@/components/ui/floating-support-button';
+import { generarLinkWhatsApp } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 interface OrdenKanban {
   id: string;
   cliente_nombre: string;
+  cliente_telefono?: string | null;
   vehiculo_marca?: string | null;
   vehiculo_modelo: string;
   vehiculo_anio?: number | string | null;
@@ -75,6 +79,7 @@ interface OrdenKanban {
   foto_odometro_url?: string | null;
   foto_repuesto_viejo_url?: string | null;
   foto_repuesto_nuevo_url?: string | null;
+  comprobante_url?: string | null;
 }
 
 // Repuestos del catálogo oficial para integración en cotizador
@@ -238,19 +243,19 @@ const COLUMNAS = [
     colorDragOver: 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/60',
     estadosValidos: ['EN_EJECUCION', 'EN_SERVICIO', 'TRABAJO_TERMINADO'],
     estadoDestino: 'EN_EJECUCION',
-    estadoSiguiente: 'PENDIENTE_PAGO',
+    estadoSiguiente: 'PAGO_REPORTADO',
     textoVacio: 'Sin servicios activos en sitio'
   },
   {
-    id: 'PENDIENTE_PAGO',
-    titulo: '6. POR LIQUIDAR',
+    id: 'PAGO_REPORTADO',
+    titulo: '6. VALIDAR PAGO',
     colorDot: 'bg-purple-600',
     colorBorder: 'hover:border-purple-400',
     colorDragOver: 'ring-2 ring-purple-500 border-purple-500 bg-purple-50/60',
-    estadosValidos: ['PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE', 'POR_LIQUIDAR'],
-    estadoDestino: 'PENDIENTE_PAGO',
-    estadoSiguiente: null,
-    textoVacio: 'Sin pagos pendientes'
+    estadosValidos: ['PAGO_REPORTADO', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE', 'POR_LIQUIDAR'],
+    estadoDestino: 'PAGO_REPORTADO',
+    estadoSiguiente: 'PAGADO',
+    textoVacio: 'Sin pagos pendientes por validar'
   }
 ];
 
@@ -439,10 +444,60 @@ export default function TableroDespachoPage() {
   const [ordenParaEvidencia, setOrdenParaEvidencia] = useState<OrdenKanban | null>(null);
   const [tabEvidenciaModal, setTabEvidenciaModal] = useState<'odometro' | 'repuesto_viejo' | 'repuesto_nuevo'>('odometro');
 
+  // Estados de Validación de Comprobante de Pago
+  const [modalComprobanteOpen, setModalComprobanteOpen] = useState(false);
+  const [ordenParaComprobante, setOrdenParaComprobante] = useState<OrdenKanban | null>(null);
+
   const handleAbrirEvidencia = (orden: OrdenKanban) => {
     setOrdenParaEvidencia(orden);
     setTabEvidenciaModal('odometro');
     setModalEvidenciaOpen(true);
+  };
+
+  const handleAbrirComprobante = (orden: OrdenKanban) => {
+    setOrdenParaComprobante(orden);
+    setModalComprobanteOpen(true);
+  };
+
+  const handleAprobarPagoYTerminar = async (orden: OrdenKanban) => {
+    try {
+      setActualizandoId(orden.id);
+      await moverOrden(orden.id, 'PAGADO');
+      setModalComprobanteOpen(false);
+      setToastPagoExitoso(
+        `¡Pago Aprobado y Conciliado! Orden #${orden.id.slice(0, 8)} cerrada oficialmente. Dinero ingresado en caja.`
+      );
+      setTimeout(() => setToastPagoExitoso(null), 5000);
+    } catch (err) {
+      console.error('Error aprobando pago:', err);
+    } finally {
+      setActualizandoId(null);
+    }
+  };
+
+  const handleRechazarComprobante = async (orden: OrdenKanban) => {
+    try {
+      setActualizandoId(orden.id);
+      await moverOrden(orden.id, 'PENDIENTE_PAGO');
+      setModalComprobanteOpen(false);
+      setToastPagoExitoso(
+        `Comprobante rechazado. Orden #${orden.id.slice(0, 8)} devuelta a Pendiente de Pago para nuevo reporte.`
+      );
+      setTimeout(() => setToastPagoExitoso(null), 5000);
+    } catch (err) {
+      console.error('Error rechazando comprobante:', err);
+    } finally {
+      setActualizandoId(null);
+    }
+  };
+
+  const handleEnviarCarnetWhatsApp = (orden: OrdenKanban) => {
+    const mec = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+    const credSlug = mec.credencial.replace('#', '');
+    const linkCarnet = `https://tutallermovil.vercel.app/carnet/${credSlug}`;
+    const mensaje = `Hola ${orden.cliente_nombre || 'estimado cliente'}, soy tu operadora de TuTallerMóvil. Tu mecánico ${mec.nombre} va en camino. Verifica su identidad aquí: ${linkCarnet}`;
+    const telefono = orden.cliente_telefono || '0414-2314194';
+    window.open(generarLinkWhatsApp(telefono, mensaje), '_blank');
   };
 
   // Estados del Centro de Despacho Táctico
@@ -1446,7 +1501,7 @@ export default function TableroDespachoPage() {
                               </div>
                             )}
 
-                            {/* En EN_INSPECCION: Avatar del Mecánico + Icono Redondo de Diagnóstico en curso + Botón de Cotizar */}
+                            {/* En EN_INSPECCION: Avatar del Mecánico + Icono Redondo + WhatsApp Carnet + Botón de Cotizar */}
                             {columna.id === 'EN_INSPECCION' && (
                               <div className="space-y-2 ml-5">
                                 <div className="flex items-center justify-between gap-2">
@@ -1459,6 +1514,21 @@ export default function TableroDespachoPage() {
                                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1E56B0] animate-pulse ring-2 ring-white" />
                                   </div>
                                 </div>
+
+                                {/* Botón: Enviar Carnet por WhatsApp */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEnviarCarnetWhatsApp(orden);
+                                  }}
+                                  className="w-full h-8 px-2.5 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                  title="Enviar carnet digital verificado del mecánico al WhatsApp del cliente"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                                  <span>Enviar Carnet por WhatsApp</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1569,29 +1639,99 @@ export default function TableroDespachoPage() {
                               </div>
                             )}
 
-                            {/* En PENDIENTE_PAGO: Monto total a liquidar en grande y botón oscuro 'Validar Pago y Cerrar' */}
-                            {columna.id === 'PENDIENTE_PAGO' && (
-                              <div className="p-3 rounded-2xl bg-purple-50/80 border border-purple-200 ml-5 space-y-2">
+                            {/* En PAGO_REPORTADO / PENDIENTE_PAGO: Ver Comprobante + Rechazar / Aprobar */}
+                            {(columna.id === 'PAGO_REPORTADO' || columna.id === 'PENDIENTE_PAGO') && (
+                              <div className="p-3 rounded-2xl bg-purple-50/80 border border-purple-200 ml-5 space-y-2.5">
                                 <div className="flex items-baseline justify-between">
                                   <span className="text-[10px] font-black uppercase tracking-wider text-purple-900">
                                     Total a Liquidar:
                                   </span>
-                                  <span className="text-lg font-black text-[#0A1525] font-mono">
+                                  <span className="text-base font-black text-[#0A1525] font-mono">
                                     ${typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0 ? (Number(orden.ganancia_estimada) * 1.5).toFixed(2) : '75.00'}{' '}
-                                    <span className="text-xs font-sans text-slate-500 font-bold">USD</span>
+                                    <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
                                   </span>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleValidarPagoYCerrar(orden);
-                                  }}
-                                  className="w-full h-9 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-[#CCFF00]" />
-                                  <span>Validar Pago y Cerrar</span>
-                                </button>
+
+                                {orden.estado === 'PAGO_REPORTADO' || orden.comprobante_url ? (
+                                  <div className="space-y-2">
+                                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs">
+                                      <span className="text-emerald-800 font-extrabold flex items-center gap-1.5 text-[11px]">
+                                        <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                                        Ticket Cargado
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAbrirComprobante(orden);
+                                        }}
+                                        className="h-6 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        <span>Ver Comprobante</span>
+                                      </button>
+                                    </div>
+
+                                    {/* Dos botones: Rechazar vs Aprobar Pago y Cerrar Orden */}
+                                    <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                                      <button
+                                        type="button"
+                                        disabled={isUpdating}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRechazarComprobante(orden);
+                                        }}
+                                        className="h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black flex items-center justify-center gap-1 transition-colors cursor-pointer active:scale-95"
+                                        title="Rechazar comprobante y devolver a Pendiente de Pago"
+                                      >
+                                        <X className="w-3 h-3 stroke-[2.5]" />
+                                        <span>Rechazar</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        disabled={isUpdating}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAprobarPagoYTerminar(orden);
+                                        }}
+                                        className="h-8 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border border-slate-900/10 text-[10px] font-black flex items-center justify-center gap-1 transition-colors shadow-2xs cursor-pointer active:scale-95"
+                                        title="Aprobar pago y cerrar orden (el dinero entra oficialmente)"
+                                      >
+                                        <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
+                                        <span>Aprobar Pago</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const tel = orden.cliente_telefono || '0414-2314194';
+                                        const msg = `Hola ${orden.cliente_nombre || 'estimado cliente'}, te recordamos los datos para realizar el pago de tu servicio en TuTallerMóvil: Zelle (correo@tutallermovil.com) o Pago Móvil (0102 • V-1786991 • 0414-2314194). Puedes subir tu comprobante en tu portal: https://tutallermovil.vercel.app/cliente/servicio/${orden.id}`;
+                                        window.open(generarLinkWhatsApp(tel, msg), '_blank');
+                                      }}
+                                      className="w-full h-8 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-[10px] font-black flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                    >
+                                      <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                                      <span>Recordar Pago por WhatsApp</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleValidarPagoYCerrar(orden);
+                                      }}
+                                      className="w-full h-8 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-[10px] font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-[#CCFF00]" />
+                                      <span>Validar Pago y Cerrar</span>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             )}
 
@@ -1604,7 +1744,7 @@ export default function TableroDespachoPage() {
 
                               <div className="flex items-center gap-1.5">
                                 {/* Botón Ver Evidencia: solo cuando el servicio llega a ejecución (o posterior) */}
-                                {(columna.id === 'EN_EJECUCION' || columna.id === 'PENDIENTE_PAGO' || orden.estado === 'EN_EJECUCION' || orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'TRABAJO_TERMINADO' || orden.estado === 'FINALIZADO') && (
+                                {(columna.id === 'EN_EJECUCION' || columna.id === 'PAGO_REPORTADO' || columna.id === 'PENDIENTE_PAGO' || orden.estado === 'EN_EJECUCION' || orden.estado === 'PAGO_REPORTADO' || orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'TRABAJO_TERMINADO' || orden.estado === 'FINALIZADO') && (
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -2879,6 +3019,133 @@ export default function TableroDespachoPage() {
               >
                 Cerrar Visor
               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 10. MODAL VISOR DE COMPROBANTE DE PAGO (VALIDACIÓN TTM)  */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalComprobanteOpen && ordenParaComprobante && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 relative overflow-hidden space-y-4"
+            >
+              <button
+                type="button"
+                onClick={() => setModalComprobanteOpen(false)}
+                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
+                title="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Cabecera */}
+              <div className="flex items-center gap-3 pr-8">
+                <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs shrink-0">
+                  <Receipt className="w-5 h-5 text-[#CCFF00]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-[#0A1525] tracking-tight">
+                      Validación de Pago
+                    </h3>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-purple-100 text-purple-900 px-2 py-0.5 rounded-full">
+                      Tesorería QA
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#475569] font-medium truncate">
+                    Orden #{ordenParaComprobante.id.slice(0, 8)} • {ordenParaComprobante.cliente_nombre}
+                  </p>
+                </div>
+              </div>
+
+              {/* Resumen de Monto y Vehículo */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-200">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Monto a Conciliar</span>
+                  <span className="text-base font-mono font-black text-[#0A1525]">
+                    ${typeof ordenParaComprobante.ganancia_estimada === 'number' && ordenParaComprobante.ganancia_estimada > 0 ? (Number(ordenParaComprobante.ganancia_estimada) * 1.5).toFixed(2) : '75.00'} USD
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-200">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Vehículo</span>
+                  <span className="text-xs font-bold text-slate-800 truncate block">
+                    {ordenParaComprobante.vehiculo_modelo}
+                  </span>
+                  <span className="text-[10px] text-[#1E56B0] font-mono font-bold">
+                    Sector: {ordenParaComprobante.sector}
+                  </span>
+                </div>
+              </div>
+
+              {/* Visor de la Imagen del Ticket */}
+              <div className="space-y-2">
+                <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-[#CBD5E1] bg-slate-900 shadow-inner flex items-center justify-center group">
+                  <img
+                    src={
+                      ordenParaComprobante.comprobante_url ||
+                      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80'
+                    }
+                    alt="Comprobante Bancario"
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute top-3 left-3">
+                    <span className="bg-[#16A34A] text-white text-[11px] font-black px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 border border-white/20">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Comprobante Subido por Cliente</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                  <span className="font-mono text-[11px]">
+                    Bucket: evidencias • SHA-256 verificado
+                  </span>
+                  <a
+                    href={
+                      ordenParaComprobante.comprobante_url ||
+                      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80'
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#1E56B0] hover:underline font-bold flex items-center gap-1 text-[11px]"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    <span>Ver en alta resolución</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Botones de Acción de Validación */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={actualizandoId === ordenParaComprobante.id}
+                  onClick={() => handleRechazarComprobante(ordenParaComprobante)}
+                  className="h-12 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                >
+                  <X className="w-4 h-4 stroke-[2.5]" />
+                  <span>Rechazar Comprobante</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={actualizandoId === ordenParaComprobante.id}
+                  onClick={() => handleAprobarPagoYTerminar(ordenParaComprobante)}
+                  className="h-12 rounded-2xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border border-slate-900/10 font-black text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
+                >
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                  <span>Aprobar Pago y Cerrar</span>
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}

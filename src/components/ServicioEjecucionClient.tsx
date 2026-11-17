@@ -36,11 +36,13 @@ import {
   AlertCircle,
   Wrench,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  MessageCircle
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import FloatingSupportButton from '@/components/ui/floating-support-button';
+import { generarLinkWhatsApp } from '@/lib/utils';
 
 interface ServicioEjecucionClientProps {
   id: string;
@@ -517,13 +519,28 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
             </div>
           </div>
 
-          <a
-            href={`tel:${clienteTelefono}`}
-            className="w-11 h-11 rounded-2xl bg-[#1E56B0] hover:bg-[#15448c] text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
-            title={`Llamar al cliente (${clienteTelefono})`}
-          >
-            <Phone className="w-4 h-4 stroke-[2.5]" />
-          </a>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={`tel:${clienteTelefono}`}
+              className="w-11 h-11 rounded-2xl bg-[#1E56B0] hover:bg-[#15448c] text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
+              title={`Llamar al cliente (${clienteTelefono})`}
+            >
+              <Phone className="w-4 h-4 stroke-[2.5]" />
+            </a>
+
+            <a
+              href={generarLinkWhatsApp(
+                clienteTelefono || '0414-2314194',
+                `Hola ${clienteNombre || 'estimado cliente'}, soy tu especialista técnico de TuTallerMóvil. Me encuentro gestionando el servicio para tu vehículo ${vehiculo || ''}.`
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-11 h-11 rounded-2xl bg-[#25D366] hover:bg-[#1ebd59] text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
+              title={`Contactar al cliente por WhatsApp (${clienteTelefono || '0414-2314194'})`}
+            >
+              <MessageCircle className="w-5 h-5 stroke-[2.5]" />
+            </a>
+          </div>
         </div>
 
         {/* ======================================================== */}
