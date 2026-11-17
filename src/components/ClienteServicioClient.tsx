@@ -129,8 +129,31 @@ interface OrdenCliente {
   foto_odometro_url?: string | null;
   created_at?: string;
   mecanico_id?: string | null;
+  runner_id?: string | null;
+  kilometraje_actual?: number | null;
   vehiculo_id?: string | null;
 }
+
+// Variantes de animación para cascada fluida (UX 2027)
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: 'easeOut' as const }
+  }
+};
 
 // Datos por defecto si la orden es de prueba o nueva
 const DATOS_DEFAULT: OrdenCliente = {
@@ -145,7 +168,11 @@ const DATOS_DEFAULT: OrdenCliente = {
   estado: 'COTIZADO',
   ganancia_estimada: 65.0,
   foto_odometro_url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
-  created_at: new Date().toISOString()
+  created_at: '2026-11-17T12:00:00.000Z',
+  mecanico_id: 'mec-0842',
+  runner_id: null,
+  kilometraje_actual: 85400,
+  vehiculo_id: 'veh-corolla-01'
 };
 
 const MECANICO_INFO = {
@@ -158,6 +185,16 @@ const MECANICO_INFO = {
   foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
   telefono: '+58 412 123 4567',
   whatsapp: '584121234567'
+};
+
+const RUNNER_INFO = {
+  nombre: 'Marcos Rivas',
+  codigo: '#RUN-312',
+  rol: 'Runner Logístico TTM Express',
+  moto: 'Yamaha DT 175 • Placa: AA4K21X',
+  foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+  telefono: '+58 414 789 0123',
+  whatsapp: '584147890123'
 };
 
 const FOTOS_EVIDENCIAS_DEMO = [
@@ -586,6 +623,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
             foto_odometro_url: data.foto_odometro_url || null,
             created_at: data.created_at || '2026-11-17T12:00:00.000Z',
             mecanico_id: data.mecanico_id || null,
+            runner_id: data.runner_id || null,
+            kilometraje_actual: data.kilometraje_actual || data.kilometraje || null,
             vehiculo_id: data.vehiculo_id || null
           });
 
@@ -793,6 +832,48 @@ export function ClienteServicioClient({ id }: { id: string }) {
     }
     return list;
   }, [orden.foto_odometro_url]);
+
+  // Paso Activo para el Stepper de 4 Pasos: Confirmado -> En Ruta -> Reparando -> Listo
+  const pasoActivo = useMemo(() => {
+    switch (orden.estado) {
+      case 'PENDIENTE':
+      case 'SOLICITADO':
+      case 'COTIZADO':
+      case 'ESPERANDO_APROBACION':
+        return 0; // Confirmado
+      case 'ASIGNADO':
+      case 'EN_RUTA_TALLER':
+      case 'DIAGNOSTICO_AGENDADO':
+      case 'REPUESTOS_EN_RUTA':
+        return 1; // En Ruta
+      case 'EN_EJECUCION':
+      case 'EN_REPARACION':
+      case 'TRABAJO_TERMINADO':
+        return 2; // Reparando
+      case 'PENDIENTE_PAGO':
+      case 'PAGO_REPORTADO':
+      case 'PAGADO':
+      case 'FINALIZADO':
+        return 3; // Listo
+      default:
+        return 1;
+    }
+  }, [orden.estado]);
+
+  // Renderizado condicional del personal activo
+  const tieneMecanico = useMemo(() => {
+    return Boolean(
+      orden.mecanico_id ||
+      ['ASIGNADO', 'EN_RUTA_TALLER', 'DIAGNOSTICO_AGENDADO', 'EN_EJECUCION', 'COTIZADO', 'ESPERANDO_APROBACION', 'REPUESTOS_EN_RUTA', 'EN_REPARACION', 'TRABAJO_TERMINADO', 'PENDIENTE_PAGO', 'PAGO_REPORTADO', 'PAGADO', 'FINALIZADO'].includes(orden.estado)
+    );
+  }, [orden.mecanico_id, orden.estado]);
+
+  const tieneRunner = useMemo(() => {
+    return Boolean(
+      orden.runner_id ||
+      orden.estado === 'REPUESTOS_EN_RUTA'
+    );
+  }, [orden.runner_id, orden.estado]);
 
   // Lógica de Aprobación de Cotización (UPDATE a ordenes con estado: APROBADO)
   const handleAprobarPresupuesto = async () => {
@@ -1008,190 +1089,384 @@ export function ClienteServicioClient({ id }: { id: string }) {
         {pestanaActiva === 'servicio' ? (
           <motion.div
             key="pestana-servicio"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
             exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.25 }}
+            className="max-w-md mx-auto px-4 py-3 space-y-4"
           >
+            {/* ======================================================== */}
+            {/* 1. HERO BANNER: Foto del Vehículo con Gradiente Oscuro,  */}
+            {/*    Placa Venezolana y Modelo en Texto Blanco Grande      */}
+            {/* ======================================================== */}
+            <motion.div variants={itemVariants}>
+              <div className="relative w-full h-56 sm:h-64 rounded-3xl overflow-hidden border border-slate-200/80 shadow-lg">
+                <img
+                  src="https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"
+                  alt={orden.vehiculo_modelo}
+                  className="w-full h-full object-cover"
+                />
 
-      {/* ======================================================== */}
-      {/* 2. HERO SECTION: Estado Actual Dinámico e Icono Animado  */}
-      {/* ======================================================== */}
-      <section className="max-w-md mx-auto px-4 pt-4 pb-6 text-center space-y-4">
-        
-        {/* Ilustración 3D de Auto / Icono Flotante en Bucle Suave */}
-        <div className="relative py-2 flex items-center justify-center">
-          
-          {/* Resplandor de Fondo */}
-          <div className="absolute inset-0 max-w-[260px] mx-auto bg-gradient-to-tr from-[#CCFF00]/30 to-[#1E56B0]/20 rounded-full blur-2xl pointer-events-none -z-10" />
+                {/* Gradiente Oscuro en la parte inferior */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A1525] via-[#0A1525]/60 to-transparent" />
 
-          <motion.div
-            animate={{ y: [0, -10, 0] }}
-            transition={{
-              duration: 3.6,
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-            className="relative"
-          >
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-br from-[#0A1525] via-[#1E56B0] to-[#0A1525] p-1 shadow-2xl flex items-center justify-center border-2 border-white/40">
-              <div className="w-full h-full rounded-[22px] bg-[#0A1525] flex flex-col items-center justify-center relative overflow-hidden">
-                <motion.div animate={configuracionEstado.iconoAnimacion}>
-                  <IconoHero className="w-13 h-13 text-[#CCFF00] stroke-[2] drop-shadow-md" />
-                </motion.div>
-                <span className="absolute bottom-2 text-[9px] font-mono font-black uppercase text-white/70 tracking-widest">
-                  TTM • GPS
-                </span>
-              </div>
-            </div>
-
-            {/* Sombra Dinámica Debajo del Auto */}
-            <motion.div
-              animate={{ scale: [1, 0.85, 1], opacity: [0.35, 0.2, 0.35] }}
-              transition={{
-                duration: 3.6,
-                repeat: Infinity,
-                ease: 'easeInOut'
-              }}
-              className="w-20 h-3 bg-black/40 rounded-full mx-auto blur-xs mt-3"
-            />
-          </motion.div>
-        </div>
-
-        {/* Textos de Estado Dinámicos */}
-        <motion.div
-          key={orden.estado}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="space-y-2"
-        >
-          {/* Badge del Estado */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border shadow-2xs">
-            <span className={`px-3 py-1 rounded-full border ${configuracionEstado.colorBadge}`}>
-              {orden.estado.replace(/_/g, ' ')}
-            </span>
-          </div>
-
-          {/* Tipografía Extra Grande para el Estado */}
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#0A1525] leading-tight px-2">
-            {configuracionEstado.titulo}
-          </h1>
-
-          {/* Subtítulo Descriptivo */}
-          <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-xs mx-auto leading-relaxed">
-            {configuracionEstado.subtitulo}
-          </p>
-
-          {/* Cronómetro en Vivo de Llegada Estimada */}
-          {orden.estado !== 'FINALIZADO' && orden.estado !== 'PAGADO' && (
-            <div className="pt-1">
-              <div className="inline-flex items-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] px-4 py-2 rounded-2xl shadow-2xs">
-                <Clock className="w-4 h-4 text-[#1E56B0] animate-spin" style={{ animationDuration: '8s' }} />
-                <span className="text-xs font-bold text-slate-700">
-                  Tiempo estimado:{' '}
-                  <strong className="text-[#0A1525] font-mono font-black text-sm">
-                    {minutosLlegada}:{segundosLlegada < 10 ? `0${segundosLlegada}` : segundosLlegada} min
-                  </strong>
-                </span>
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </section>
-
-      {/* ======================================================== */}
-      {/* 3. LÍNEA DE TIEMPO VISUAL: 5 Pasos del Ciclo de Vida     */}
-      {/* ======================================================== */}
-      <section className="max-w-md mx-auto px-4 py-2">
-        <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs">
-          
-          <div className="flex items-center justify-between mb-4 px-1">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-              Progreso Operativo
-            </span>
-            <span className="text-xs font-mono font-bold text-[#1E56B0]">
-              Fase {configuracionEstado.etapaIndex + 1} de 5
-            </span>
-          </div>
-
-          <div className="relative flex items-center justify-between">
-            
-            {/* Barra de Fondo */}
-            <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-1.5 bg-slate-200 rounded-full z-0" />
-
-            {/* Barra de Progreso Dinámica */}
-            <motion.div
-              initial={{ width: '0%' }}
-              animate={{
-                width: `${(configuracionEstado.etapaIndex / 4) * 100}%`
-              }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-[#1E56B0] via-[#3B82F6] to-[#CCFF00] rounded-full z-0 shadow-xs"
-            />
-
-            {/* 5 Pasos */}
-            {[
-              { id: 0, label: 'Inspección', icon: Wrench },
-              { id: 1, label: 'Presupuesto', icon: FileText },
-              { id: 2, label: 'Repuestos', icon: Bike },
-              { id: 3, label: 'Reparación', icon: Settings },
-              { id: 4, label: 'Listo', icon: CheckCircle2 }
-            ].map((paso) => {
-              const isPassed = configuracionEstado.etapaIndex > paso.id;
-              const isActive = configuracionEstado.etapaIndex === paso.id;
-              const IconComponent = paso.icon;
-
-              return (
-                <div key={paso.id} className="relative z-10 flex flex-col items-center gap-1.5">
-                  <div
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
-                      isActive
-                        ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-lg scale-110'
-                        : isPassed
-                        ? 'bg-[#1E56B0] text-white shadow-sm'
-                        : 'bg-white text-slate-400 border border-slate-300'
-                    }`}
-                  >
-                    {isActive ? (
-                      <IconComponent className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
-                    ) : isPassed ? (
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    ) : (
-                      <IconComponent className="w-3.5 h-3.5 stroke-[2]" />
-                    )}
-                  </div>
-                  <span
-                    className={`text-[9px] sm:text-[10px] font-extrabold tracking-tight text-center ${
-                      isActive
-                        ? 'text-[#0A1525] font-black'
-                        : isPassed
-                        ? 'text-[#1E56B0]'
-                        : 'text-slate-400'
-                    }`}
-                  >
-                    {paso.label}
+                {/* Badge de Estado Superior */}
+                <div className="absolute top-3.5 left-3.5 z-10 flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#0A1525]/85 backdrop-blur-md text-[#CCFF00] border border-white/10 shadow-sm flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#CCFF00] animate-pulse" />
+                    <span>{orden.estado.replace(/_/g, ' ')}</span>
                   </span>
                 </div>
-              );
-            })}
-          </div>
 
-        </div>
-      </section>
+                {/* Cronómetro Flotante Superior Derecho si el servicio está en curso */}
+                {orden.estado !== 'FINALIZADO' && orden.estado !== 'PAGADO' && (
+                  <div className="absolute top-3.5 right-3.5 z-10">
+                    <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 text-[#0A1525] text-[10px] font-mono font-black flex items-center gap-1.5 shadow-sm">
+                      <Clock className="w-3 h-3 text-[#1E56B0] animate-spin" style={{ animationDuration: '8s' }} />
+                      <span>{minutosLlegada}:{segundosLlegada < 10 ? `0${segundosLlegada}` : segundosLlegada} min</span>
+                    </div>
+                  </div>
+                )}
 
-      {/* ======================================================== */}
-      {/* 4. TARJETA FLOTANTE GIGANTE: Aprobación de Cotización    */}
-      {/* (Visible destacada en estado COTIZADO)                   */}
-      {/* ======================================================== */}
-      {(orden.estado === 'COTIZADO' || orden.estado === 'ESPERANDO_APROBACION') && !presupuestoRechazado && (
-        <section className="max-w-md mx-auto px-4 py-2">
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl p-5 border-2 border-[#1E56B0] shadow-xl space-y-4 relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/20 rounded-full blur-2xl pointer-events-none" />
+                {/* Información Superpuesta: Placa Venezolana + Modelo del Vehículo en Blanco Grande */}
+                <div className="absolute bottom-4 left-4 right-4 z-10 space-y-2">
+                  {/* Placa Estilo Venezolano */}
+                  <div className="inline-block bg-white border-2 border-[#0A1525] rounded-xl px-3 py-1 shadow-md">
+                    <span className="text-[7.5px] font-black text-slate-400 block tracking-widest leading-none">
+                      VENEZUELA
+                    </span>
+                    <span className="font-mono text-base font-black text-[#0A1525] tracking-wider leading-tight">
+                      {orden.placa || 'AB123CD'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight drop-shadow-sm">
+                      {orden.vehiculo_marca ? `${orden.vehiculo_marca} ` : ''}{orden.vehiculo_modelo}
+                    </h1>
+                    <p className="text-xs text-slate-300 font-semibold drop-shadow-xs mt-0.5">
+                      {configuracionEstado.titulo}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ======================================================== */}
+            {/* 2. SÍNTOMAS Y VEHÍCULO (BENTO CARDS EN 2 COLUMNAS)        */}
+            {/* ======================================================== */}
+            <motion.div variants={itemVariants}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Tarjeta 1: Síntomas Reportados */}
+                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200/50">
+                      <Wrench className="w-4 h-4 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Diagnóstico Inicial
+                      </span>
+                      <h3 className="text-xs sm:text-sm font-black text-[#0A1525]">
+                        Síntomas Reportados
+                      </h3>
+                    </div>
+                  </div>
+
+                  <p className="text-xs font-semibold text-[#0A1525] leading-relaxed bg-white p-3 rounded-2xl border border-slate-200/70">
+                    "{orden.falla_reportada}"
+                  </p>
+
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-extrabold pt-0.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Garantía QA TuTallerMóvil 90 días</span>
+                  </div>
+                </div>
+
+                {/* Tarjeta 2: Detalles del Vehículo */}
+                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-blue-500/10 text-[#1E56B0] flex items-center justify-center shrink-0 border border-blue-200/50">
+                      <Car className="w-4 h-4 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Ficha Automotriz
+                      </span>
+                      <h3 className="text-xs sm:text-sm font-black text-[#0A1525]">
+                        Detalles
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-2xl border border-slate-200/70 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Marca:</span>
+                      <span className="font-bold text-[#0A1525]">{orden.vehiculo_marca || 'Toyota'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Año:</span>
+                      <span className="font-bold text-[#0A1525]">{orden.vehiculo_anio || '2018'}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                      <span className="text-slate-500 font-medium flex items-center gap-1">
+                        <Gauge className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Kilometraje:</span>
+                      </span>
+                      <span className="font-mono font-black text-[#1E56B0]">
+                        {orden.kilometraje_actual
+                          ? `${Number(orden.kilometraje_actual).toLocaleString('es-VE')} KM`
+                          : orden.foto_odometro_url
+                          ? '85.400 KM'
+                          : 'En verificación'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold pt-0.5">
+                    <span>Sector: {orden.sector || 'Caracas'}</span>
+                    <span className="text-[#1E56B0] font-bold font-mono">#{orden.id.slice(0, 8)}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ======================================================== */}
+            {/* 3. PROGRESO OPERATIVO (EL STEPPER: Confirmado -> En Ruta  */}
+            {/*    -> Reparando -> Listo con Animación Fluida)           */}
+            {/* ======================================================== */}
+            <motion.div variants={itemVariants}>
+              <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs">
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    Progreso Operativo
+                  </span>
+                  <span className="text-xs font-mono font-bold text-[#1E56B0]">
+                    Paso {pasoActivo + 1} de 4
+                  </span>
+                </div>
+
+                <div className="relative flex items-center justify-between px-2">
+                  {/* Barra de Fondo */}
+                  <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1.5 bg-slate-200 rounded-full z-0" />
+
+                  {/* Barra de Progreso Dinámica con Animación Fluida */}
+                  <motion.div
+                    initial={{ width: '0%' }}
+                    animate={{
+                      width: `${(pasoActivo / 3) * 100}%`
+                    }}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                    className="absolute left-6 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-[#1E56B0] via-[#3B82F6] to-[#CCFF00] rounded-full z-0 shadow-xs"
+                    style={{ maxWidth: 'calc(100% - 48px)' }}
+                  />
+
+                  {/* 4 Pasos */}
+                  {[
+                    { id: 0, label: 'Confirmado', icon: CheckCircle2 },
+                    { id: 1, label: 'En Ruta', icon: Navigation },
+                    { id: 2, label: 'Reparando', icon: Wrench },
+                    { id: 3, label: 'Listo', icon: ShieldCheck }
+                  ].map((paso) => {
+                    const isPassed = pasoActivo > paso.id;
+                    const isActive = pasoActivo === paso.id;
+                    const IconComponent = paso.icon;
+
+                    return (
+                      <div key={paso.id} className="relative z-10 flex flex-col items-center gap-1.5">
+                        <div
+                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                            isActive
+                              ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-lg scale-110'
+                              : isPassed
+                              ? 'bg-[#1E56B0] text-white shadow-sm'
+                              : 'bg-white text-slate-400 border border-slate-300'
+                          }`}
+                        >
+                          {isActive ? (
+                            <IconComponent className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
+                          ) : isPassed ? (
+                            <Check className="w-4 h-4 stroke-[3]" />
+                          ) : (
+                            <IconComponent className="w-4 h-4 stroke-[2]" />
+                          )}
+                        </div>
+                        <span
+                          className={`text-[10px] font-extrabold tracking-tight text-center ${
+                            isActive
+                              ? 'text-[#0A1525] font-black'
+                              : isPassed
+                              ? 'text-[#1E56B0]'
+                              : 'text-slate-400'
+                          }`}
+                        >
+                          {paso.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ======================================================== */}
+            {/* 4. TARJETAS DEL PERSONAL ACTIVO (Renderizado Condicional) */}
+            {/* ======================================================== */}
+            <motion.div variants={itemVariants} className="space-y-3.5">
+              {/* Tarjeta Mecánico: Fondo Oscuro (#0A1525), Rating y Botón Verde Lima Verificar Carnet */}
+              {tieneMecanico && (
+                <div className="bg-[#0A1525] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 space-y-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-44 h-44 bg-[#1E56B0]/20 rounded-full blur-3xl pointer-events-none" />
+
+                  <div className="flex items-start justify-between gap-3 relative z-10">
+                    <div className="flex items-center gap-3.5">
+                      <div className="relative">
+                        <img
+                          src={MECANICO_INFO.foto}
+                          alt={MECANICO_INFO.nombre}
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-[#CCFF00] shadow-md"
+                        />
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shadow-xs">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                            {MECANICO_INFO.nombre}
+                          </h3>
+                          <BadgeCheck className="w-4 h-4 text-[#CCFF00]" />
+                        </div>
+                        <p className="text-xs text-slate-300 font-medium">
+                          {MECANICO_INFO.especialidad}
+                        </p>
+                        <div className="flex items-center gap-2 pt-0.5 text-xs">
+                          <span className="flex items-center gap-1 text-amber-300 font-black">
+                            <Star className="w-3 h-3 fill-amber-300" />
+                            {MECANICO_INFO.rating}
+                          </span>
+                          <span className="text-slate-500">•</span>
+                          <span className="text-[11px] text-[#CCFF00] font-bold">
+                            {MECANICO_INFO.ranking}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botón Llamar Directo */}
+                    <a
+                      href={`tel:${MECANICO_INFO.telefono}`}
+                      className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-[#CCFF00] hover:text-[#0A1525] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+                      title="Llamar al Mecánico"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </a>
+                  </div>
+
+                  {/* Botón Gigante en Verde Lima: Verificar Carnet QR */}
+                  <button
+                    type="button"
+                    onClick={() => setModalCarnetOpen(true)}
+                    className="w-full h-12 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#CCFF00]/20 transition-all cursor-pointer active:scale-95 border border-[#0A1525]/10 relative z-10"
+                  >
+                    <QrCode className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
+                    <span>Verificar Carnet QR Oficial</span>
+                    <ShieldCheck className="w-4 h-4 text-[#0A1525]" />
+                  </button>
+                </div>
+              )}
+
+              {/* Tarjeta Runner: Fondo blanco, borde azul cobalto, moto y badge 'En camino con tus repuestos' */}
+              {tieneRunner && (
+                <div className="bg-white border-2 border-[#1E56B0] rounded-3xl p-5 shadow-lg space-y-3 relative overflow-hidden">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <img
+                          src={RUNNER_INFO.foto}
+                          alt={RUNNER_INFO.nombre}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-[#1E56B0] shadow-xs"
+                        />
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#1E56B0] text-white flex items-center justify-center font-black">
+                          <Bike className="w-2.5 h-2.5" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm sm:text-base font-black text-[#0A1525] tracking-tight">
+                            {RUNNER_INFO.nombre}
+                          </h3>
+                          <span className="text-[10px] font-mono font-bold text-slate-400">
+                            {RUNNER_INFO.codigo}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-bold text-[#1E56B0] flex items-center gap-1">
+                          <Bike className="w-3.5 h-3.5" />
+                          <span>{RUNNER_INFO.moto}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href={`https://wa.me/${RUNNER_INFO.whatsapp}?text=Hola%20Marcos,%20te%20escribo%20del%20servicio%20${orden.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WhatsApp</span>
+                    </a>
+                  </div>
+
+                  {/* Badge Azul: En camino con tus repuestos */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-[#1E56B0] font-black">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#1E56B0]"></span>
+                      </span>
+                      <span>En camino con tus repuestos</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase font-mono">
+                      Despacho Express
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Estado Vacío Elegante si no hay mecánico ni runner asignados */}
+              {!tieneMecanico && !tieneRunner && (
+                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-6 text-center space-y-3 shadow-xs">
+                  <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mx-auto shadow-sm text-[#1E56B0]">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                    >
+                      <Wrench className="w-6 h-6 stroke-[2.2]" />
+                    </motion.div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-[#0A1525]">
+                      Asignando especialista...
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1 max-w-xs mx-auto">
+                      Nuestra central de despacho está localizando al técnico certificado más cercano con disponibilidad inmediata.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* ======================================================== */}
+            {/* 5. TARJETA FLOTANTE: Aprobación de Cotización            */}
+            {/* (Visible destacada en estado COTIZADO)                   */}
+            {/* ======================================================== */}
+            {(orden.estado === 'COTIZADO' || orden.estado === 'ESPERANDO_APROBACION') && !presupuestoRechazado && (
+              <motion.div variants={itemVariants}>
+                <div className="bg-white rounded-3xl p-5 border-2 border-[#1E56B0] shadow-xl space-y-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/20 rounded-full blur-2xl pointer-events-none" />
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1336,20 +1611,16 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 Rechazar o Modificar Cotización
               </button>
             </div>
-          </motion.div>
-        </section>
+          </div>
+        </motion.div>
       )}
 
       {/* ======================================================== */}
-      {/* 5. PANEL DE PAGO PREMIUM (Glassmorphism & Ultra-Seguro)   */}
+      {/* 6. PANEL DE PAGO PREMIUM (Glassmorphism & Ultra-Seguro)   */}
       {/* ======================================================== */}
       {(orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'LIQUIDACION_PENDIENTE' || orden.estado === 'TRABAJO_TERMINADO' || orden.estado === 'PAGO_REPORTADO') && (
-        <section className="max-w-md mx-auto px-4 py-2">
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 border border-slate-200/90 shadow-2xl space-y-4 relative overflow-hidden"
-          >
+        <motion.div variants={itemVariants}>
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 border border-slate-200/90 shadow-2xl space-y-4 relative overflow-hidden">
             {/* Acento Sutil de Luz */}
             <div className="absolute top-0 right-0 w-36 h-36 bg-[#16A34A]/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -1582,133 +1853,14 @@ export function ClienteServicioClient({ id }: { id: string }) {
               </span>
               <span>Bóveda QA Conciliada</span>
             </div>
-
-          </motion.div>
-        </section>
+          </div>
+        </motion.div>
       )}
-
-      {/* ======================================================== */}
-      {/* 6. BENTO GRID: La Tarjeta del Mecánico + Vehículo         */}
-      {/* ======================================================== */}
-      <section className="max-w-md mx-auto px-4 py-2 space-y-3.5">
-        
-        {/* Bento Grid Principal: 2 Columnas */}
-        <div className="grid grid-cols-2 gap-3.5">
-
-          {/* Tarjeta Grande: El Mecánico (col-span-2, Dark Mode #0A1525) */}
-          <motion.div
-            whileHover={{ y: -2 }}
-            className="col-span-2 bg-[#0A1525] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 space-y-4 relative overflow-hidden"
-          >
-            {/* Acento Sutil de Fondo */}
-            <div className="absolute top-0 right-0 w-44 h-44 bg-[#1E56B0]/20 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Cabecera Mecánico */}
-            <div className="flex items-start justify-between gap-3 relative z-10">
-              <div className="flex items-center gap-3.5">
-                <div className="relative">
-                  <img
-                    src={MECANICO_INFO.foto}
-                    alt={MECANICO_INFO.nombre}
-                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-[#CCFF00] shadow-md"
-                  />
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shadow-xs">
-                    <Check className="w-3 h-3 stroke-[3]" />
-                  </div>
-                </div>
-
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-                      {MECANICO_INFO.nombre}
-                    </h3>
-                    <BadgeCheck className="w-4 h-4 text-[#CCFF00]" />
-                  </div>
-                  <p className="text-xs text-slate-300 font-medium">
-                    {MECANICO_INFO.especialidad}
-                  </p>
-                  <div className="flex items-center gap-2 pt-0.5 text-xs">
-                    <span className="flex items-center gap-1 text-amber-300 font-black">
-                      <Star className="w-3 h-3 fill-amber-300" />
-                      {MECANICO_INFO.rating}
-                    </span>
-                    <span className="text-slate-500">•</span>
-                    <span className="text-[11px] text-[#CCFF00] font-bold">
-                      {MECANICO_INFO.ranking}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botón Llamar Directo */}
-              <a
-                href={`tel:${MECANICO_INFO.telefono}`}
-                className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-[#CCFF00] hover:text-[#0A1525] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
-                title="Llamar al Mecánico"
-              >
-                <Phone className="w-4 h-4" />
-              </a>
-            </div>
-
-            {/* Botón Gigante en Verde Lima: Verificar Carnet QR */}
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setModalCarnetOpen(true)}
-              className="w-full h-12 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#CCFF00]/20 transition-all cursor-pointer active:scale-95 border border-[#0A1525]/10 relative z-10"
-            >
-              <QrCode className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
-              <span>Verificar Carnet QR Oficial</span>
-              <ShieldCheck className="w-4 h-4 text-[#0A1525]" />
-            </motion.button>
-          </motion.div>
-
-          {/* Tarjeta Pequeña 1: Vehículo */}
-          <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 shadow-2xs flex flex-col justify-between">
-            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center mb-3 shadow-2xs">
-              <Car className="w-4 h-4" />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Vehículo
-              </span>
-              <h4 className="text-xs sm:text-sm font-black text-[#0A1525] leading-tight line-clamp-2">
-                {[orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
-                  .filter(Boolean)
-                  .join(' ') || orden.vehiculo_modelo}
-              </h4>
-              <p className="text-[11px] font-mono font-bold text-slate-600 pt-1">
-                Placa: <strong className="text-[#0A1525]">{orden.placa || 'AB123CD'}</strong>
-              </p>
-            </div>
-          </div>
-
-          {/* Tarjeta Pequeña 2: Falla Reportada */}
-          <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 shadow-2xs flex flex-col justify-between">
-            <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 shadow-2xs">
-              <Wrench className="w-4 h-4" />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Síntoma Reportado
-              </span>
-              <p className="text-xs font-bold text-[#0A1525] leading-snug line-clamp-3">
-                {orden.falla_reportada}
-              </p>
-              <span className="text-[10px] text-emerald-700 font-extrabold block pt-1">
-                ✓ Garantía QA 3% activa
-              </span>
-            </div>
-          </div>
-
-        </div>
-      </section>
 
       {/* ======================================================== */}
       {/* 7. GALERÍA DE EVIDENCIAS: Carrusel Snap                   */}
       {/* ======================================================== */}
-      <section className="max-w-md mx-auto px-4 py-4 space-y-3">
+      <motion.div variants={itemVariants} className="space-y-3 pt-1">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Camera className="w-4 h-4 text-[#1E56B0]" />
@@ -1754,7 +1906,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
             </motion.div>
           ))}
         </div>
-      </section>
+      </motion.div>
 
       {/* ======================================================== */}
       {/* 8. BOTTOM ACTION BAR: Fijo e Inmersivo (Glassmorphism)   */}
