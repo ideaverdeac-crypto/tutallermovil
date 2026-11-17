@@ -83,7 +83,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
         {/* Parte Superior: Foto Real Clara de Unsplash (40% de la tarjeta) */}
         <div className="relative w-full h-64 sm:h-72 overflow-hidden bg-slate-100">
           <img
-            src="https://images.unsplash.com/photo-1613214150384-4b12d2a50125?q=80&w=600&auto=format&fit=crop"
+            src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80"
             alt="Carlos Mendoza - Especialista TuTallerMóvil"
             className="w-full h-full object-cover object-center"
           />
@@ -166,12 +166,12 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
             </div>
           </div>
 
-          {/* 5. Especialidades (Chips con fondo blanco, borde gris y texto oscuro) */}
-          <div className="space-y-1.5">
+          {/* 5. Especialidades: Etiquetas elegantes bg-[#F1F5F9], text-[#0A1525], rounded-full px-4 py-1.5, text-sm, con check azul #1E56B0 */}
+          <div className="space-y-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
               Especialidades Certificadas
             </span>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {[
                 'Diagnóstico OBD2',
                 'Frenos e Hidráulica',
@@ -180,10 +180,10 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
               ].map((chip) => (
                 <span
                   key={chip}
-                  className="bg-white border border-[#CBD5E1] text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs"
+                  className="bg-[#F1F5F9] text-[#0A1525] text-sm font-semibold rounded-full px-4 py-1.5 flex items-center gap-1.5 shadow-2xs"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  {chip}
+                  <CheckCircle2 className="w-4 h-4 text-[#1E56B0] shrink-0" />
+                  <span>{chip}</span>
                 </span>
               ))}
             </div>
@@ -209,7 +209,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
               </div>
             </div>
 
-            {/* Recuadro B: Orden Activa (con borde izquierdo grueso en verde lima) */}
+            {/* Recuadro B: Orden Activa (Texto exacto sin placa, con borde izquierdo verde lima) */}
             <div className="bg-[#F8FAFC] border border-[#CBD5E1] border-l-4 border-l-[#CCFF00] rounded-2xl p-3.5 flex items-center gap-3 shadow-xs">
               <div className="w-9 h-9 rounded-xl bg-[#0A1525] flex items-center justify-center text-[#CCFF00] shrink-0">
                 <Navigation className="w-4 h-4 text-[#CCFF00]" />
@@ -220,11 +220,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
                   Orden Activa en Curso
                 </span>
                 <p className="font-extrabold text-[#0A1525] pt-0.5">
-                  Atendiendo a: Chevrolet Aveo LT • Placa{' '}
-                  <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-300 text-[#1E56B0]">
-                    AD456EF
-                  </span>{' '}
-                  • Cuadrante: Chacao
+                  Atendiendo a: Chevrolet Aveo LT • Cuadrante: Chacao
                 </p>
               </div>
             </div>
