@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import {
   Star,
@@ -28,7 +28,13 @@ import {
   Inbox,
   LocateFixed,
   LogOut,
-  Sparkles
+  Sparkles,
+  Check,
+  ClipboardCheck,
+  ExternalLink,
+  Phone,
+  Plus,
+  ChevronRight
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
@@ -46,6 +52,8 @@ interface OrdenSupabase {
   sector: string;
   ganancia_estimada: number | string;
   estado: string;
+  mecanico_id?: string | null;
+  foto_odometro_url?: string | null;
   latitud?: number | string | null;
   longitud?: number | string | null;
   created_at?: string;
@@ -76,6 +84,11 @@ export default function PortalAliadosPage() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [aceptandoId, setAceptandoId] = useState<string | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
+  const [filtroServicios, setFiltroServicios] = useState<'todos' | 'asignados' | 'disponibles'>('todos');
+  const [toastAceptado, setToastAceptado] = useState<string | null>(null);
+  const [creandoOrdenPrueba, setCreandoOrdenPrueba] = useState<boolean>(false);
+
+  const MECANICO_ID_ACTUAL = '123e4567-e89b-12d3-a456-426614174000';
 
   // 1. Geolocalización del mecánico
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -101,7 +114,7 @@ export default function PortalAliadosPage() {
     }
   }, []);
 
-  // Consulta a Supabase para traer todas las órdenes donde estado = 'DISPONIBLE'
+  // Consulta a Supabase para traer todas las órdenes del sistema
   const cargarOrdenes = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setCargando(true);
@@ -111,7 +124,6 @@ export default function PortalAliadosPage() {
       const { data, error } = await supabase
         .from('ordenes')
         .select('*')
-        .eq('estado', 'DISPONIBLE')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -127,56 +139,23 @@ export default function PortalAliadosPage() {
     }
   };
 
-  // 2. Cargar órdenes iniciales y activar Supabase Realtime (INSERT y UPDATE)
+  // 2. Cargar órdenes iniciales y activar Supabase Realtime para cualquier cambio en ordenes
   useEffect(() => {
     cargarOrdenes();
 
     const supabase = createClient();
     const channel = supabase
-      .channel('realtime_ordenes_aliados')
+      .channel('realtime_ordenes_aliados_all')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'ordenes'
         },
         (payload) => {
-          console.log('Nueva orden recibida en tiempo real:', payload);
-          const nuevaOrden = payload.new as OrdenSupabase;
-          if (nuevaOrden && nuevaOrden.estado === 'DISPONIBLE') {
-            setOrdenes((prev) => {
-              // Evitar duplicados si ya está en la lista
-              if (prev.some((o) => o.id === nuevaOrden.id)) return prev;
-              return [nuevaOrden, ...prev];
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'ordenes'
-        },
-        (payload) => {
-          console.log('Orden actualizada en tiempo real:', payload);
-          const ordenActualizada = payload.new as OrdenSupabase;
-          if (ordenActualizada) {
-            setOrdenes((prev) => {
-              // Si ya no está DISPONIBLE (ej. otro mecánico la aceptó), se quita del feed
-              if (ordenActualizada.estado !== 'DISPONIBLE') {
-                return prev.filter((o) => o.id !== ordenActualizada.id);
-              }
-              // Si sigue DISPONIBLE, se actualiza o se inserta
-              const exists = prev.some((o) => o.id === ordenActualizada.id);
-              if (exists) {
-                return prev.map((o) => (o.id === ordenActualizada.id ? ordenActualizada : o));
-              }
-              return [ordenActualizada, ...prev];
-            });
-          }
+          console.log('⚡ Orden modificada/creada en tiempo real:', payload);
+          cargarOrdenes();
         }
       )
       .subscribe((status, err) => {
@@ -228,6 +207,77 @@ export default function PortalAliadosPage() {
       });
   }, [ordenes, userCoords]);
 
+  // Clasificación de órdenes
+  const ordenesAsignadas = useMemo(() => {
+    return ordenesConDistancia.filter((o) =>
+      o.mecanico_id === MECANICO_ID_ACTUAL ||
+      ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO'].includes(o.estado)
+    );
+  }, [ordenesConDistancia]);
+
+  const ordenesDisponibles = useMemo(() => {
+    return ordenesConDistancia.filter((o) =>
+      ['DISPONIBLE', 'LEAD_NUEVO', 'DIAGNOSTICO_AGENDADO'].includes(o.estado) ||
+      (!o.mecanico_id && o.estado !== 'FINALIZADO')
+    );
+  }, [ordenesConDistancia]);
+
+  const ordenesFiltradas = useMemo(() => {
+    if (filtroServicios === 'asignados') return ordenesAsignadas;
+    if (filtroServicios === 'disponibles') return ordenesDisponibles;
+    return ordenesConDistancia;
+  }, [filtroServicios, ordenesAsignadas, ordenesDisponibles, ordenesConDistancia]);
+
+  // Crear orden de prueba en vivo en Supabase con 1 clic
+  const handleCrearOrdenPrueba = async () => {
+    setCreandoOrdenPrueba(true);
+    try {
+      const supabase = createClient();
+      const fallas = [
+        'Testigo de batería encendido y pérdida de arranque en frío',
+        'Ruido al girar el volante en bajas velocidades y freno esponjoso',
+        'Frenos chirriando al frenar en pendiente y pedal bajo',
+        'Cambio preventivo de pastillas y fluido de freno DOT 4'
+      ];
+      const sectores = [
+        'Chacao — Av. Francisco de Miranda',
+        'Altamira — 4ta Transversal',
+        'Las Mercedes — Calle París',
+        'Bello Monte — Av. Principal'
+      ];
+      const indexAleatorio = Math.floor(Math.random() * fallas.length);
+
+      const { data, error } = await supabase
+        .from('ordenes')
+        .insert([
+          {
+            cliente_nombre: 'Cliente TTM Móvil',
+            vehiculo_marca: 'Toyota',
+            vehiculo_modelo: 'Toyota Corolla 2020',
+            vehiculo_anio: 2020,
+            falla_reportada: fallas[indexAleatorio],
+            sector: sectores[indexAleatorio],
+            estado: 'DISPONIBLE',
+            ganancia_estimada: 35.0,
+            latitud: 10.496 + (Math.random() - 0.5) * 0.02,
+            longitud: -66.848 + (Math.random() - 0.5) * 0.02
+          }
+        ])
+        .select();
+
+      if (!error && data) {
+        setToastAceptado('¡Nueva orden pedida generada en Supabase!');
+        await cargarOrdenes(true);
+        setFiltroServicios('disponibles');
+        setTimeout(() => setToastAceptado(null), 4000);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCreandoOrdenPrueba(false);
+    }
+  };
+
   // 4 y 5. Acción de Aceptar con Supabase RPC y manejo de Race Conditions
   const handleAceptarServicio = async (orden: OrdenSupabase) => {
     if (aceptandoId) return;
@@ -237,28 +287,44 @@ export default function PortalAliadosPage() {
       const supabase = createClient();
       const { data, error } = await supabase.rpc('aceptar_servicio_disponible', {
         p_orden_id: orden.id,
-        p_mecanico_id: '123e4567-e89b-12d3-a456-426614174000'
+        p_mecanico_id: MECANICO_ID_ACTUAL
       });
 
-      if (error) {
-        console.error('Error al llamar RPC aceptar_servicio_disponible:', error);
-        alert('Lo sentimos, otro mecánico acaba de aceptar este servicio');
-        await cargarOrdenes(true);
-        return;
-      }
-
       if (data === true) {
-        alert('¡Servicio aceptado! Dirígete al cliente');
-        // Eliminar esa tarjeta de la lista visualmente
-        setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
+        setToastAceptado(`¡Servicio aceptado! La orden se añadió a tus servicios asignados.`);
+        setTimeout(() => setToastAceptado(null), 4500);
+        // Actualizar localmente para feedback inmediato
+        setOrdenes((prev) =>
+          prev.map((o) =>
+            o.id === orden.id
+              ? { ...o, estado: 'ASIGNADO', mecanico_id: MECANICO_ID_ACTUAL }
+              : o
+          )
+        );
+        setFiltroServicios('asignados');
       } else {
-        alert('Lo sentimos, otro mecánico acaba de aceptar este servicio');
-        // Actualizar la lista para remover la orden ya tomada
-        await cargarOrdenes(true);
+        // Fallback directo por update en base de datos si la orden está en estado diferente a DISPONIBLE
+        const { error: updErr } = await supabase
+          .from('ordenes')
+          .update({
+            estado: 'ASIGNADO',
+            mecanico_id: MECANICO_ID_ACTUAL
+          })
+          .eq('id', orden.id);
+
+        if (!updErr) {
+          setToastAceptado(`¡Servicio asignado a tu perfil con éxito!`);
+          setTimeout(() => setToastAceptado(null), 4500);
+          await cargarOrdenes(true);
+          setFiltroServicios('asignados');
+        } else {
+          alert('Lo sentimos, otro mecánico acaba de aceptar este servicio');
+          await cargarOrdenes(true);
+        }
       }
     } catch (err) {
       console.error('Excepción al aceptar servicio:', err);
-      alert('Lo sentimos, ocurrió un problema al aceptar este servicio. Intenta nuevamente.');
+      alert('Ocurrió un inconveniente al aceptar el servicio. Intenta nuevamente.');
     } finally {
       setAceptandoId(null);
     }
@@ -596,22 +662,95 @@ export default function PortalAliadosPage() {
 
         {/* 4. Feed de Servicios (Conectado a la tabla ordenes en Supabase) */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#0A1525]">
-                Órdenes Cercanas Disponibles
+                Bolsa de Servicios y Órdenes
               </h2>
               {!cargando && (
                 <span className="bg-[#CCFF00] text-[#0A1525] font-extrabold text-xs px-2.5 py-0.5 rounded-full">
-                  {ordenesConDistancia.length} disponibles
+                  {ordenesFiltradas.length} {filtroServicios === 'asignados' ? 'en curso' : 'activas'}
                 </span>
               )}
             </div>
 
-            <span className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Supabase en vivo
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={creandoOrdenPrueba}
+                onClick={handleCrearOrdenPrueba}
+                className="h-8 px-3 rounded-lg bg-white border border-[#CBD5E1] hover:border-[#1E56B0] hover:text-[#1E56B0] text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                title="Crear una orden de prueba en tiempo real en Supabase"
+              >
+                {creandoOrdenPrueba ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E56B0]" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5 text-[#1E56B0]" />
+                )}
+                <span>+ Orden de Prueba</span>
+              </button>
+
+              <span className="text-xs text-slate-500 hidden sm:flex items-center gap-1.5 font-medium bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Supabase Realtime
+              </span>
+            </div>
+          </div>
+
+          {/* Filtros de Pestañas: Todas, Mis Asignados, Disponibles */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => setFiltroServicios('todos')}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                filtroServicios === 'todos'
+                  ? 'bg-[#0A1525] text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+              }`}
+            >
+              <span>Todas las Órdenes</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                filtroServicios === 'todos' ? 'bg-white/20 text-[#CCFF00]' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {ordenesConDistancia.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFiltroServicios('asignados')}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                filtroServicios === 'asignados'
+                  ? 'bg-[#1E56B0] text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+              }`}
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              <span>Mis Servicios Asignados</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                filtroServicios === 'asignados' ? 'bg-white/20 text-[#CCFF00]' : 'bg-blue-50 text-[#1E56B0]'
+              }`}>
+                {ordenesAsignadas.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFiltroServicios('disponibles')}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                filtroServicios === 'disponibles'
+                  ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs'
+                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Solicitudes Disponibles</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                filtroServicios === 'disponibles' ? 'bg-[#CCFF00] text-[#0A1525]' : 'bg-emerald-50 text-emerald-700'
+              }`}>
+                {ordenesDisponibles.length}
+              </span>
+            </button>
           </div>
 
           {/* Estado Inactivo */}
@@ -637,11 +776,11 @@ export default function PortalAliadosPage() {
             <div className="bg-white border border-[#CBD5E1] rounded-2xl p-12 text-center space-y-3 shadow-xs">
               <Loader2 className="w-8 h-8 animate-spin text-[#1E56B0] mx-auto" />
               <p className="text-sm font-semibold text-slate-600">
-                Consultando órdenes disponibles en Supabase...
+                Consultando órdenes en Supabase...
               </p>
             </div>
-          ) : ordenesConDistancia.length === 0 ? (
-            /* 5. Mensaje Vacío si no hay órdenes */
+          ) : ordenesFiltradas.length === 0 ? (
+            /* 5. Mensaje Vacío si no hay órdenes en este filtro */
             <div className="bg-white border border-[#CBD5E1] rounded-3xl p-10 sm:p-12 text-center space-y-4 shadow-xs">
               <div className="relative w-16 h-16 rounded-3xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-400 shadow-2xs">
                 <Inbox className="w-8 h-8 stroke-[1.8] text-slate-400" />
@@ -652,21 +791,43 @@ export default function PortalAliadosPage() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-base sm:text-lg font-black text-[#0A1525]">
-                  No hay servicios cerca
+                  {filtroServicios === 'asignados'
+                    ? 'No tienes servicios asignados actualmente'
+                    : filtroServicios === 'disponibles'
+                    ? 'No hay solicitudes disponibles en este momento'
+                    : 'No hay órdenes registradas'}
                 </h3>
                 <p className="text-xs sm:text-sm text-[#475569] font-medium max-w-sm mx-auto">
-                  Mantente conectado, te avisaremos en tiempo real cuando un cliente solicite asistencia en tu zona.
+                  {filtroServicios === 'asignados'
+                    ? 'Ve a la pestaña "Solicitudes Disponibles" para aceptar servicios o genera una orden de prueba.'
+                    : 'Mantente conectado, te avisaremos en tiempo real cuando un cliente solicite asistencia en tu zona.'}
                 </p>
               </div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3.5 py-1.5 rounded-full border border-emerald-200 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Radar GPS activo y escuchando</span>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCrearOrdenPrueba}
+                  className="h-9 px-4 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Crear Orden de Prueba en Vivo</span>
+                </button>
+                {filtroServicios !== 'todos' && (
+                  <button
+                    type="button"
+                    onClick={() => setFiltroServicios('todos')}
+                    className="h-9 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    Ver todas las órdenes ({ordenesConDistancia.length})
+                  </button>
+                )}
               </div>
             </div>
           ) : (
             /* Feed de Servicios con Datos Reales y Ordenados por Distancia */
             <div className="space-y-4">
-              {ordenesConDistancia.map((orden, index) => {
+              {ordenesFiltradas.map((orden, index) => {
                 const gananciaFormatted = `$${Number(orden.ganancia_estimada || 0).toFixed(2)} USD`;
                 const shortId = orden.id ? `#${orden.id.slice(0, 8).toUpperCase()}` : `#ORD-${index + 1}`;
                 const isAccepting = aceptandoId === orden.id;
@@ -674,15 +835,23 @@ export default function PortalAliadosPage() {
                   .filter(Boolean)
                   .join(' ') || orden.vehiculo_modelo || 'Vehículo';
 
+                const estaAsignado =
+                  orden.mecanico_id === MECANICO_ID_ACTUAL ||
+                  ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO'].includes(orden.estado);
+
                 return (
                   <motion.div
                     key={orden.id}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: '-20px' }}
-                    transition={{ duration: 0.45, delay: index * 0.08, ease: 'easeOut' }}
-                    whileHover={{ scale: 1.01 }}
-                    className="bg-white border-2 border-[#CBD5E1] hover:border-[#1E56B0] rounded-2xl p-5 sm:p-6 shadow-sm transition-all"
+                    transition={{ duration: 0.35, delay: index * 0.05, ease: 'easeOut' }}
+                    whileHover={{ scale: 1.008 }}
+                    className={`bg-white border-2 rounded-2xl p-5 sm:p-6 shadow-sm transition-all ${
+                      estaAsignado
+                        ? 'border-[#1E56B0]/40 hover:border-[#1E56B0] shadow-blue-50/50'
+                        : 'border-[#CBD5E1] hover:border-[#0A1525]'
+                    }`}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       
@@ -692,10 +861,18 @@ export default function PortalAliadosPage() {
                           <span className="font-mono text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                             {shortId}
                           </span>
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                            {orden.estado}
-                          </span>
+
+                          {estaAsignado ? (
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#1E56B0] border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse"></span>
+                              {orden.estado === 'EN_EJECUCION' ? 'EN EJECUCIÓN' : 'ASIGNADO A TI'}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                              {orden.estado}
+                            </span>
+                          )}
 
                           {/* Distancia Calculada con Haversine (si GPS concedido y orden tiene coords) */}
                           {orden.distanciaKm !== null && (
@@ -706,8 +883,8 @@ export default function PortalAliadosPage() {
                           )}
 
                           {orden.cliente_nombre && (
-                            <span className="text-[11px] text-slate-400">
-                              Cliente: <strong className="text-slate-600">{orden.cliente_nombre}</strong>
+                            <span className="text-[11px] text-slate-500">
+                              Cliente: <strong className="text-slate-800 font-bold">{orden.cliente_nombre}</strong>
                             </span>
                           )}
                         </div>
@@ -728,10 +905,19 @@ export default function PortalAliadosPage() {
                             <MapPin className="w-4 h-4 text-slate-400" />
                             {orden.sector}
                           </span>
+                          {orden.foto_odometro_url && (
+                            <>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                <Check className="w-3 h-3" />
+                                Odómetro cargado
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
 
-                      {/* Ganancia Real y Botón de Aceptar con RPC */}
+                      {/* Ganancia Real y Botones de Acción */}
                       <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between gap-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                         <div className="text-left lg:text-right">
                           <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
@@ -745,31 +931,43 @@ export default function PortalAliadosPage() {
                           </span>
                         </div>
 
-                        {/* 4. Botón "Aceptar Servicio" con llamada RPC y race condition */}
-                        <motion.button
-                          type="button"
-                          disabled={isAccepting}
-                          whileHover={{ scale: isAccepting ? 1 : 1.02 }}
-                          whileTap={{ scale: isAccepting ? 1 : 0.98 }}
-                          onClick={() => handleAceptarServicio(orden)}
-                          className={`w-full lg:w-44 h-12 text-base font-extrabold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 ${
-                            isAccepting
-                              ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                              : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
-                          }`}
-                        >
-                          {isAccepting ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin text-[#0A1525]" />
-                              <span>Aceptando...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Navigation className="w-4 h-4 text-[#0A1525]" />
-                              <span>Aceptar Servicio</span>
-                            </>
-                          )}
-                        </motion.button>
+                        {estaAsignado ? (
+                          /* Botón directo a Ejecutar Servicio y Checklist Odómetro */
+                          <Link
+                            href={`/aliados/servicio/${orden.id}`}
+                            className="w-full lg:w-48 h-12 text-sm font-black rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer bg-[#0A1525] hover:bg-[#1E56B0] text-white active:scale-95"
+                          >
+                            <ClipboardCheck className="w-4 h-4 text-[#CCFF00]" />
+                            <span>Ejecutar Servicio</span>
+                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                          </Link>
+                        ) : (
+                          /* Botón Aceptar Servicio para solicitudes libres */
+                          <motion.button
+                            type="button"
+                            disabled={isAccepting}
+                            whileHover={{ scale: isAccepting ? 1 : 1.02 }}
+                            whileTap={{ scale: isAccepting ? 1 : 0.98 }}
+                            onClick={() => handleAceptarServicio(orden)}
+                            className={`w-full lg:w-44 h-12 text-base font-extrabold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 ${
+                              isAccepting
+                                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
+                            }`}
+                          >
+                            {isAccepting ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin text-[#0A1525]" />
+                                <span>Aceptando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Navigation className="w-4 h-4 text-[#0A1525]" />
+                                <span>Aceptar Servicio</span>
+                              </>
+                            )}
+                          </motion.button>
+                        )}
                       </div>
 
                     </div>
@@ -845,6 +1043,32 @@ export default function PortalAliadosPage() {
         className="bottom-20 sm:bottom-6"
         mensajePersonalizado="Hola, soy especialista de TuTallerMóvil y necesito soporte técnico en mi portal."
       />
+
+      {/* Toast Flotante de Notificaciones */}
+      <AnimatePresence>
+        {toastAceptado && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-24 sm:bottom-8 right-4 sm:right-8 z-50 bg-[#0A1525] text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 max-w-sm"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#CCFF00] text-[#0A1525] flex items-center justify-center shrink-0 font-black">
+              <Check className="w-4 h-4 stroke-[3]" />
+            </div>
+            <div className="text-xs font-semibold text-slate-100 flex-1">
+              {toastAceptado}
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastAceptado(null)}
+              className="text-slate-400 hover:text-white cursor-pointer ml-1 text-xs"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

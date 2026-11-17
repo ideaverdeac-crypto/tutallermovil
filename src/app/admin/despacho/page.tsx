@@ -784,6 +784,13 @@ export default function TableroDespachoPage() {
     );
   };
 
+  const handleEstablecerCantidad = (id: string, cantidad: number) => {
+    const qty = Math.max(1, cantidad);
+    setRepuestosSeleccionados((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, cantidad: qty } : item))
+    );
+  };
+
   // 4. Lógica Financiera del Cotizador ($40 regla de negocio P0)
   const totalRepuestosCatalogo = repuestosSeleccionados.reduce(
     (acc, r) => acc + r.precio_usd * r.cantidad,
@@ -1801,7 +1808,7 @@ export default function TableroDespachoPage() {
                             </div>
 
                             <div className="flex items-center gap-2.5 shrink-0">
-                              {/* Selector de Cantidad */}
+                              {/* Selector de Cantidad Interactivo */}
                               <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
                                 <button
                                   type="button"
@@ -1811,9 +1818,17 @@ export default function TableroDespachoPage() {
                                 >
                                   <Minus className="w-2.5 h-2.5" />
                                 </button>
-                                <span className="w-6 text-center text-xs font-mono font-black text-slate-800">
-                                  {item.cantidad}
-                                </span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.cantidad}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    handleEstablecerCantidad(item.id, isNaN(val) ? 1 : Math.max(1, val));
+                                  }}
+                                  className="w-7 text-center text-xs font-mono font-black text-slate-800 bg-transparent focus:outline-none focus:bg-white rounded px-0 py-0"
+                                  title="Editar cantidad"
+                                />
                                 <button
                                   type="button"
                                   onClick={() => handleModificarCantidad(item.id, 1)}
