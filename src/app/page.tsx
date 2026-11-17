@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
 import {
   Wrench,
   Search,
@@ -48,6 +49,25 @@ export default function Home() {
   const [plate, setPlate] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Obtener sesión activa al cargar
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    }).catch((err) => console.error('Error al obtener sesión:', err));
+
+    // Escuchar cambios de estado de autenticación en tiempo real
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSearchPlate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -100,25 +120,38 @@ export default function Home() {
             />
           </Link>
 
-          {/* Acceso Clientes ('Mi Garaje') y Staff / Aliados */}
+          {/* Acceso Clientes ('Ingresar' o 'Mi Garaje') y Staff / Aliados */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Botón Secundario: Mi Garaje */}
-            <Link
-              href="/login-cliente"
-              className="h-10 sm:h-11 px-3.5 sm:px-4 text-xs sm:text-sm font-extrabold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] hover:text-[#1E56B0] rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-[#CBD5E1] shadow-2xs"
-              title="Acceder a Mi Garaje de Vehículos y Pasaporte Técnico"
-            >
-              <User className="w-4 h-4 text-[#1E56B0]" />
-              <span>Mi Garaje</span>
-            </Link>
+            {/* Si NO hay sesión: Botón Secundario 'Ingresar' */}
+            {!session ? (
+              <Link
+                href="/login-cliente"
+                className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-extrabold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] hover:text-[#1E56B0] rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-[#CBD5E1] shadow-2xs active:scale-95"
+                title="Iniciar sesión en Tu Garaje"
+              >
+                <User className="w-4 h-4 text-[#1E56B0] shrink-0" />
+                <span>Ingresar</span>
+              </Link>
+            ) : (
+              /* Si SÍ hay sesión: Botón Principal 'Mi Garaje' */
+              <Link
+                href="/cliente/dashboard"
+                className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-black bg-[#1E56B0] hover:bg-[#15448c] text-white rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-md shadow-blue-900/10 active:scale-95 border border-blue-400/30"
+                title="Ir a Mi Garaje y Pasaporte Técnico"
+              >
+                <Car className="w-4 h-4 text-[#CCFF00] shrink-0" />
+                <span className="hidden sm:inline">Mi Garaje</span>
+                <span className="sm:hidden">Garaje</span>
+              </Link>
+            )}
 
             {/* Acceso Staff / Aliados */}
             <Link
               href="/login"
-              className="h-10 sm:h-11 px-3.5 sm:px-5 text-xs sm:text-sm font-black bg-[#0A1525] hover:bg-[#1E56B0] text-white rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-xs border border-white/10"
+              className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-black bg-[#0A1525] hover:bg-slate-800 text-white rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-xs border border-white/10 active:scale-95"
               title="Acceso exclusivo para Staff Operativo, Aliados y Despacho"
             >
-              <UserCircle className="w-4 h-4 text-[#CCFF00]" />
+              <UserCircle className="w-4 h-4 text-[#CCFF00] shrink-0" />
               <span className="hidden sm:inline">Acceso Staff</span>
               <span className="sm:hidden">Staff</span>
             </Link>
