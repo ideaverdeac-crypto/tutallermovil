@@ -1095,26 +1095,17 @@ export default function TableroDespachoPage() {
                                 <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
                                   <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
                                 </div>
-                                <div className="flex items-center justify-between pt-0.5">
+                                <div className="pt-0.5">
                                   <Link
                                     href={`/aliados/servicio/${orden.id}`}
                                     target="_blank"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="h-8 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black flex items-center gap-1.5 border border-emerald-200 transition-colors shadow-2xs"
+                                    className="w-full h-8 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center gap-1.5 border border-emerald-200 transition-colors shadow-2xs"
                                     title="Ver Checklist TTM y Candado de Odómetro"
                                   >
                                     <ClipboardCheck className="w-3.5 h-3.5 text-emerald-700" />
                                     <span>Ver Checklist TTM</span>
                                     <ExternalLink className="w-3 h-3 text-emerald-600" />
-                                  </Link>
-                                  <Link
-                                    href="/carnet/TTM-0842"
-                                    target="_blank"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
-                                  >
-                                    <span>Carnet</span>
-                                    <ExternalLink className="w-2.5 h-2.5" />
                                   </Link>
                                 </div>
                               </div>
