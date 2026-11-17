@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -89,16 +90,13 @@ export default function Home() {
           </div>
 
           {/* Acceso Staff / Aliados */}
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+          <Link
+            href="/aliados/portal"
             className="h-12 px-5 text-base font-semibold border border-[#CBD5E1] text-[#0A1525] hover:bg-[#F8FAFC] hover:border-[#1E56B0] hover:text-[#1E56B0] rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
           >
             <UserCircle className="w-5 h-5 text-[#1E56B0]" />
             <span>Acceso Staff/Aliados</span>
-          </motion.button>
+          </Link>
         </div>
       </header>
 
@@ -455,14 +453,13 @@ export default function Home() {
                 </p>
               </div>
 
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.98 }}
+              <Link
+                href="/aliados/portal"
                 className="w-full h-12 text-base font-semibold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] border border-[#CBD5E1] rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
               >
                 <span>Ingresar al Portal</span>
                 <ArrowRight className="w-4 h-4" />
-              </motion.button>
+              </Link>
             </motion.div>
 
           </div>
