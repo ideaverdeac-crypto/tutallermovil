@@ -40,8 +40,54 @@ import {
   Loader2,
   HelpCircle,
   ThumbsUp,
-  CreditCard
+  CreditCard,
+  Layers,
+  PackageCheck,
+  Tag
 } from 'lucide-react';
+
+export interface RepuestoDetallado {
+  id: string;
+  nombre: string;
+  marca: string;
+  referencia: string;
+  foto_url: string;
+  cantidad: number;
+  precio_unitario: number;
+  precio_total: number;
+  compatibilidad: string;
+  garantia: string;
+  estado_pieza: string;
+}
+
+const REPUESTOS_FALLBACK_DEFAULT: RepuestoDetallado[] = [
+  {
+    id: 'rep-01',
+    nombre: 'Pastillas de Freno Delanteras Cerámicas',
+    marca: 'Bosch Blue Edition',
+    referencia: 'Ref: BP-1210-HD',
+    foto_url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=300&q=80',
+    cantidad: 1,
+    precio_unitario: 25.0,
+    precio_total: 25.0,
+    compatibilidad: 'Toyota Corolla 2014-2022 / Matrix',
+    garantia: 'Garantía QA 90 días / 5,000 km',
+    estado_pieza: '100% Nuevo en Caja Sellada'
+  },
+  {
+    id: 'rep-02',
+    nombre: 'Líquido de Frenos Sintético DOT 4 (500 ml)',
+    marca: 'Motul Brake Fluid',
+    referencia: 'Ref: MOT-DOT4-500',
+    foto_url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=300&q=80',
+    cantidad: 1,
+    precio_unitario: 10.0,
+    precio_total: 10.0,
+    compatibilidad: 'Especificación SAE J1704 / ISO 4925',
+    garantia: 'Certificado Sellado de Fábrica',
+    estado_pieza: 'Insumo Nuevo Grado Automotriz'
+  }
+];
 
 interface OrdenCliente {
   id: string;
@@ -132,6 +178,9 @@ export function ClienteServicioClient({ id }: { id: string }) {
   const [comentarioCalificacion, setComentarioCalificacion] = useState<string>('');
   const [calificacionEnviada, setCalificacionEnviada] = useState<boolean>(false);
 
+  // Lista detallada de repuestos que se van a instalar en el vehículo
+  const [repuestosDetallados, setRepuestosDetallados] = useState<RepuestoDetallado[]>(REPUESTOS_FALLBACK_DEFAULT);
+
   // Referencia para input de archivo comprobante
   const inputComprobanteRef = useRef<HTMLInputElement>(null);
 
@@ -184,6 +233,33 @@ export function ClienteServicioClient({ id }: { id: string }) {
             created_at: data.created_at || new Date().toISOString(),
             mecanico_id: data.mecanico_id || null
           });
+
+          // Consultar repuestos asociados a la orden en orden_repuestos
+          try {
+            const { data: repuestosData } = await supabase
+              .from('orden_repuestos')
+              .select('id, repuesto_id, cantidad, precio_al_momento, repuestos(*)')
+              .eq('orden_id', id);
+
+            if (repuestosData && repuestosData.length > 0) {
+              const formateados: RepuestoDetallado[] = repuestosData.map((item: any) => ({
+                id: item.id || item.repuesto_id,
+                nombre: item.repuestos?.nombre_repuesto || 'Repuesto Original Certificado',
+                marca: item.repuestos?.marca || 'Marca Oficial',
+                referencia: item.repuestos?.id ? `Ref: TTM-${String(item.repuestos.id).slice(0, 6).toUpperCase()}` : 'OEM Genuino',
+                foto_url: item.repuestos?.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=300&q=80',
+                cantidad: item.cantidad || 1,
+                precio_unitario: Number(item.precio_al_momento) || 25.0,
+                precio_total: (Number(item.precio_al_momento) || 25.0) * (item.cantidad || 1),
+                compatibilidad: item.repuestos?.compatibilidad || `${data.vehiculo_modelo || 'Vehículo'} • Especificación OEM`,
+                garantia: 'Garantía QA 90 días / 5,000 km',
+                estado_pieza: '100% Nuevo en Caja Sellada'
+              }));
+              setRepuestosDetallados(formateados);
+            }
+          } catch (errRep) {
+            console.warn('Usando catálogo descriptivo de repuestos para demostración:', errRep);
+          }
         }
       } catch (err) {
         console.warn('Cargando orden con valores por defecto para demostración:', err);
@@ -223,7 +299,11 @@ export function ClienteServicioClient({ id }: { id: string }) {
     };
   }, [id]);
 
-  // Cálculos de Cotización
+  // Cálculos de Cotización y Repuestos
+  const repuestosTotal = useMemo(() => {
+    return repuestosDetallados.reduce((acc, curr) => acc + curr.precio_total, 0);
+  }, [repuestosDetallados]);
+
   const totalCotizado = useMemo(() => {
     const val = typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0
       ? Number(orden.ganancia_estimada)
@@ -231,8 +311,11 @@ export function ClienteServicioClient({ id }: { id: string }) {
     return val;
   }, [orden.ganancia_estimada]);
 
-  const manoDeObra = useMemo(() => Math.round(totalCotizado * 0.45 * 100) / 100, [totalCotizado]);
-  const repuestos = useMemo(() => Math.round((totalCotizado - manoDeObra) * 100) / 100, [totalCotizado, manoDeObra]);
+  const manoDeObra = useMemo(() => {
+    const calculada = totalCotizado - repuestosTotal;
+    return calculada > 0 ? Math.round(calculada * 100) / 100 : Math.round(totalCotizado * 0.45 * 100) / 100;
+  }, [totalCotizado, repuestosTotal]);
+
   const exoneraDiagnostico = totalCotizado > 40;
 
   // Mapeo dinámico del estado según regla de negocio
@@ -704,25 +787,100 @@ export function ClienteServicioClient({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Desglose Financiero */}
-            <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-200">
-                <span className="text-slate-600 font-semibold">Mano de Obra Certificada</span>
-                <span className="font-mono font-bold text-[#0A1525]">${manoDeObra.toFixed(2)} USD</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-200">
-                <span className="text-slate-600 font-semibold">Repuestos Originales</span>
-                <span className="font-mono font-bold text-[#0A1525]">${repuestos.toFixed(2)} USD</span>
-              </div>
+            {/* Desglose Financiero con Detalle de Repuestos */}
+            <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 space-y-3.5 text-xs">
               
+              {/* 1. Detalle de Cada Repuesto a Instalar */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
+                  <span className="font-extrabold text-[#0A1525] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-[#1E56B0]" />
+                    <span>Repuestos Certificados a Instalar ({repuestosDetallados.length})</span>
+                  </span>
+                  <span className="font-mono font-bold text-[#1E56B0] text-xs">
+                    Subtotal: ${repuestosTotal.toFixed(2)} USD
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {repuestosDetallados.map((rep) => (
+                    <div
+                      key={rep.id}
+                      className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-2 transition-all hover:border-[#1E56B0]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={rep.foto_url}
+                          alt={rep.nombre}
+                          className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0 shadow-2xs"
+                        />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-start justify-between gap-1.5">
+                            <h4 className="font-black text-xs text-[#0A1525] leading-snug">
+                              {rep.nombre}
+                            </h4>
+                            <span className="font-mono font-black text-xs text-[#0A1525] shrink-0">
+                              ${rep.precio_total.toFixed(2)}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#1E56B0] border border-blue-100">
+                              {rep.marca}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {rep.referencia}
+                            </span>
+                          </div>
+
+                          <p className="text-[10px] text-slate-500 font-medium truncate pt-0.5">
+                            {rep.compatibilidad}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10px]">
+                        <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                          <span>{rep.estado_pieza}</span>
+                        </span>
+                        <span className="font-semibold text-slate-500">
+                          Cant: <strong className="text-[#0A1525]">{rep.cantidad}</strong> (${rep.precio_unitario.toFixed(2)} c/u)
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Mano de Obra Certificada */}
+              <div className="pt-2 border-t border-slate-200 space-y-1">
+                <div className="flex justify-between items-start py-1">
+                  <div className="space-y-0.5">
+                    <span className="text-slate-700 font-bold block text-xs">Mano de Obra Certificada</span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Instalación en sitio, ajuste de torque según manual y prueba OBD2
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-[#0A1525] text-xs">
+                    ${manoDeObra.toFixed(2)} USD
+                  </span>
+                </div>
+              </div>
+
+              {/* 3. Diagnóstico Exonerado */}
               {exoneraDiagnostico && (
-                <div className="flex items-center justify-between py-1 text-emerald-800 bg-emerald-50 px-2 rounded-lg border border-emerald-200 font-bold">
-                  <span>Diagnóstico OBD2 (Regla &gt;$40)</span>
+                <div className="flex items-center justify-between py-1.5 text-emerald-800 bg-emerald-50 px-2.5 rounded-xl border border-emerald-200 font-bold text-[11px]">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Diagnóstico Inicial OBD2 (Regla &gt;$40)</span>
+                  </span>
                   <span>✓ Exonerado ($15 GRATIS)</span>
                 </div>
               )}
 
-              <div className="flex justify-between pt-2 border-t border-slate-300 text-sm font-black text-[#0A1525]">
+              {/* 4. Total Facturable */}
+              <div className="flex justify-between items-baseline pt-2.5 border-t-2 border-slate-300 text-sm font-black text-[#0A1525]">
                 <span>Total Facturable:</span>
                 <span className="font-mono text-lg text-[#1E56B0]">
                   ${totalCotizado.toFixed(2)} USD
@@ -1227,39 +1385,125 @@ export function ClienteServicioClient({ id }: { id: string }) {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative"
+              className="w-full max-w-lg bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative max-h-[90vh] overflow-y-auto"
             >
+              <button
+                type="button"
+                onClick={() => setModalAprobarPresupuesto(false)}
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
               <div className="w-14 h-14 rounded-2xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-md">
                 <FileText className="w-7 h-7 stroke-[2.5]" />
               </div>
 
               <div>
                 <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
-                  Aprobar Presupuesto
+                  Aprobar Presupuesto Detallado
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Desglose formal del servicio para {orden.vehiculo_modelo}
+                  Revisa los repuestos e insumos certificados a montar en tu {orden.vehiculo_modelo}
                 </p>
               </div>
 
-              <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 text-left space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-slate-200">
-                  <span className="text-slate-600 font-semibold">Mano de Obra Certificada</span>
-                  <span className="font-mono font-bold text-[#0A1525]">${manoDeObra.toFixed(2)} USD</span>
+              {/* Desglose con Repuestos Detallados */}
+              <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 text-left space-y-3.5 text-xs">
+                
+                {/* Repuestos a Instalar */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
+                    <span className="font-extrabold text-[#0A1525] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-[#1E56B0]" />
+                      <span>Repuestos Certificados a Instalar ({repuestosDetallados.length})</span>
+                    </span>
+                    <span className="font-mono font-bold text-[#1E56B0]">
+                      ${repuestosTotal.toFixed(2)} USD
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                    {repuestosDetallados.map((rep) => (
+                      <div
+                        key={rep.id}
+                        className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-2"
+                      >
+                        <div className="flex items-start gap-3">
+                          <img
+                            src={rep.foto_url}
+                            alt={rep.nombre}
+                            className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0"
+                          />
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <h4 className="font-black text-xs text-[#0A1525] leading-snug">
+                                {rep.nombre}
+                              </h4>
+                              <span className="font-mono font-black text-xs text-[#0A1525] shrink-0">
+                                ${rep.precio_total.toFixed(2)}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#1E56B0] border border-blue-100">
+                                {rep.marca}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {rep.referencia}
+                              </span>
+                            </div>
+
+                            <p className="text-[10px] text-slate-500 font-medium truncate pt-0.5">
+                              {rep.compatibilidad}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10px]">
+                          <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                            <span>{rep.estado_pieza}</span>
+                          </span>
+                          <span className="font-semibold text-slate-500">
+                            Cant: <strong className="text-[#0A1525]">{rep.cantidad}</strong> (${rep.precio_unitario.toFixed(2)} c/u)
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-200">
-                  <span className="text-slate-600 font-semibold">Repuestos Originales</span>
-                  <span className="font-mono font-bold text-[#0A1525]">${repuestos.toFixed(2)} USD</span>
+
+                {/* Mano de Obra */}
+                <div className="pt-2 border-t border-slate-200 space-y-1">
+                  <div className="flex justify-between items-start py-1">
+                    <div className="space-y-0.5">
+                      <span className="text-slate-700 font-bold block text-xs">Mano de Obra Certificada</span>
+                      <span className="text-[10px] text-slate-400 block">
+                        Instalación en sitio, ajuste de torque según manual y prueba OBD2
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-[#0A1525] text-xs">
+                      ${manoDeObra.toFixed(2)} USD
+                    </span>
+                  </div>
                 </div>
+
+                {/* Exoneración Diagnóstico */}
                 {exoneraDiagnostico && (
-                  <div className="flex items-center justify-between py-1 text-emerald-800 bg-emerald-50 px-2 rounded-lg border border-emerald-200 font-bold">
-                    <span>Diagnóstico Inicial (Regla &gt;$40)</span>
+                  <div className="flex items-center justify-between py-1.5 text-emerald-800 bg-emerald-50 px-2.5 rounded-xl border border-emerald-200 font-bold text-[11px]">
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Diagnóstico Inicial OBD2 (Regla &gt;$40)</span>
+                    </span>
                     <span>✓ Exonerado ($15 GRATIS)</span>
                   </div>
                 )}
-                <div className="flex justify-between pt-2 border-t border-slate-300 text-sm font-black text-[#0A1525]">
-                  <span>Total Final:</span>
-                  <span className="font-mono text-base text-[#1E56B0]">${totalCotizado.toFixed(2)} USD</span>
+
+                {/* Total Final */}
+                <div className="flex justify-between items-baseline pt-2.5 border-t-2 border-slate-300 text-sm font-black text-[#0A1525]">
+                  <span>Total Facturable:</span>
+                  <span className="font-mono text-lg text-[#1E56B0]">${totalCotizado.toFixed(2)} USD</span>
                 </div>
               </div>
 
