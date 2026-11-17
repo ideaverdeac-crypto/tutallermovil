@@ -27,7 +27,9 @@ import {
   Check,
   FileText,
   BadgeCheck,
-  GripVertical
+  GripVertical,
+  Bike,
+  ClipboardCheck
 } from 'lucide-react';
 
 interface OrdenKanban {
@@ -75,7 +77,7 @@ const MECANICOS_DISPONIBLES = [
   }
 ];
 
-// Definición de Columnas del Kanban para Drag & Drop
+// Definición de las 6 Columnas del Kanban según el PRD para Drag & Drop y Snap
 const COLUMNAS = [
   {
     id: 'LEAD_NUEVO',
@@ -101,25 +103,47 @@ const COLUMNAS = [
   },
   {
     id: 'ASIGNADO',
-    titulo: '3. ASIGNADOS',
+    titulo: '3. ASIGNADOS / EN RUTA',
     colorDot: 'bg-purple-600',
     colorBorder: 'hover:border-purple-400',
     colorDragOver: 'ring-2 ring-purple-500 border-purple-500 bg-purple-50/60',
     estadosValidos: ['ASIGNADO'],
     estadoDestino: 'ASIGNADO',
-    estadoSiguiente: 'EN_EJECUCION',
+    estadoSiguiente: 'REPUESTOS_EN_RUTA',
     textoVacio: 'Sin técnicos en ruta'
   },
   {
+    id: 'REPUESTOS_EN_RUTA',
+    titulo: '4. GESTIÓN RUNNER',
+    colorDot: 'bg-sky-500',
+    colorBorder: 'hover:border-sky-400',
+    colorDragOver: 'ring-2 ring-sky-500 border-sky-500 bg-sky-50/60',
+    estadosValidos: ['REPUESTOS_EN_RUTA', 'RUNNER_ASIGNADO'],
+    estadoDestino: 'REPUESTOS_EN_RUTA',
+    estadoSiguiente: 'EN_EJECUCION',
+    textoVacio: 'Sin repuestos en tránsito'
+  },
+  {
     id: 'EN_EJECUCION',
-    titulo: '4. EN EJECUCIÓN',
+    titulo: '5. EN EJECUCIÓN',
     colorDot: 'bg-emerald-500',
     colorBorder: 'hover:border-emerald-400',
     colorDragOver: 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/60',
     estadosValidos: ['EN_EJECUCION', 'EN_SERVICIO'],
     estadoDestino: 'EN_EJECUCION',
-    estadoSiguiente: null,
+    estadoSiguiente: 'PENDIENTE_PAGO',
     textoVacio: 'Sin servicios activos en sitio'
+  },
+  {
+    id: 'PENDIENTE_PAGO',
+    titulo: '6. POR LIQUIDAR',
+    colorDot: 'bg-amber-500',
+    colorBorder: 'hover:border-amber-400',
+    colorDragOver: 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/60',
+    estadosValidos: ['PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE', 'POR_LIQUIDAR'],
+    estadoDestino: 'PENDIENTE_PAGO',
+    estadoSiguiente: null,
+    textoVacio: 'Sin pagos pendientes'
   }
 ];
 
@@ -307,6 +331,14 @@ export default function TableroDespachoPage() {
     setOrdenParaAsignar(null);
   };
 
+  const handleValidarPago = async (orden: OrdenKanban) => {
+    const confirmar = confirm(`¿Confirmar validación de pago y conciliación para la orden de ${orden.cliente_nombre}?`);
+    if (!confirmar) return;
+
+    await moverOrden(orden.id, 'COMPLETADA');
+    alert('¡Pago validado y orden conciliada exitosamente!');
+  };
+
   // 4. Lógica Financiera del Cotizador ($40 regla de negocio P0)
   const numManoObra = parseFloat(manoDeObra) || 0;
   const numRepuestos = parseFloat(repuestos) || 0;
@@ -382,7 +414,7 @@ export default function TableroDespachoPage() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 flex flex-col relative z-10">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col relative z-10">
         
         {/* Título de Sección y Contadores */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
@@ -404,9 +436,9 @@ export default function TableroDespachoPage() {
           </div>
         </div>
 
-        {/* 1. Estructura del Tablero: Contenedor con scroll horizontal suave y soporte Drag & Drop */}
-        <div className="flex-1 overflow-x-auto pb-6">
-          <div className="flex gap-4 min-w-[1100px] items-start">
+        {/* 1. Estructura del Tablero: Contenedor con scroll horizontal suave, snap-x y soporte Drag & Drop */}
+        <div className="flex-1 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          <div className="flex gap-6 snap-x snap-mandatory items-start min-w-max pb-2">
             
             {COLUMNAS.map((columna) => {
               const ordenesDeColumna = ordenes.filter((o) =>
@@ -420,7 +452,7 @@ export default function TableroDespachoPage() {
                   onDragOver={(e) => handleDragOverColumn(e, columna.id)}
                   onDragLeave={handleDragLeaveColumn}
                   onDrop={(e) => handleDropOnColumn(e, columna.id)}
-                  className={`w-72 sm:w-80 shrink-0 rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)] transition-all duration-200 ${
+                  className={`min-w-[320px] w-[320px] shrink-0 snap-center rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)] transition-all duration-200 ${
                     isDragOver
                       ? `${columna.colorDragOver} border-2 border-dashed`
                       : 'bg-slate-50/80 border border-[#E2E8F0]'
@@ -530,6 +562,71 @@ export default function TableroDespachoPage() {
                               </div>
                             )}
 
+                            {/* En REPUESTOS_EN_RUTA: Badge azul con icono de moto 'Runner asignado' */}
+                            {columna.id === 'REPUESTOS_EN_RUTA' && (
+                              <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs ml-5">
+                                <span className="font-extrabold text-[#1E56B0] flex items-center gap-1.5">
+                                  <Bike className="w-4 h-4 text-[#1E56B0]" />
+                                  Runner asignado
+                                </span>
+                                <span className="font-mono text-[10px] text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-100 font-bold">
+                                  Repuestos en ruta
+                                </span>
+                              </div>
+                            )}
+
+                            {/* En EN_EJECUCION: Botón verde sutil 'Ver Checklist TTM' */}
+                            {columna.id === 'EN_EJECUCION' && (
+                              <div className="flex items-center justify-between ml-5 pt-1">
+                                <Link
+                                  href={`/aliados/servicio/${orden.id}`}
+                                  target="_blank"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-8 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black flex items-center gap-1.5 border border-emerald-200 transition-colors shadow-2xs"
+                                  title="Ver Checklist TTM y Candado de Odómetro"
+                                >
+                                  <ClipboardCheck className="w-3.5 h-3.5 text-emerald-700" />
+                                  <span>Ver Checklist TTM</span>
+                                  <ExternalLink className="w-3 h-3 text-emerald-600" />
+                                </Link>
+                                <Link
+                                  href="/carnet/TTM-0842"
+                                  target="_blank"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
+                                >
+                                  <span>Carnet</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </Link>
+                              </div>
+                            )}
+
+                            {/* En PENDIENTE_PAGO: Monto total a cobrar en grande y botón oscuro 'Validar Pago' */}
+                            {columna.id === 'PENDIENTE_PAGO' && (
+                              <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 ml-5 space-y-2">
+                                <div className="flex items-baseline justify-between">
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+                                    Total a Cobrar:
+                                  </span>
+                                  <span className="text-lg font-black text-[#0A1525] font-mono">
+                                    ${typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0 ? (orden.ganancia_estimada * 1.5).toFixed(2) : '75.00'}{' '}
+                                    <span className="text-xs font-sans text-slate-500 font-bold">USD</span>
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleValidarPago(orden);
+                                  }}
+                                  className="w-full h-9 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Validar Pago</span>
+                                </button>
+                              </div>
+                            )}
+
                             {/* Abajo: Sector y Acciones Rápidas */}
                             <div className="pt-2 border-t border-slate-100 flex items-center justify-between pl-5">
                               <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
@@ -551,31 +648,6 @@ export default function TableroDespachoPage() {
                                   >
                                     + Asignar
                                   </button>
-                                )}
-
-                                {/* Enlaces en ejecución: Consola de Mecánico y Carnet */}
-                                {columna.id === 'EN_EJECUCION' && (
-                                  <div className="flex items-center gap-2 mr-1">
-                                    <Link
-                                      href={`/aliados/servicio/${orden.id}`}
-                                      target="_blank"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md hover:bg-emerald-100 flex items-center gap-1 transition-colors"
-                                      title="Abrir vista de ejecución del mecánico"
-                                    >
-                                      <span>Consola</span>
-                                      <ExternalLink className="w-2.5 h-2.5" />
-                                    </Link>
-                                    <Link
-                                      href="/carnet/TTM-0842"
-                                      target="_blank"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="text-[11px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
-                                    >
-                                      <span>Carnet</span>
-                                      <ExternalLink className="w-2.5 h-2.5" />
-                                    </Link>
-                                  </div>
                                 )}
 
                                 {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente */}
