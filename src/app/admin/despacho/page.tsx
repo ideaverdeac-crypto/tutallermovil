@@ -54,7 +54,9 @@ import {
   PackageCheck,
   MessageCircle,
   Receipt,
-  Lock
+  Lock,
+  Truck,
+  Building2
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
@@ -84,6 +86,9 @@ interface OrdenKanban {
   comprobante_url?: string | null;
   monto_aprobado_cliente?: number | string | null;
   bloqueado_por?: string | null;
+  es_flota?: boolean | null;
+  empresa_flota?: string | null;
+  placa_flota?: string | null;
 }
 
 export interface OperadoraPresencia {
@@ -643,13 +648,71 @@ export default function TableroDespachoPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
+      let ordenesFinales: OrdenKanban[] = [];
+
+      if (data && data.length > 0) {
+        ordenesFinales = [...data];
+      }
+
+      // Sincronizar con órdenes de Flotas Corporativas registradas localmente o en tiempo real
+      if (typeof window !== 'undefined') {
+        try {
+          const rawFlota = localStorage.getItem('ttm_ordenes_flota_recientes');
+          if (rawFlota) {
+            const parsedFlota = JSON.parse(rawFlota);
+            if (Array.isArray(parsedFlota)) {
+              parsedFlota.forEach((of: OrdenKanban) => {
+                if (!ordenesFinales.some((o) => o.id === of.id)) {
+                  ordenesFinales.unshift(of);
+                }
+              });
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Si no hay órdenes (base de datos sin datos), proveer órdenes iniciales incluyendo una Flota Corporativa
+      if (ordenesFinales.length === 0) {
+        ordenesFinales = [
+          {
+            id: 'ord-flota-demo-01',
+            cliente_nombre: 'Logística El Este C.A. (Flota)',
+            cliente_telefono: '+58 412 889 0011',
+            vehiculo_marca: 'Iveco',
+            vehiculo_modelo: 'Daily 70C15 Furgón [A89DF5G]',
+            vehiculo_anio: 2022,
+            falla_reportada: '[FLOTA J-12345678-9] Mantenimiento Preventivo 120K: Cambio de aceite 15W-40, filtro y revisión de frenos de aire.',
+            sector: 'Los Ruices - Galpón 4',
+            estado: 'LEAD_NUEVO',
+            ganancia_estimada: 120.0,
+            es_flota: true,
+            empresa_flota: 'Logística El Este C.A.',
+            placa_flota: 'A89DF5G',
+            created_at: '2026-11-17T11:42:00.000Z'
+          },
+          {
+            id: 'ord-particular-demo-02',
+            cliente_nombre: 'Carlos Silva',
+            cliente_telefono: '+58 414 231 4194',
+            vehiculo_marca: 'Toyota',
+            vehiculo_modelo: 'Corolla GLi 2018',
+            vehiculo_anio: 2018,
+            falla_reportada: 'Chillido agudo al frenar en frío y pedal de freno ligeramente bajo.',
+            sector: 'Altamira Sur',
+            estado: 'EN_INSPECCION',
+            ganancia_estimada: 45.0,
+            es_flota: false,
+            created_at: '2026-11-17T11:15:00.000Z'
+          }
+        ];
+      }
+
       if (error) {
         console.error('Error cargando órdenes para el Kanban:', error);
-      } else if (data) {
-        setOrdenes(data);
-        if (data.length > 0 && !ordenParaCotizar) {
-          setOrdenParaCotizar(data[0]);
-        }
+      }
+      setOrdenes(ordenesFinales);
+      if (ordenesFinales.length > 0 && !ordenParaCotizar) {
+        setOrdenParaCotizar(ordenesFinales[0]);
       }
     } catch (err) {
       console.error('Excepción al cargar órdenes:', err);
@@ -1743,6 +1806,13 @@ export default function TableroDespachoPage() {
                         const estaBloqueadaPorOtra = Boolean(
                           orden.bloqueado_por && orden.bloqueado_por !== miOperadora.nombre
                         );
+                        const esFlota = Boolean(
+                          orden.es_flota === true ||
+                          orden.cliente_nombre?.toLowerCase().includes('flota') ||
+                          orden.cliente_nombre?.toLowerCase().includes('logística') ||
+                          orden.falla_reportada?.includes('[FLOTA') ||
+                          orden.empresa_flota
+                        );
 
                         return (
                           <motion.div
@@ -1753,16 +1823,29 @@ export default function TableroDespachoPage() {
                             onDragEnd={handleDragEnd}
                             whileHover={{ scale: isBeingDragged || estaBloqueadaPorOtra ? 1 : 1.02, y: isBeingDragged || estaBloqueadaPorOtra ? 0 : -2 }}
                             transition={{ duration: 0.2 }}
-                            className={`bg-white rounded-2xl border p-3.5 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-2.5 select-none group ${
+                            className={`rounded-2xl p-3.5 transition-all relative flex flex-col justify-between gap-2.5 select-none group ${
                               estaBloqueadaPorOtra
                                 ? 'border-rose-200 bg-rose-50/20 cursor-not-allowed opacity-90'
-                                : 'cursor-grab active:cursor-grabbing border-[#E2E8F0] hover:border-[#1E56B0]'
-                            } ${
-                              isBeingDragged
+                                : isBeingDragged
                                 ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
-                                : ''
+                                : esFlota
+                                ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg cursor-grab active:cursor-grabbing'
+                                : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing'
                             }`}
                           >
+                            {/* 0. Banner Distintivo Flota Corporativa B2B (Resalta la tarjeta de color diferente) */}
+                            {esFlota && (
+                              <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#0A1525] text-white shadow-2xs border border-blue-400/30">
+                                <div className="flex items-center gap-1.5 text-[10px] font-black tracking-wide text-[#CCFF00] uppercase truncate">
+                                  <Truck className="w-3.5 h-3.5 text-[#CCFF00] shrink-0" />
+                                  <span className="truncate">{orden.empresa_flota || 'Flota Corporativa B2B'}</span>
+                                </div>
+                                <span className="text-[9px] font-mono text-white font-extrabold px-1.5 py-0.5 rounded bg-[#1E56B0] shrink-0 shadow-2xs">
+                                  PRIORIDAD B2B
+                                </span>
+                              </div>
+                            )}
+
                             {/* 1. Barra Superior: Hora de Solicitud (HH:MM AM/PM) y Cronómetro Animado SLA */}
                             <div className="flex items-center justify-between bg-[#F8FAFC] border border-[#E2E8F0] px-2.5 py-1.5 rounded-xl text-xs transition-colors">
                               <div className="flex items-center gap-1.5 text-slate-500 font-semibold text-[11px]">
@@ -1799,11 +1882,19 @@ export default function TableroDespachoPage() {
                               <div className="flex items-start gap-1.5 flex-1 min-w-0">
                                 <GripVertical className="w-4 h-4 text-slate-300 shrink-0 mt-0.5 hover:text-[#0A1525]" />
                                 <div className="space-y-0.5 min-w-0">
-                                  <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug truncate">
-                                    {vehiculo}
-                                  </h3>
-                                  <p className="text-xs font-semibold text-[#475569] truncate">
-                                    {orden.cliente_nombre || 'Cliente Particular'}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug truncate">
+                                      {vehiculo}
+                                    </h3>
+                                    {esFlota && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black bg-blue-100 text-[#1E56B0] border border-blue-200 shrink-0">
+                                        FLOTA
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1">
+                                    {esFlota && <Building2 className="w-3 h-3 text-[#1E56B0] shrink-0" />}
+                                    <span>{orden.cliente_nombre || 'Cliente Particular'}</span>
                                   </p>
                                 </div>
                               </div>

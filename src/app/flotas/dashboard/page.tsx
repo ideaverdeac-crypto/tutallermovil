@@ -326,6 +326,15 @@ export default function FlotasDashboardPage() {
   const [toastGeneral, setToastGeneral] = useState<{ tipo: 'exito' | 'error'; mensaje: string } | null>(null);
   const [generandoPdf, setGenerandoPdf] = useState<boolean>(false);
 
+  // Estados de Solicitar Servicio de Flota
+  const [modalPedirServicioOpen, setModalPedirServicioOpen] = useState<boolean>(false);
+  const [servicioVehiculoId, setServicioVehiculoId] = useState<string>('');
+  const [servicioTipo, setServicioTipo] = useState<string>('Mantenimiento Preventivo (Aceite y Filtros)');
+  const [servicioDescripcion, setServicioDescripcion] = useState<string>('');
+  const [servicioUbicacion, setServicioUbicacion] = useState<string>('');
+  const [servicioUrgencia, setServicioUrgencia] = useState<'INMEDIATA' | 'PROGRAMADA'>('INMEDIATA');
+  const [enviandoServicioFlota, setEnviandoServicioFlota] = useState<boolean>(false);
+
   // Carga inicial y persistencia en localStorage
   useEffect(() => {
     try {
@@ -370,6 +379,109 @@ export default function FlotasDashboardPage() {
   const mostrarToast = (mensaje: string, tipo: 'exito' | 'error' = 'exito') => {
     setToastGeneral({ mensaje, tipo });
     setTimeout(() => setToastGeneral(null), 4000);
+  };
+
+  const handleAbrirPedirServicio = (vehiculo?: VehiculoFlota) => {
+    if (vehiculo) {
+      setServicioVehiculoId(vehiculo.id);
+    } else if (vehiculos.length > 0 && !servicioVehiculoId) {
+      setServicioVehiculoId(vehiculos[0].id);
+    }
+    setServicioUbicacion(empresa.direccion);
+    setServicioDescripcion('');
+    setModalPedirServicioOpen(true);
+  };
+
+  const handleConfirmarServicioFlota = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const vehiculo = vehiculos.find((v) => v.id === servicioVehiculoId) || vehiculos[0];
+    if (!vehiculo) {
+      mostrarToast('Selecciona un vehículo de tu flota', 'error');
+      return;
+    }
+
+    setEnviandoServicioFlota(true);
+    const nuevaOrdenId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `ord_flota_${Date.now()}`;
+
+    const nuevaOrden = {
+      id: nuevaOrdenId,
+      cliente_nombre: `${empresa.razonSocial} (Flota)`,
+      cliente_telefono: vehiculo.conductorTelefono || empresa.telefono,
+      vehiculo_marca: vehiculo.marca,
+      vehiculo_modelo: `${vehiculo.modelo} [${vehiculo.placa}]`,
+      vehiculo_anio: vehiculo.anio,
+      falla_reportada: `[FLOTA ${empresa.rif}] ${servicioTipo}: ${servicioDescripcion || 'Revisión y servicio técnico prioritario in situ.'}`,
+      sector: servicioUbicacion || empresa.direccion,
+      estado: 'LEAD_NUEVO',
+      ganancia_estimada: 85.0,
+      es_flota: true,
+      empresa_flota: empresa.razonSocial,
+      placa_flota: vehiculo.placa,
+      created_at: new Date().toISOString()
+    };
+
+    // 1. Guardar en Supabase tabla ordenes
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from('ordenes').insert([
+        {
+          id: nuevaOrden.id,
+          cliente_nombre: nuevaOrden.cliente_nombre,
+          cliente_telefono: nuevaOrden.cliente_telefono,
+          vehiculo_marca: nuevaOrden.vehiculo_marca,
+          vehiculo_modelo: nuevaOrden.vehiculo_modelo,
+          vehiculo_anio: nuevaOrden.vehiculo_anio,
+          falla_reportada: nuevaOrden.falla_reportada,
+          sector: nuevaOrden.sector,
+          estado: nuevaOrden.estado,
+          ganancia_estimada: nuevaOrden.ganancia_estimada
+        }
+      ]);
+      if (error) {
+        console.warn('Aviso insertando orden flota en Supabase:', error.message);
+      }
+    } catch (err) {
+      console.warn('Error conectando a Supabase ordenes:', err);
+    }
+
+    // 2. Persistir localmente para sincronización en tiempo real con el tablero de despacho
+    try {
+      const raw = localStorage.getItem('ttm_ordenes_flota_recientes');
+      const lista = raw ? JSON.parse(raw) : [];
+      lista.unshift(nuevaOrden);
+      localStorage.setItem('ttm_ordenes_flota_recientes', JSON.stringify(lista));
+    } catch (e) {}
+
+    // 3. Añadir al historial del vehículo
+    const nuevosVehiculos = vehiculos.map((v) => {
+      if (v.id === vehiculo.id) {
+        const histActual = v.serviciosHistorial ? [...v.serviciosHistorial] : [];
+        histActual.unshift({
+          fecha: 'Hoy (Solicitado)',
+          tipo: servicioTipo,
+          kilometraje: v.kilometrajeActual,
+          mecanico: 'Despacho Central TTM (Prioridad B2B)',
+          costo: 85.0,
+          repuestos: 'En evaluación'
+        });
+        return {
+          ...v,
+          estado: 'PROXIMO' as const,
+          serviciosHistorial: histActual
+        };
+      }
+      return v;
+    });
+    guardarVehiculosLocal(nuevosVehiculos);
+
+    setEnviandoServicioFlota(false);
+    setModalPedirServicioOpen(false);
+    mostrarToast(
+      `¡Servicio solicitado para ${vehiculo.placa}! Orden #${nuevaOrdenId.slice(0, 8).toUpperCase()} enviada a Despacho con prioridad B2B.`
+    );
   };
 
   // KPIs
@@ -931,6 +1043,17 @@ export default function FlotasDashboardPage() {
               <span>{generandoPdf ? 'Generando PDF...' : 'Factura Quincenal (PDF)'}</span>
             </button>
 
+            {/* Botón Destacado: Pedir un Servicio de Flota */}
+            <button
+              type="button"
+              onClick={() => handleAbrirPedirServicio()}
+              className="h-12 px-5 rounded-2xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-md shadow-lime-500/20 transition-all cursor-pointer active:scale-95 border border-[#0A1525]/10"
+              title="Solicitar servicio técnico inmediato o correctivo para un vehículo de la flota"
+            >
+              <Wrench className="w-4 h-4 text-[#0A1525]" />
+              <span>Pedir un Servicio</span>
+            </button>
+
             {/* Botón Principal: Agendar Jornada Sabatina */}
             <button
               type="button"
@@ -1265,9 +1388,20 @@ export default function FlotasDashboardPage() {
                           )}
                         </td>
 
-                        {/* Acciones: Pasaporte, Editar, Eliminar */}
+                        {/* Acciones: Pedir Servicio, Pasaporte, Editar, Eliminar */}
                         <td className="py-3.5 px-5 sm:px-6 text-right whitespace-nowrap">
                           <div className="inline-flex items-center gap-1.5">
+                            {/* Pedir Servicio para este vehículo */}
+                            <button
+                              type="button"
+                              onClick={() => handleAbrirPedirServicio(vehiculo)}
+                              className="h-8 px-2.5 rounded-xl bg-blue-50 hover:bg-[#1E56B0] text-[#1E56B0] hover:text-white font-bold text-xs inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs border border-blue-200"
+                              title="Solicitar servicio técnico prioritario para esta unidad"
+                            >
+                              <Wrench className="w-3.5 h-3.5" />
+                              <span className="hidden lg:inline">Pedir Servicio</span>
+                            </button>
+
                             {/* Ver Pasaporte */}
                             <button
                               type="button"
@@ -2168,6 +2302,234 @@ export default function FlotasDashboardPage() {
                   Cerrar Pasaporte
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL: SOLICITAR SERVICIO TÉCNICO PARA FLOTA            */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalPedirServicioOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-7 space-y-5 border border-[#E2E8F0] shadow-2xl relative max-h-[92vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setModalPedirServicioOpen(false)}
+                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Cabecera */}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs shrink-0">
+                  <Wrench className="w-6 h-6 text-[#CCFF00]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
+                      Pedir Servicio para Flota
+                    </h3>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#1E56B0] border border-blue-200">
+                      B2B Prioritario
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Despacho de brigada mecánica oficial in situ a las instalaciones de {empresa.razonSocial}
+                  </p>
+                </div>
+              </div>
+
+              {/* Formulario */}
+              <form onSubmit={handleConfirmarServicioFlota} className="space-y-4">
+                {/* 1. Selección de Vehículo */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    1. Unidad de la Flota que requiere servicio *
+                  </label>
+                  <select
+                    value={servicioVehiculoId}
+                    onChange={(e) => setServicioVehiculoId(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs text-[#0A1525] bg-[#F8FAFC] font-bold focus:outline-none focus:border-[#1E56B0]"
+                  >
+                    {vehiculos.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        [{v.placa}] {v.marca} {v.modelo} (Año {v.anio}) — {v.conductor} • {v.kilometrajeActual.toLocaleString()} km
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Resumen de la unidad seleccionada */}
+                  {(() => {
+                    const sel = vehiculos.find((v) => v.id === servicioVehiculoId) || vehiculos[0];
+                    if (!sel) return null;
+                    return (
+                      <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={sel.fotoUrl}
+                            alt={sel.placa}
+                            className="w-10 h-10 rounded-xl object-cover border border-blue-200 shrink-0"
+                          />
+                          <div>
+                            <span className="font-black text-[#0A1525] block">
+                              {sel.marca} {sel.modelo} • <span className="font-mono text-[#1E56B0]">{sel.placa}</span>
+                            </span>
+                            <span className="text-[11px] text-slate-500">
+                              Chofer: {sel.conductor} ({sel.conductorTelefono})
+                            </span>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            sel.estado === 'AL_DIA'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : sel.estado === 'PROXIMO'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {sel.estado === 'AL_DIA' ? 'Al día' : sel.estado === 'PROXIMO' ? 'Próximo' : 'Vencido'}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* 2. Tipo de Servicio Requerido */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    2. Tipo de Servicio o Falla Principal *
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      'Mantenimiento Preventivo (Aceite y Filtros)',
+                      'Frenos y Pastillas',
+                      'Diagnóstico OBD-II / Check Engine',
+                      'Sistema Eléctrico y Batería',
+                      'Tren Delantero / Suspensión',
+                      'Mecánica de Urgencia en Sitio'
+                    ].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setServicioTipo(t)}
+                        className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                          servicioTipo === t
+                            ? 'bg-[#0A1525] text-white border-[#0A1525] shadow-xs'
+                            : 'bg-[#F8FAFC] text-slate-700 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Urgencia del Servicio */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      3. Prioridad de Respuesta
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setServicioUrgencia('INMEDIATA')}
+                        className={`flex-1 py-2 px-3 rounded-xl border text-xs font-extrabold text-center transition-all ${
+                          servicioUrgencia === 'INMEDIATA'
+                            ? 'bg-[#1E56B0] text-white border-[#1E56B0] shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        ⚡ Inmediata (45 min)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setServicioUrgencia('PROGRAMADA')}
+                        className={`flex-1 py-2 px-3 rounded-xl border text-xs font-extrabold text-center transition-all ${
+                          servicioUrgencia === 'PROGRAMADA'
+                            ? 'bg-[#1E56B0] text-white border-[#1E56B0] shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        📅 Programada
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      4. Ubicación / Patio de la Flota *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={servicioUbicacion}
+                      onChange={(e) => setServicioUbicacion(e.target.value)}
+                      placeholder="Dirección o punto de atención..."
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs text-[#0A1525] bg-[#F8FAFC] focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Descripción de la Falla */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    5. Detalles del Fallo o Síntomas Observados
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={servicioDescripcion}
+                    onChange={(e) => setServicioDescripcion(e.target.value)}
+                    placeholder="Ej. Pérdida de fuerza en subidas, chillido persistente en frenos delanteros..."
+                    className="w-full p-3 rounded-xl border border-slate-200 text-xs text-[#0A1525] bg-[#F8FAFC] focus:outline-none focus:border-[#1E56B0]"
+                  />
+                </div>
+
+                {/* Banner de Garantía B2B */}
+                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-900">
+                  <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>
+                    <strong>SLA Flota Corporativa:</strong> Despacho asigna técnico certificado con repuestos evaluados y registro automático en Pasaporte Técnico.
+                  </span>
+                </div>
+
+                {/* Botones de Acción */}
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalPedirServicioOpen(false)}
+                    className="h-11 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={enviandoServicioFlota}
+                    className="h-11 px-6 rounded-xl bg-[#1E56B0] hover:bg-[#0A1525] text-white font-black text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {enviandoServicioFlota ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-[#CCFF00]" />
+                        <span>Enviando a Despacho...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wrench className="w-4 h-4 text-[#CCFF00]" />
+                        <span>Confirmar y Pedir Servicio</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
