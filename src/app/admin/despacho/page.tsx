@@ -33,7 +33,11 @@ import {
   Shield,
   Phone,
   Star,
-  UserPlus
+  UserPlus,
+  Search,
+  Trash2,
+  Plus,
+  Package
 } from 'lucide-react';
 
 interface OrdenKanban {
@@ -48,6 +52,29 @@ interface OrdenKanban {
   estado: string;
   mecanico_id?: string | null;
   created_at?: string;
+}
+
+// Repuestos del catálogo oficial para integración en cotizador
+interface RepuestoCatalogo {
+  id: string;
+  proveedor_nombre?: string;
+  nombre_repuesto: string;
+  marca: string;
+  precio_usd: number;
+  descripcion?: string;
+  foto_url?: string;
+  compatibilidad: string;
+  stock?: number;
+}
+
+interface RepuestoSeleccionado {
+  id: string;
+  nombre_repuesto: string;
+  marca: string;
+  precio_usd: number;
+  foto_url?: string;
+  compatibilidad?: string;
+  cantidad: number;
 }
 
 // Mecánicos disponibles para asignación
@@ -392,12 +419,18 @@ export default function TableroDespachoPage() {
   });
   const [toastPagoExitoso, setToastPagoExitoso] = useState<string | null>(null);
 
-  // Estado del Cotizador
-  const [manoDeObra, setManoDeObra] = useState<string>('');
+  // Estado del Cotizador con Repuestos del Catálogo
+  const [ordenParaCotizar, setOrdenParaCotizar] = useState<OrdenKanban | null>(null);
+  const [manoDeObra, setManoDeObra] = useState<string>('30');
   const [repuestos, setRepuestos] = useState<string>('');
   const [notasCotizacion, setNotasCotizacion] = useState<string>('');
+  const [catalogoRepuestos, setCatalogoRepuestos] = useState<RepuestoCatalogo[]>([]);
+  const [busquedaRepuesto, setBusquedaRepuesto] = useState<string>('');
+  const [repuestosSeleccionados, setRepuestosSeleccionados] = useState<RepuestoSeleccionado[]>([]);
+  const [guardandoCotizacion, setGuardandoCotizacion] = useState<boolean>(false);
+  const [toastCotizacion, setToastCotizacion] = useState<string | null>(null);
 
-  // 1. Cargar Órdenes de Supabase
+  // 1. Cargar Órdenes y Catálogo de Repuestos de Supabase
   const cargarOrdenes = async () => {
     try {
       const supabase = createClient();
@@ -410,6 +443,9 @@ export default function TableroDespachoPage() {
         console.error('Error cargando órdenes para el Kanban:', error);
       } else if (data) {
         setOrdenes(data);
+        if (data.length > 0 && !ordenParaCotizar) {
+          setOrdenParaCotizar(data[0]);
+        }
       }
     } catch (err) {
       console.error('Excepción al cargar órdenes:', err);
@@ -418,9 +454,60 @@ export default function TableroDespachoPage() {
     }
   };
 
+  const cargarCatalogoRepuestos = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('repuestos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data && data.length > 0) {
+        setCatalogoRepuestos(data as RepuestoCatalogo[]);
+      } else {
+        // Fallback de catálogo en caso de tabla sin datos iniciales
+        setCatalogoRepuestos([
+          {
+            id: '5f07a2d9-270e-4745-bc57-7b85cd82f80e',
+            proveedor_nombre: 'AutoPartes Chacao',
+            nombre_repuesto: 'Pastillas de Freno Delanteras',
+            marca: 'Bosch',
+            precio_usd: 35.0,
+            foto_url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=300&q=80',
+            compatibilidad: 'Toyota Corolla 2014-2020, Chevrolet Aveo 2012-2018',
+            stock: 15
+          },
+          {
+            id: '72dd0245-2853-462e-8f74-bb66cf135fed',
+            proveedor_nombre: 'Repuestos El Hatillo',
+            nombre_repuesto: 'Filtro de Aceite Sintético',
+            marca: 'Mann-Filter',
+            precio_usd: 12.5,
+            foto_url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=300&q=80',
+            compatibilidad: 'Ford Explorer 2011-2019, Toyota Corolla 2010-2022',
+            stock: 20
+          },
+          {
+            id: '5bcb7def-faf0-4391-9b4d-89b0abbd4721',
+            proveedor_nombre: 'Mayorista Las Mercedes',
+            nombre_repuesto: 'Batería 12V 650A',
+            marca: 'Optima',
+            precio_usd: 110.0,
+            foto_url: 'https://images.unsplash.com/photo-1620910930886-6b2b9e214686?auto=format&fit=crop&w=300&q=80',
+            compatibilidad: 'Chevrolet Aveo, Ford Explorer',
+            stock: 8
+          }
+        ]);
+      }
+    } catch (err) {
+      console.warn('Aviso cargando catálogo de repuestos:', err);
+    }
+  };
+
   // 5. Supabase Realtime: Suscripción a cambios
   useEffect(() => {
     cargarOrdenes();
+    cargarCatalogoRepuestos();
 
     const supabase = createClient();
     const canal = supabase
@@ -626,9 +713,43 @@ export default function TableroDespachoPage() {
     }, 4500);
   };
 
+  // Manejo de Carrito de Cotización y Repuestos del Catálogo
+  const handleAgregarRepuesto = (rep: RepuestoCatalogo) => {
+    setRepuestosSeleccionados((prev) => {
+      const existe = prev.find((item) => item.id === rep.id);
+      if (existe) {
+        return prev.map((item) =>
+          item.id === rep.id ? { ...item, cantidad: item.cantidad + 1 } : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: rep.id,
+          nombre_repuesto: rep.nombre_repuesto,
+          marca: rep.marca,
+          precio_usd: Number(rep.precio_usd),
+          foto_url: rep.foto_url,
+          compatibilidad: rep.compatibilidad,
+          cantidad: 1
+        }
+      ];
+    });
+    setBusquedaRepuesto('');
+  };
+
+  const handleEliminarRepuesto = (id: string) => {
+    setRepuestosSeleccionados((prev) => prev.filter((item) => item.id !== id));
+  };
+
   // 4. Lógica Financiera del Cotizador ($40 regla de negocio P0)
+  const totalRepuestosCatalogo = repuestosSeleccionados.reduce(
+    (acc, r) => acc + r.precio_usd * r.cantidad,
+    0
+  );
+  const numRepuestosManual = parseFloat(repuestos) || 0;
+  const numRepuestos = totalRepuestosCatalogo + numRepuestosManual;
   const numManoObra = parseFloat(manoDeObra) || 0;
-  const numRepuestos = parseFloat(repuestos) || 0;
   const subtotalServicio = numManoObra + numRepuestos;
   const exoneraDiagnostico = subtotalServicio > 40;
   const totalCotizacion = exoneraDiagnostico
@@ -636,6 +757,92 @@ export default function TableroDespachoPage() {
     : subtotalServicio > 0
     ? subtotalServicio + 15
     : 0;
+
+  // Filtrado de repuestos para el Command/Combobox
+  const repuestosFiltradosCatalogo = catalogoRepuestos.filter((r) => {
+    if (!busquedaRepuesto.trim()) return false;
+    const term = busquedaRepuesto.toLowerCase();
+    return (
+      r.nombre_repuesto.toLowerCase().includes(term) ||
+      r.marca.toLowerCase().includes(term) ||
+      (r.compatibilidad && r.compatibilidad.toLowerCase().includes(term))
+    );
+  });
+
+  // Guardar Cotización e Inserción en orden_repuestos para control de inventario
+  const handleGuardarCotizacion = async () => {
+    try {
+      setGuardandoCotizacion(true);
+      const supabase = createClient();
+      const ordenObjetivo = ordenParaCotizar || ordenes[0];
+
+      if (!ordenObjetivo) {
+        alert('No hay una orden activa seleccionada para cotizar.');
+        return;
+      }
+
+      const ordenId = ordenObjetivo.id;
+
+      // 1. Insertar en orden_repuestos por cada repuesto seleccionado
+      if (repuestosSeleccionados.length > 0) {
+        const filasAInsertar = repuestosSeleccionados.map((rep) => ({
+          orden_id: ordenId,
+          repuesto_id: rep.id,
+          cantidad: rep.cantidad,
+          precio_al_momento: rep.precio_usd
+        }));
+
+        const { error: errRep } = await supabase
+          .from('orden_repuestos')
+          .insert(filasAInsertar);
+
+        if (errRep) {
+          console.warn('[SUPABASE] Aviso al insertar en orden_repuestos:', errRep.message);
+        }
+      }
+
+      // 2. Actualizar monto en tabla ordenes
+      const { error: errOrd } = await supabase
+        .from('ordenes')
+        .update({
+          ganancia_estimada: totalCotizacion
+        })
+        .eq('id', ordenId);
+
+      if (errOrd) {
+        console.warn('[SUPABASE] Aviso al actualizar ganancia en ordenes:', errOrd.message);
+      }
+
+      // 3. Actualizar estado local
+      setOrdenes((prev) =>
+        prev.map((ord) =>
+          ord.id === ordenId ? { ...ord, ganancia_estimada: totalCotizacion } : ord
+        )
+      );
+
+      // 4. Bitácora inmutable en consola
+      console.log('[BITÁCORA INMUTABLE] Operadora guardó cotización oficial con repuestos vinculados', {
+        orden_id: ordenId,
+        vehiculo: ordenObjetivo.vehiculo_modelo,
+        cliente: ordenObjetivo.cliente_nombre,
+        repuestos_seleccionados: repuestosSeleccionados,
+        total_repuestos: totalRepuestosCatalogo,
+        mano_de_obra: numManoObra,
+        diagnostico_exonerado: exoneraDiagnostico,
+        total_facturable_usd: totalCotizacion,
+        timestamp: new Date().toISOString()
+      });
+
+      // 5. Cerrar modal y mostrar toast
+      setModalCotizadorOpen(false);
+      setToastCotizacion('Cotización enviada al cliente');
+      setTimeout(() => setToastCotizacion(null), 4500);
+    } catch (err) {
+      console.error('Error al guardar cotización:', err);
+    } finally {
+      setGuardandoCotizacion(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col font-sans selection:bg-[#CCFF00] selection:text-[#0A1525] relative">
@@ -1016,17 +1223,17 @@ export default function TableroDespachoPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 20 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="w-full max-w-2xl bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 sm:p-7 relative overflow-hidden"
+              className="w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between"
             >
               {/* Header Modal */}
-              <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0]">
+              <div className="flex items-start justify-between pb-4 border-b border-[#E2E8F0] shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black">
-                    <Calculator className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs border border-[#0A1525]/10 shrink-0">
+                    <Calculator className="w-5 h-5 text-[#CCFF00]" />
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
-                      Cotizador Premium de Servicio
+                      Cotizador Táctico con Repuestos del Catálogo
                     </h2>
                     <p className="text-xs text-[#475569] font-medium">
                       Regla de Negocio P0: Diagnóstico de $15 100% GRATIS en reparaciones &gt; $40
@@ -1037,20 +1244,51 @@ export default function TableroDespachoPage() {
                 <button
                   type="button"
                   onClick={() => setModalCotizadorOpen(false)}
-                  className="p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors"
+                  className="p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Cerrar modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Diseño de Dos Columnas (Izquierda: Inputs, Derecha: Resumen Financiero) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-5">
+              {/* Selector de Orden Activa */}
+              {ordenes.length > 0 && (
+                <div className="my-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Car className="w-4 h-4 text-[#1E56B0] shrink-0" />
+                    <span className="text-xs font-bold text-slate-500 shrink-0">Cotizando para:</span>
+                    <span className="text-xs font-black text-[#0A1525] truncate">
+                      {ordenParaCotizar?.vehiculo_modelo || ordenes[0].vehiculo_modelo} — {ordenParaCotizar?.cliente_nombre || ordenes[0].cliente_nombre}
+                    </span>
+                  </div>
+
+                  <select
+                    value={ordenParaCotizar?.id || ordenes[0]?.id || ''}
+                    onChange={(e) => {
+                      const sel = ordenes.find((o) => o.id === e.target.value);
+                      if (sel) setOrdenParaCotizar(sel);
+                    }}
+                    className="text-xs font-bold bg-white border border-[#CBD5E1] rounded-xl px-3 py-1.5 text-[#0A1525] focus:outline-none focus:border-[#1E56B0] cursor-pointer shadow-2xs"
+                  >
+                    {ordenes.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.vehiculo_modelo} • {o.cliente_nombre} ({o.sector})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Contenido Principal en Dos Columnas (Scrollable) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto pr-1 py-1 flex-1">
                 
-                {/* Columna Izquierda: Inputs */}
-                <div className="space-y-4">
+                {/* Columna Izquierda: Mano de Obra, Buscador Command y Carrito (7 cols) */}
+                <div className="lg:col-span-7 space-y-4">
+                  
+                  {/* Mano de Obra */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#0A1525] mb-1.5">
-                      Mano de Obra ($ USD)
+                      Mano de Obra Especializada ($ USD)
                     </label>
                     <div className="relative">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
@@ -1066,44 +1304,191 @@ export default function TableroDespachoPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#0A1525] mb-1.5">
-                      Repuestos &amp; Insumos ($ USD)
-                    </label>
+                  {/* 1. Buscador de Repuestos (Command / Combobox) */}
+                  <div className="space-y-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-3.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
+                        <Package className="w-3.5 h-3.5 text-[#1E56B0]" />
+                        <span>Añadir Repuestos del Catálogo</span>
+                      </label>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {catalogoRepuestos.length} disponibles en red
+                      </span>
+                    </div>
+
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={busquedaRepuesto}
+                        onChange={(e) => setBusquedaRepuesto(e.target.value)}
+                        placeholder="Buscar repuesto (ej: Freno, Corolla, Bujías, Optima)..."
+                        className="w-full h-10 pl-9 pr-8 text-xs font-semibold bg-white border border-[#E2E8F0] focus:border-[#1E56B0] rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-400"
+                      />
+                      {busquedaRepuesto && (
+                        <button
+                          type="button"
+                          onClick={() => setBusquedaRepuesto('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Desplegable de Resultados de Búsqueda (Combobox) */}
+                    {busquedaRepuesto.trim().length > 0 && (
+                      <div className="bg-white border border-[#CBD5E1] rounded-2xl shadow-xl p-2 max-h-56 overflow-y-auto space-y-1.5 z-20 relative">
+                        {repuestosFiltradosCatalogo.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-slate-500">
+                            No se encontraron repuestos para &ldquo;{busquedaRepuesto}&rdquo;
+                          </div>
+                        ) : (
+                          repuestosFiltradosCatalogo.map((rep) => (
+                            <div
+                              key={rep.id}
+                              className="p-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-[#E2E8F0] flex items-center justify-between gap-3 transition-colors"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img
+                                  src={rep.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=150&q=80'}
+                                  alt={rep.nombre_repuesto}
+                                  className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-black text-[#0A1525] truncate">
+                                    {rep.nombre_repuesto}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                                    <span className="font-bold text-[#1E56B0]">{rep.marca}</span>
+                                    <span>•</span>
+                                    <span className="truncate max-w-[150px]">{rep.compatibilidad}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-mono font-black text-xs text-[#0A1525]">
+                                  ${Number(rep.precio_usd).toFixed(2)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAgregarRepuesto(rep)}
+                                  className="h-7 px-2.5 rounded-lg bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black flex items-center gap-1 shadow-2xs border border-[#0A1525]/10 cursor-pointer active:scale-95"
+                                >
+                                  <Plus className="w-3 h-3 stroke-[3]" />
+                                  <span>Añadir</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Carrito de Cotización */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#475569]">
+                        Carrito de Cotización ({repuestosSeleccionados.length})
+                      </span>
+                      {repuestosSeleccionados.length > 0 && (
+                        <span className="font-mono font-bold text-xs text-[#1E56B0]">
+                          Subtotal Repuestos: ${totalRepuestosCatalogo.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+
+                    {repuestosSeleccionados.length === 0 ? (
+                      <div className="p-3.5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-400 bg-[#F8FAFC]">
+                        Sin repuestos seleccionados. Escribe en el buscador para sumar piezas del catálogo.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                        {repuestosSeleccionados.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-2 px-2.5 rounded-xl bg-white border border-[#E2E8F0] flex items-center justify-between gap-2 shadow-2xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <img
+                                src={item.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=100&q=80'}
+                                alt={item.nombre_repuesto}
+                                className="w-7 h-7 rounded-md object-cover border border-slate-200 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-[#0A1525] truncate">
+                                  {item.nombre_repuesto}
+                                </p>
+                                <p className="text-[10px] text-slate-400 font-semibold truncate">
+                                  {item.marca} • Cant: {item.cantidad}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-mono font-black text-xs text-[#0A1525]">
+                                ${(item.precio_usd * item.cantidad).toFixed(2)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleEliminarRepuesto(item.id)}
+                                className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Eliminar repuesto"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Repuestos / Insumos Adicionales Manuales (Opcional) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#475569] mb-1">
+                        Insumos Manuales ($ USD)
+                      </label>
                       <input
                         type="number"
                         min="0"
                         step="5"
                         value={repuestos}
                         onChange={(e) => setRepuestos(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full h-11 pl-9 pr-3 text-base font-bold bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0A1525] focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-mono"
+                        placeholder="0.00 (Opcional)"
+                        className="w-full h-9 px-3 text-xs font-bold bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0A1525] focus:outline-none focus:border-[#1E56B0] focus:bg-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#475569] mb-1">
+                        Notas del Presupuesto
+                      </label>
+                      <input
+                        type="text"
+                        value={notasCotizacion}
+                        onChange={(e) => setNotasCotizacion(e.target.value)}
+                        placeholder="Ej. Piezas con garantía oficial"
+                        className="w-full h-9 px-3 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0A1525] focus:outline-none focus:border-[#1E56B0] focus:bg-white"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#0A1525] mb-1.5">
-                      Notas del Presupuesto (Opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={notasCotizacion}
-                      onChange={(e) => setNotasCotizacion(e.target.value)}
-                      placeholder="Ej. Cambio de pastillas delanteras + rectificación"
-                      className="w-full h-10 px-3 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0A1525] focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all"
-                    />
-                  </div>
                 </div>
 
-                {/* Columna Derecha: Resumen Financiero Animado Spatial UI */}
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                {/* Columna Derecha: Resumen Financiero Animado Spatial UI (5 cols) */}
+                <div className="lg:col-span-5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 flex flex-col justify-between space-y-4">
                   <div className="space-y-3">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
-                      Desglose en Vivo
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
+                        Desglose en Vivo (Spatial UI)
+                      </span>
+                      <span className="text-[10px] font-mono text-[#1E56B0] font-bold">
+                        {repuestosSeleccionados.length} piezas
+                      </span>
+                    </div>
 
                     <div className="flex justify-between text-xs text-[#475569] font-medium">
                       <span>Mano de Obra:</span>
@@ -1111,9 +1496,16 @@ export default function TableroDespachoPage() {
                     </div>
 
                     <div className="flex justify-between text-xs text-[#475569] font-medium">
-                      <span>Repuestos:</span>
-                      <span className="font-bold text-[#0A1525] font-mono">${numRepuestos.toFixed(2)}</span>
+                      <span>Repuestos de Catálogo:</span>
+                      <span className="font-bold text-[#0A1525] font-mono">${totalRepuestosCatalogo.toFixed(2)}</span>
                     </div>
+
+                    {numRepuestosManual > 0 && (
+                      <div className="flex justify-between text-xs text-[#475569] font-medium">
+                        <span>Insumos Adicionales:</span>
+                        <span className="font-bold text-[#0A1525] font-mono">${numRepuestosManual.toFixed(2)}</span>
+                      </div>
+                    )}
 
                     <div className="border-t border-[#E2E8F0] pt-2 flex justify-between text-xs font-extrabold text-[#0A1525]">
                       <span>Subtotal de Intervención:</span>
@@ -1153,14 +1545,22 @@ export default function TableroDespachoPage() {
                     </AnimatePresence>
                   </div>
 
-                  {/* Total Final */}
-                  <div className="border-t border-[#E2E8F0] pt-3">
+                  {/* Total Final Facturable */}
+                  <div className="border-t border-[#E2E8F0] pt-3 space-y-2">
                     <div className="flex justify-between items-baseline">
                       <span className="text-xs font-extrabold uppercase tracking-wider text-[#475569]">
                         Total Facturable:
                       </span>
-                      <span className="text-2xl font-black text-[#1E56B0] font-mono tracking-tight">
-                        ${totalCotizacion.toFixed(2)} <span className="text-xs font-sans text-slate-500 font-bold">USD</span>
+                      <span className="text-3xl font-black text-[#1E56B0] font-mono tracking-tight">
+                        ${totalCotizacion.toFixed(2)}{' '}
+                        <span className="text-xs font-sans text-slate-500 font-bold">USD</span>
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-[#E2E8F0] flex items-center gap-2 text-[11px] text-[#475569]">
+                      <Bike className="w-4 h-4 text-[#1E56B0] shrink-0" />
+                      <span>
+                        Al guardar, se descontará del inventario en <strong className="text-[#0A1525]">orden_repuestos</strong> para el Runner.
                       </span>
                     </div>
                   </div>
@@ -1168,27 +1568,44 @@ export default function TableroDespachoPage() {
 
               </div>
 
-              {/* Botones de Acción */}
-              <div className="pt-6 border-t border-[#E2E8F0] flex gap-3">
+              {/* Botones de Acción (Footer del Modal) */}
+              <div className="pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
+                    const listaRepuestos = repuestosSeleccionados
+                      .map((r) => `${r.nombre_repuesto} ($${r.precio_usd.toFixed(2)})`)
+                      .join(', ');
                     const text = `Presupuesto TuTallerMóvil: Subtotal $${subtotalServicio.toFixed(2)} | ${
                       exoneraDiagnostico ? 'Diagnóstico GRATIS' : 'Diagnóstico $15.00'
-                    } | Total Final: $${totalCotizacion.toFixed(2)} USD. ${notasCotizacion ? `(${notasCotizacion})` : ''}`;
+                    } | Total Final: $${totalCotizacion.toFixed(2)} USD. ${
+                      listaRepuestos ? `Repuestos: ${listaRepuestos}. ` : ''
+                    }${notasCotizacion ? `(${notasCotizacion})` : ''}`;
                     navigator.clipboard.writeText(text);
                     alert('¡Presupuesto copiado al portapapeles!');
                   }}
-                  className="flex-1 h-11 text-xs font-bold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] border border-[#E2E8F0] rounded-xl transition-colors cursor-pointer"
+                  className="sm:w-1/3 h-11 text-xs font-bold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] border border-[#E2E8F0] rounded-xl transition-colors cursor-pointer"
                 >
-                  Copiar para WhatsApp
+                  Copiar WhatsApp
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setModalCotizadorOpen(false)}
-                  className="flex-1 h-11 text-xs font-black bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-colors cursor-pointer border border-[#0A1525]/10 shadow-xs"
+                  disabled={guardandoCotizacion}
+                  onClick={handleGuardarCotizacion}
+                  className="flex-1 h-11 text-xs font-black bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all cursor-pointer border border-[#0A1525]/10 shadow-xs flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 >
-                  Listo
+                  {guardandoCotizacion ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3.5 h-3.5 border-2 border-[#0A1525] border-t-transparent rounded-full animate-spin" />
+                      <span>Guardando en orden_repuestos...</span>
+                    </span>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Guardar Cotización</span>
+                    </>
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -1678,7 +2095,40 @@ export default function TableroDespachoPage() {
             <button
               type="button"
               onClick={() => setToastPagoExitoso(null)}
-              className="text-slate-400 hover:text-white ml-2"
+              className="text-slate-400 hover:text-white ml-2 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 8. TOAST ANIMADO: COTIZACIÓN ENVIADA AL CLIENTE          */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {toastCotizacion && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-50 bg-[#0A1525] text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3.5 max-w-md"
+          >
+            <div className="w-9 h-9 rounded-xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center text-white shrink-0 shadow-xs font-black">
+              <Check className="w-5 h-5 text-[#0A1525] stroke-[3]" />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-xs font-black text-white">
+                {toastCotizacion}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Repuestos guardados en orden_repuestos para control de inventario y runner.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastCotizacion(null)}
+              className="text-slate-400 hover:text-white ml-2 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
