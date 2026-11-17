@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 785 348" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:affinity="https://www.affinity.studio/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+<svg width="100%" height="100%" viewBox="-40 -40 865 440" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <defs>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,700;1,700&amp;display=swap');
+            .ttm-text { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        </style>
+    </defs>
+    <!-- Fondo oscuro corporativo con esquinas redondeadas para contraste perfecto (100% visible en fondos claros y oscuros) -->
+    <rect x="-40" y="-40" width="865" height="440" rx="56" fill="#0A1525"/>
     <g transform="matrix(1,0,0,1,-3757.415746,-376.301657)">
         <g transform="matrix(1.189383,0,0,1.381074,-536.341609,1316.163683)">
             <g transform="matrix(5.592292,0,0,4.816089,-26112.989426,-1990.505974)">
@@ -10,13 +18,13 @@
         <g transform="matrix(1.189383,0,0,1.381074,-536.341609,1316.163683)">
             <g transform="matrix(2.667654,0,0,2.297387,3140.260627,-1166.319302)">
                 <g transform="matrix(0.656608,0,0,0.656608,-375.373557,-173.996355)">
-                    <text x="914.893px" y="753.331px" style="font-family:'Poppins-Regular', 'Poppins';font-size:36.385px;fill:rgb(180,225,47);">Taller</text>
+                    <text x="914.893px" y="753.331px" class="ttm-text" style="font-size:36.385px;fill:rgb(180,225,47);">Taller</text>
                 </g>
                 <g transform="matrix(0.656608,0,0,0.656608,-308.158927,-173.816098)">
-                    <text x="914.893px" y="753.331px" style="font-family:'Poppins-BoldItalic', 'Poppins';font-weight:700;font-style:italic;font-size:36.385px;fill:rgb(180,225,47);">Movil</text>
+                    <text x="914.893px" y="753.331px" class="ttm-text" style="font-weight:700;font-style:italic;font-size:36.385px;fill:rgb(180,225,47);">Movil</text>
                 </g>
                 <g transform="matrix(0.656608,0,0,0.656608,-402.348823,-173.816098)">
-                    <text x="914.893px" y="753.331px" style="font-family:'Poppins-Regular', 'Poppins';font-size:36.385px;fill:rgb(180,225,47);">Tu</text>
+                    <text x="914.893px" y="753.331px" class="ttm-text" style="font-size:36.385px;fill:rgb(180,225,47);">Tu</text>
                 </g>
             </g>
         </g>
