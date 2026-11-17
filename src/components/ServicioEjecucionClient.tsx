@@ -64,45 +64,82 @@ interface ChecklistCategory {
 const CHECKLIST_CATEGORIES: ChecklistCategory[] = [
   {
     id: 'fluidos',
-    titulo: '1. Nivel y Calidad de Fluidos',
+    titulo: '1. Nivel y Calidad de Fluidos (7 Puntos)',
     items: [
       { id: 'aceite_motor', nombre: 'Aceite de Motor', descripcion: 'Nivel en varilla y viscosidad adecuada' },
       { id: 'liquido_frenos', nombre: 'Líquido de Frenos', descripcion: 'Humedad menor a 2% y nivel en reservorio' },
       { id: 'refrigerante', nombre: 'Refrigerante / Coolant', descripcion: 'Estado del líquido y hermeticidad de mangueras' },
-      { id: 'direccion_hidraulica', nombre: 'Dirección Hidráulica', descripcion: 'Nivel de ATF y ausencia de fugas en bomba' }
+      { id: 'direccion_hidraulica', nombre: 'Dirección Hidráulica', descripcion: 'Nivel de ATF y ausencia de fugas en bomba' },
+      { id: 'limpiaparabrisas', nombre: 'Agua Limpiaparabrisas', descripcion: 'Nivel de reservorio y aditivo' },
+      { id: 'aceite_transmision', nombre: 'Aceite de Transmisión', descripcion: 'Nivel y color de fluido de caja' },
+      { id: 'fugas_motor', nombre: 'Hermeticidad de Motor', descripcion: 'Inspección de fugas en tapa de válvulas y cárter' }
     ]
   },
   {
     id: 'frenos',
-    titulo: '2. Sistema de Frenos',
+    titulo: '2. Sistema de Frenos (6 Puntos)',
     items: [
       { id: 'pastillas_delanteras', nombre: 'Pastillas Delanteras', descripcion: 'Grosor de pasta mayor a 4 mm' },
+      { id: 'pastillas_traseras', nombre: 'Pastillas Traseras / Bandas', descripcion: 'Desgaste simétrico en ambos lados' },
       { id: 'discos_freno', nombre: 'Discos de Freno', descripcion: 'Superficie uniforme sin rebaba crítica' },
       { id: 'lineas_mangueras', nombre: 'Líneas y Mangueras', descripcion: 'Sin agrietamiento ni pérdida de presión' },
-      { id: 'freno_mano', nombre: 'Freno de Estacionamiento', descripcion: 'Tensión de guaya (4 a 6 clics de bloqueo)' }
+      { id: 'freno_mano', nombre: 'Freno de Estacionamiento', descripcion: 'Tensión de guaya (4 a 6 clics de bloqueo)' },
+      { id: 'calipers_mordazas', nombre: 'Calipers / Mordazas', descripcion: 'Desplazamiento libre de pasadores y pistones' }
     ]
   },
   {
     id: 'suspension',
-    titulo: '3. Suspensión y Tren Delantero',
+    titulo: '3. Suspensión y Tren Delantero (6 Puntos)',
     items: [
       { id: 'amortiguadores', nombre: 'Amortiguadores', descripcion: 'Sin fugas de aceite ni rebote excesivo' },
       { id: 'munones_rotulas', nombre: 'Muñones y Rótulas', descripcion: 'Guardapolvos intactos y sin holgura axial' },
       { id: 'terminales_direccion', nombre: 'Terminales de Dirección', descripcion: 'Alineación firme y terminales ajustados' },
-      { id: 'bujes_mesetas', nombre: 'Bujes de Meseta', descripcion: 'Gomas sin resequedad ni desprendimiento' }
+      { id: 'bujes_mesetas', nombre: 'Bujes de Meseta', descripcion: 'Gomas sin resequedad ni desprendimiento' },
+      { id: 'barra_estabilizadora', nombre: 'Bielas y Barra Estabilizadora', descripcion: 'Gomas y terminales sin juego' },
+      { id: 'rodamientos_rueda', nombre: 'Rodamientos de Rueda', descripcion: 'Sin zumbido al giro libre ni juego axial' }
     ]
   },
   {
     id: 'electrico',
-    titulo: '4. Luces y Sistema Eléctrico',
+    titulo: '4. Luces y Sistema Eléctrico (6 Puntos)',
     items: [
       { id: 'luces_principales', nombre: 'Luces Principales', descripcion: 'Altas, bajas y alineación de faros' },
       { id: 'luces_stop', nombre: 'Luces de Stop e Intermitentes', descripcion: 'Funcionamiento simultáneo al frenar' },
       { id: 'bornes_bateria', nombre: 'Bornes de Batería', descripcion: 'Ajuste firme, sin sulfatación' },
-      { id: 'alternador_carga', nombre: 'Carga de Alternador', descripcion: 'Voltaje en ralentí entre 13.8V y 14.4V' }
+      { id: 'estado_bateria', nombre: 'Salud de Batería (CCA)', descripcion: 'Capacidad de arranque y voltaje en reposo' },
+      { id: 'alternador_carga', nombre: 'Carga de Alternador', descripcion: 'Voltaje en ralentí entre 13.8V y 14.4V' },
+      { id: 'correa_accesorios', nombre: 'Correa de Accesorios', descripcion: 'Tensión adecuada y sin grietas superficiales' }
     ]
   }
 ];
+
+const CHECKLIST_DEFAULT_MAP: Record<string, 'OK' | 'CAMBIO'> = {
+  aceite_motor: 'OK',
+  liquido_frenos: 'CAMBIO',
+  refrigerante: 'OK',
+  direccion_hidraulica: 'OK',
+  limpiaparabrisas: 'OK',
+  aceite_transmision: 'OK',
+  fugas_motor: 'OK',
+  pastillas_delanteras: 'CAMBIO',
+  pastillas_traseras: 'OK',
+  discos_freno: 'CAMBIO',
+  lineas_mangueras: 'OK',
+  freno_mano: 'OK',
+  calipers_mordazas: 'OK',
+  amortiguadores: 'OK',
+  munones_rotulas: 'OK',
+  terminales_direccion: 'OK',
+  bujes_mesetas: 'OK',
+  barra_estabilizadora: 'OK',
+  rodamientos_rueda: 'OK',
+  luces_principales: 'OK',
+  luces_stop: 'OK',
+  bornes_bateria: 'OK',
+  estado_bateria: 'OK',
+  alternador_carga: 'OK',
+  correa_accesorios: 'OK'
+};
 
 // Pasos del Stepper
 const PASOS_WIZARD = [
@@ -142,7 +179,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   const [kmInicial, setKmInicial] = useState<string>('');
   const [fotoOdometroInicial, setFotoOdometroInicial] = useState<string | null>(null);
   const [piezasRequeridas, setPiezasRequeridas] = useState<string>('Pastillas de freno delanteras Bosch, 1 Botella Líquido DOT 4 Motul');
-  const [checklistRespuestas, setChecklistRespuestas] = useState<Record<string, 'OK' | 'CAMBIO'>>({});
+  const [checklistRespuestas, setChecklistRespuestas] = useState<Record<string, 'OK' | 'CAMBIO'>>(CHECKLIST_DEFAULT_MAP);
   const [categoriaAbierta, setCategoriaAbierta] = useState<string>('fluidos');
   const [enviandoDiagnostico, setEnviandoDiagnostico] = useState<boolean>(false);
 
@@ -241,6 +278,16 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           }
           if (data.foto_odometro_url) {
             setFotoOdometroInicial(data.foto_odometro_url);
+          }
+          if (data.diagnostico_json?.items) {
+            const cargadas: Record<string, 'OK' | 'CAMBIO'> = {};
+            Object.entries(data.diagnostico_json.items).forEach(([k, v]) => {
+              cargadas[k] = v === 'requiere_cambio' ? 'CAMBIO' : 'OK';
+            });
+            setChecklistRespuestas(cargadas);
+          }
+          if (data.diagnostico_json?.piezas_requeridas) {
+            setPiezasRequeridas(data.diagnostico_json.piezas_requeridas);
           }
         }
       } catch (err) {
@@ -380,19 +427,83 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
 
     setEnviandoDiagnostico(true);
     try {
+      // Normalizar respuestas y agrupaciones para formato interoperable
+      const itemsNormalizados: Record<string, string> = {};
+      Object.entries(checklistRespuestas).forEach(([key, val]) => {
+        itemsNormalizados[key] = val === 'CAMBIO' ? 'requiere_cambio' : 'ok';
+      });
+
+      const tieneCambioFrenos = [
+        'pastillas_delanteras',
+        'pastillas_traseras',
+        'discos_freno',
+        'liquido_frenos',
+        'lineas_mangueras',
+        'freno_mano',
+        'calipers_mordazas'
+      ].some((id) => checklistRespuestas[id] === 'CAMBIO');
+
+      const tieneCambioFluidos = [
+        'aceite_motor',
+        'liquido_frenos',
+        'refrigerante',
+        'direccion_hidraulica',
+        'aceite_transmision',
+        'limpiaparabrisas',
+        'fugas_motor'
+      ].some((id) => checklistRespuestas[id] === 'CAMBIO');
+
+      const tieneCambioSuspension = [
+        'amortiguadores',
+        'munones_rotulas',
+        'terminales_direccion',
+        'bujes_mesetas',
+        'barra_estabilizadora',
+        'rodamientos_rueda'
+      ].some((id) => checklistRespuestas[id] === 'CAMBIO');
+
+      const tieneCambioElectrico = [
+        'luces_principales',
+        'luces_stop',
+        'bornes_bateria',
+        'estado_bateria',
+        'alternador_carga',
+        'correa_accesorios'
+      ].some((id) => checklistRespuestas[id] === 'CAMBIO');
+
+      // Objeto JSON con el resumen solicitado: {"frenos": "requiere_cambio", "aceite": "ok", "suspension": "ok"}
+      const diagnosticoJson = {
+        frenos: tieneCambioFrenos ? 'requiere_cambio' : 'ok',
+        aceite: checklistRespuestas['aceite_motor'] === 'CAMBIO' ? 'requiere_cambio' : 'ok',
+        suspension: tieneCambioSuspension ? 'requiere_cambio' : 'ok',
+        fluidos: tieneCambioFluidos ? 'requiere_cambio' : 'ok',
+        electrico: tieneCambioElectrico ? 'requiere_cambio' : 'ok',
+        items: itemsNormalizados,
+        total_puntos: 25,
+        puntos_ok: Object.values(checklistRespuestas).filter((v) => v === 'OK').length,
+        puntos_cambio: Object.values(checklistRespuestas).filter((v) => v === 'CAMBIO').length,
+        piezas_requeridas: piezasRequeridas,
+        fecha: new Date().toISOString(),
+        mecanico: {
+          nombre: 'Carlos Mendoza',
+          codigo: '#TTM-0842'
+        }
+      };
+
       const supabase = createClient();
       await supabase
         .from('ordenes')
         .update({
           estado: 'COTIZADO',
           foto_odometro_url: fotoOdometroInicial,
+          diagnostico_json: diagnosticoJson,
           falla_reportada: `${fallaReportada} | Piezas requeridas: ${piezasRequeridas}`
         })
         .eq('id', id);
 
       setEstadoOrden('COTIZADO');
       setFaseActual(2);
-      setToastMensaje(['✓ Diagnóstico enviado a Despacho Central. Esperando aprobación del cliente.']);
+      setToastMensaje(['✓ Diagnóstico de 25 Puntos enviado a Despacho Central. Esperando cotización y aprobación.']);
       setTimeout(() => setToastMensaje(null), 4500);
     } catch (e) {
       console.error(e);
@@ -829,11 +940,19 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-[#1E56B0]" />
-                    <h3 className="text-sm font-black text-[#0A1525]">Checklist de Inspección</h3>
+                    <h3 className="text-sm font-black text-[#0A1525]">Checklist de Inspección (25 Puntos)</h3>
                   </div>
-                  <span className="text-xs font-mono font-bold text-slate-500">
-                    {Object.keys(checklistRespuestas).length} calificados
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allOk: Record<string, 'OK' | 'CAMBIO'> = {};
+                      CHECKLIST_CATEGORIES.forEach((cat) => cat.items.forEach((item) => { allOk[item.id] = 'OK'; }));
+                      setChecklistRespuestas(allOk);
+                    }}
+                    className="text-[11px] font-bold text-[#1E56B0] hover:underline cursor-pointer"
+                  >
+                    Marcar Todo OK
+                  </button>
                 </div>
 
                 <div className="space-y-2">
