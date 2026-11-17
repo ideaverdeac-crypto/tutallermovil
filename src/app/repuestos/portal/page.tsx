@@ -90,6 +90,49 @@ export default function PortalRepuestosPage() {
   const [procesandoFoto, setProcesandoFoto] = useState<boolean>(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Etiquetas sugeridas dinámicas (el usuario puede crear nuevas)
+  const [etiquetasSugeridas, setEtiquetasSugeridas] = useState([
+    {
+      label: 'Pastillas de Freno',
+      url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      label: 'Batería Automotriz',
+      url: 'https://images.unsplash.com/photo-1620910930886-6b2b9e214686?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      label: 'Filtro / Bujías',
+      url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      label: 'Amortiguador / Suspensión',
+      url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=600&q=80'
+    }
+  ]);
+  const [mostrarInputNuevaEtiqueta, setMostrarInputNuevaEtiqueta] = useState<boolean>(false);
+  const [textoNuevaEtiqueta, setTextoNuevaEtiqueta] = useState<string>('');
+  const [etiquetaActiva, setEtiquetaActiva] = useState<string | null>(null);
+
+  const handleAgregarNuevaEtiqueta = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const nombreLimpio = textoNuevaEtiqueta.trim();
+    if (!nombreLimpio) return;
+
+    const nuevaEtiqueta = {
+      label: nombreLimpio,
+      url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=600&q=80'
+    };
+
+    setEtiquetasSugeridas((prev) => [...prev, nuevaEtiqueta]);
+    setFormFotoUrl(nuevaEtiqueta.url);
+    setEtiquetaActiva(nombreLimpio);
+    if (!formNombre) {
+      setFormNombre(nombreLimpio);
+    }
+    setTextoNuevaEtiqueta('');
+    setMostrarInputNuevaEtiqueta(false);
+  };
+
   // Procesar y comprimir foto de cámara / dispositivo a base64 optimizada
   const handleSeleccionarArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -832,21 +875,82 @@ export default function PortalRepuestosPage() {
                         className="w-full h-11 px-3.5 text-xs font-mono bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#1E56B0] focus:bg-white rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-400"
                       />
 
-                      {/* Chips de Sugerencias de Fotos para Carga Rápida */}
+                      {/* Chips de Sugerencias de Fotos y Opción de Nueva Etiqueta */}
                       <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                         <span className="text-[10px] font-bold text-slate-400 uppercase">
                           Sugerencias:
                         </span>
-                        {FOTOS_PREESTABLECIDAS.map((foto) => (
+
+                        {etiquetasSugeridas.map((item) => {
+                          const isSelected = etiquetaActiva === item.label || formFotoUrl === item.url;
+                          return (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => {
+                                setFormFotoUrl(item.url);
+                                setEtiquetaActiva(item.label);
+                                if (!formNombre) {
+                                  setFormNombre(item.label);
+                                }
+                              }}
+                              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
+                                isSelected
+                                  ? 'bg-[#0A1525] text-[#CCFF00] border-[#0A1525] shadow-2xs font-black'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <span>{item.label}</span>
+                            </button>
+                          );
+                        })}
+
+                        {/* Opción para escribir una nueva etiqueta personalizada */}
+                        {!mostrarInputNuevaEtiqueta ? (
                           <button
-                            key={foto.label}
                             type="button"
-                            onClick={() => setFormFotoUrl(foto.url)}
-                            className="text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-md border border-slate-200 transition-colors cursor-pointer"
+                            onClick={() => setMostrarInputNuevaEtiqueta(true)}
+                            className="text-[11px] font-extrabold bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] px-2.5 py-0.5 rounded-lg border border-dashed border-blue-300 hover:border-slate-800 transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
+                            title="Escribir una nueva etiqueta personalizada"
                           >
-                            {foto.label}
+                            <Plus className="w-3 h-3 stroke-[3]" />
+                            <span>Nueva etiqueta</span>
                           </button>
-                        ))}
+                        ) : (
+                          <div className="inline-flex items-center gap-1 bg-white border border-[#1E56B0] rounded-lg p-0.5 shadow-xs">
+                            <input
+                              type="text"
+                              autoFocus
+                              value={textoNuevaEtiqueta}
+                              onChange={(e) => setTextoNuevaEtiqueta(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAgregarNuevaEtiqueta();
+                                }
+                              }}
+                              placeholder="Escribe etiqueta..."
+                              className="text-[11px] font-semibold text-[#0A1525] px-2 py-0.5 outline-hidden w-28 sm:w-36 bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAgregarNuevaEtiqueta()}
+                              className="h-6 px-2 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-[10px] font-black rounded cursor-pointer transition-colors"
+                            >
+                              Añadir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTextoNuevaEtiqueta('');
+                                setMostrarInputNuevaEtiqueta(false);
+                              }}
+                              className="h-6 px-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Vista Previa */}
