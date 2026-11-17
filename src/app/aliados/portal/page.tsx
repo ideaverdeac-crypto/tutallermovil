@@ -34,7 +34,9 @@ type EstadoMecanico = 'DISPONIBLE' | 'EN_SERVICIO' | 'INACTIVO';
 interface OrdenSupabase {
   id: string;
   cliente_nombre: string;
+  vehiculo_marca?: string | null;
   vehiculo_modelo: string;
+  vehiculo_anio?: number | string | null;
   falla_reportada: string;
   sector: string;
   ganancia_estimada: number | string;
@@ -593,6 +595,9 @@ export default function PortalAliadosPage() {
                 const gananciaFormatted = `$${Number(orden.ganancia_estimada || 0).toFixed(2)} USD`;
                 const shortId = orden.id ? `#${orden.id.slice(0, 8).toUpperCase()}` : `#ORD-${index + 1}`;
                 const isAccepting = aceptandoId === orden.id;
+                const vehiculoCompleto = [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
+                  .filter(Boolean)
+                  .join(' ') || orden.vehiculo_modelo || 'Vehículo';
 
                 return (
                   <motion.div
@@ -637,11 +642,11 @@ export default function PortalAliadosPage() {
                           {orden.falla_reportada}
                         </h3>
 
-                        {/* Modelo de Carro y Sector Reales */}
+                        {/* Modelo de Carro (Marca, Modelo, Año) y Sector Reales */}
                         <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-600 pt-1">
                           <span className="inline-flex items-center gap-1.5 font-bold text-[#0A1525]">
                             <Car className="w-4 h-4 text-[#1E56B0]" />
-                            {orden.vehiculo_modelo}
+                            {vehiculoCompleto}
                           </span>
                           <span>•</span>
                           <span className="inline-flex items-center gap-1 text-slate-600">

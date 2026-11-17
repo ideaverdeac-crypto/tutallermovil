@@ -13,7 +13,8 @@ import {
   User,
   Loader2,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 
 interface SolicitarMecanicoModalProps {
@@ -28,7 +29,9 @@ export function SolicitarMecanicoModal({
   onSuccessToast
 }: SolicitarMecanicoModalProps) {
   const [nombre, setNombre] = useState('');
+  const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
+  const [anio, setAnio] = useState('');
   const [falla, setFalla] = useState('');
   const [sector, setSector] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -38,7 +41,14 @@ export function SolicitarMecanicoModal({
     e.preventDefault();
     setErrorMsg('');
 
-    if (!nombre.trim() || !modelo.trim() || !falla.trim() || !sector.trim()) {
+    if (
+      !nombre.trim() ||
+      !marca.trim() ||
+      !modelo.trim() ||
+      !anio.trim() ||
+      !falla.trim() ||
+      !sector.trim()
+    ) {
       setErrorMsg('Por favor completa todos los campos para continuar.');
       return;
     }
@@ -47,10 +57,14 @@ export function SolicitarMecanicoModal({
 
     try {
       const supabase = createClient();
+      const anioNum = parseInt(anio.trim(), 10) || null;
+
       const { data, error } = await supabase.from('ordenes').insert([
         {
           cliente_nombre: nombre.trim(),
+          vehiculo_marca: marca.trim(),
           vehiculo_modelo: modelo.trim(),
+          vehiculo_anio: anioNum,
           falla_reportada: falla.trim(),
           sector: sector.trim(),
           estado: 'DISPONIBLE',
@@ -69,7 +83,9 @@ export function SolicitarMecanicoModal({
 
       // Éxito: limpiar campos, cerrar modal y disparar toast
       setNombre('');
+      setMarca('');
       setModelo('');
+      setAnio('');
       setFalla('');
       setSector('');
       setSubmitting(false);
@@ -140,7 +156,7 @@ export function SolicitarMecanicoModal({
                   </div>
 
                   <Dialog.Description className="text-xs text-slate-600 mb-5 leading-relaxed">
-                    Completa este formulario rápido. Asignaremos a un especialista verificado con escáner y herramientas directas a tu ubicación.
+                    Completa los datos de tu vehículo. Asignaremos a un especialista verificado con escáner y herramientas directas a tu ubicación.
                   </Dialog.Description>
 
                   {/* Mensaje de error si ocurre */}
@@ -171,10 +187,51 @@ export function SolicitarMecanicoModal({
                       </div>
                     </div>
 
-                    {/* Campo 2: Modelo del Vehículo */}
+                    {/* Fila 2: Grid Marca y Año (grid-cols-2) */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Campo: Marca */}
+                      <div>
+                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
+                          Marca
+                        </label>
+                        <div className="relative">
+                          <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            value={marca}
+                            onChange={(e) => setMarca(e.target.value)}
+                            placeholder="Ej. Toyota"
+                            className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Campo: Año */}
+                      <div>
+                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
+                          Año
+                        </label>
+                        <div className="relative">
+                          <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="number"
+                            required
+                            min="1970"
+                            max="2030"
+                            value={anio}
+                            onChange={(e) => setAnio(e.target.value)}
+                            placeholder="Ej. 2018"
+                            className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fila 3: Modelo (Ancho completo) */}
                     <div>
                       <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                        Modelo del Vehículo (Marca, Modelo, Año)
+                        Modelo
                       </label>
                       <div className="relative">
                         <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -183,13 +240,13 @@ export function SolicitarMecanicoModal({
                           required
                           value={modelo}
                           onChange={(e) => setModelo(e.target.value)}
-                          placeholder="Ej. Toyota Corolla 2018 / Ford Fiesta 2012"
+                          placeholder="Ej. Corolla / Yaris / Fiesta"
                           className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
                         />
                       </div>
                     </div>
 
-                    {/* Campo 3: Falla Reportada */}
+                    {/* Campo 4: Falla Reportada */}
                     <div>
                       <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
                         Falla Reportada o Síntoma
@@ -207,7 +264,7 @@ export function SolicitarMecanicoModal({
                       </div>
                     </div>
 
-                    {/* Campo 4: Sector */}
+                    {/* Campo 5: Sector */}
                     <div>
                       <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
                         Sector en Caracas
