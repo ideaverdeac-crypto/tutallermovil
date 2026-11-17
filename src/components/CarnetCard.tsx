@@ -117,8 +117,10 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
               <h1 className="text-2xl sm:text-3xl font-black text-[#0A1525] tracking-tight">
                 Carlos Mendoza
               </h1>
-              {/* Check Azul BadgeCheck */}
-              <BadgeCheck className="w-7 h-7 text-[#1E56B0] fill-[#1E56B0] text-white shrink-0" />
+              {/* Check Verde Oficial Sólido con tilde blanca (Idéntico a la referencia) */}
+              <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#16a34a] flex items-center justify-center shrink-0 shadow-xs" title="Técnico Verificado Oficial">
+                <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white stroke-[3.5]" />
+              </span>
             </div>
 
             <p className="text-sm font-semibold text-[#475569]">
@@ -182,7 +184,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
                   key={chip}
                   className="bg-[#F1F5F9] text-[#0A1525] text-sm font-semibold rounded-full px-3.5 py-1.5 flex items-center gap-2 shadow-2xs"
                 >
-                  <span className="w-4 h-4 rounded-full bg-emerald-600 flex items-center justify-center shrink-0">
+                  <span className="w-4 h-4 rounded-full bg-[#16a34a] flex items-center justify-center shrink-0">
                     <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
                   </span>
                   <span>{chip}</span>

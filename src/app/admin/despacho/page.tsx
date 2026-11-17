@@ -26,7 +26,8 @@ import {
   Sparkles,
   Check,
   FileText,
-  BadgeCheck
+  BadgeCheck,
+  GripVertical
 } from 'lucide-react';
 
 interface OrdenKanban {
@@ -71,6 +72,54 @@ const MECANICOS_DISPONIBLES = [
   }
 ];
 
+// Definición de Columnas del Kanban para Drag & Drop
+const COLUMNAS = [
+  {
+    id: 'LEAD_NUEVO',
+    titulo: '1. NUEVOS LEADS',
+    colorDot: 'bg-slate-400',
+    colorBorder: 'hover:border-slate-400',
+    colorDragOver: 'ring-2 ring-slate-400 border-slate-400 bg-slate-50/90',
+    estadosValidos: ['LEAD_NUEVO', 'DISPONIBLE'],
+    estadoDestino: 'LEAD_NUEVO',
+    estadoSiguiente: 'DIAGNOSTICO_AGENDADO',
+    textoVacio: 'Sin nuevos leads por ahora'
+  },
+  {
+    id: 'DIAGNOSTICO_AGENDADO',
+    titulo: '2. DIAGNÓSTICO',
+    colorDot: 'bg-[#1E56B0]',
+    colorBorder: 'hover:border-[#1E56B0]',
+    colorDragOver: 'ring-2 ring-[#1E56B0] border-[#1E56B0] bg-blue-50/60',
+    estadosValidos: ['DIAGNOSTICO_AGENDADO'],
+    estadoDestino: 'DIAGNOSTICO_AGENDADO',
+    estadoSiguiente: 'ASIGNADO',
+    textoVacio: 'Sin órdenes en diagnóstico'
+  },
+  {
+    id: 'ASIGNADO',
+    titulo: '3. ASIGNADOS',
+    colorDot: 'bg-purple-600',
+    colorBorder: 'hover:border-purple-400',
+    colorDragOver: 'ring-2 ring-purple-500 border-purple-500 bg-purple-50/60',
+    estadosValidos: ['ASIGNADO'],
+    estadoDestino: 'ASIGNADO',
+    estadoSiguiente: 'EN_EJECUCION',
+    textoVacio: 'Sin técnicos en ruta'
+  },
+  {
+    id: 'EN_EJECUCION',
+    titulo: '4. EN EJECUCIÓN',
+    colorDot: 'bg-emerald-500',
+    colorBorder: 'hover:border-emerald-400',
+    colorDragOver: 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/60',
+    estadosValidos: ['EN_EJECUCION', 'EN_SERVICIO'],
+    estadoDestino: 'EN_EJECUCION',
+    estadoSiguiente: null,
+    textoVacio: 'Sin servicios activos en sitio'
+  }
+];
+
 // Cálculo de SLA (Tiempo Restante de Respuesta objetivo 45 min)
 function calcularSLA(createdAt?: string): { texto: string; critico: boolean } {
   if (!createdAt) return { texto: '⏱ 45 min', critico: false };
@@ -95,6 +144,10 @@ export default function TableroDespachoPage() {
   const [ordenes, setOrdenes] = useState<OrdenKanban[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
   const [actualizandoId, setActualizandoId] = useState<string | null>(null);
+
+  // Estados de Drag and Drop
+  const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const [dragOverColId, setDragOverColId] = useState<string | null>(null);
 
   // Estados de Modales
   const [modalCotizadorOpen, setModalCotizadorOpen] = useState(false);
@@ -133,7 +186,7 @@ export default function TableroDespachoPage() {
 
     const supabase = createClient();
     const canal = supabase
-      .channel('admin_despacho_realtime_2027')
+      .channel('admin_despacho_realtime_dnd')
       .on(
         'postgres_changes',
         {
@@ -153,9 +206,19 @@ export default function TableroDespachoPage() {
     };
   }, []);
 
-  // 3. Flujo de Acción Rápida: Mover Orden al Siguiente Estado
+  // 3. Mover Orden al Nuevo Estado (Tanto por botón como por Drag & Drop)
   const moverOrden = async (ordenId: string, nuevoEstado: string, mecanicoId?: string) => {
     setActualizandoId(ordenId);
+
+    // Optimistic UI update: actualizar inmediatamente en memoria
+    setOrdenes((prev) =>
+      prev.map((ord) =>
+        ord.id === ordenId
+          ? { ...ord, estado: nuevoEstado, ...(mecanicoId ? { mecanico_id: mecanicoId } : {}) }
+          : ord
+      )
+    );
+
     try {
       const supabase = createClient();
       const updatePayload: Record<string, any> = { estado: nuevoEstado };
@@ -171,19 +234,66 @@ export default function TableroDespachoPage() {
       if (error) {
         console.error('Error actualizando estado de la orden:', error);
         alert('No se pudo actualizar el estado de la orden');
-      } else {
-        setOrdenes((prev) =>
-          prev.map((ord) =>
-            ord.id === ordenId
-              ? { ...ord, estado: nuevoEstado, ...(mecanicoId ? { mecanico_id: mecanicoId } : {}) }
-              : ord
-          )
-        );
+        await cargarOrdenes();
       }
     } catch (err) {
       console.error('Excepción al mover orden:', err);
+      await cargarOrdenes();
     } finally {
       setActualizandoId(null);
+    }
+  };
+
+  // Manejadores de Drag and Drop
+  const handleDragStart = (e: React.DragEvent, ordenId: string) => {
+    e.dataTransfer.setData('text/plain', ordenId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedCardId(ordenId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedCardId(null);
+    setDragOverColId(null);
+  };
+
+  const handleDragOverColumn = (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverColId !== colId) {
+      setDragOverColId(colId);
+    }
+  };
+
+  const handleDragLeaveColumn = (e: React.DragEvent) => {
+    // Si sale hacia otro elemento que no es hijo, limpiar indicador
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setDragOverColId(null);
+  };
+
+  const handleDropOnColumn = async (e: React.DragEvent, targetColId: string) => {
+    e.preventDefault();
+    setDragOverColId(null);
+    const ordenId = e.dataTransfer.getData('text/plain') || draggedCardId;
+    setDraggedCardId(null);
+
+    if (!ordenId) return;
+
+    const orden = ordenes.find((o) => o.id === ordenId);
+    if (!orden) return;
+
+    // Verificar si ya está en esta columna
+    const targetCol = COLUMNAS.find((c) => c.id === targetColId);
+    if (!targetCol) return;
+
+    if (targetCol.estadosValidos.includes(orden.estado)) {
+      return; // Ya está en esta columna
+    }
+
+    // Si se suelta en ASIGNADO y no tiene mecánico asignado, asignar el primer especialista disponible por defecto
+    if (targetColId === 'ASIGNADO' && !orden.mecanico_id) {
+      await moverOrden(ordenId, 'ASIGNADO', MECANICOS_DISPONIBLES[0].id);
+    } else {
+      await moverOrden(ordenId, targetCol.estadoDestino);
     }
   };
 
@@ -193,16 +303,6 @@ export default function TableroDespachoPage() {
     setModalAsignarOpen(false);
     setOrdenParaAsignar(null);
   };
-
-  // Filtros de Columnas
-  const leadsNuevos = ordenes.filter(
-    (o) => o.estado === 'LEAD_NUEVO' || o.estado === 'DISPONIBLE'
-  );
-  const enDiagnostico = ordenes.filter((o) => o.estado === 'DIAGNOSTICO_AGENDADO');
-  const asignados = ordenes.filter((o) => o.estado === 'ASIGNADO');
-  const enEjecucion = ordenes.filter(
-    (o) => o.estado === 'EN_EJECUCION' || o.estado === 'EN_SERVICIO'
-  );
 
   // 4. Lógica Financiera del Cotizador ($40 regla de negocio P0)
   const numManoObra = parseFloat(manoDeObra) || 0;
@@ -288,8 +388,8 @@ export default function TableroDespachoPage() {
               <Kanban className="w-6 h-6 text-[#1E56B0]" />
               Tablero Operativo de Despacho
             </h1>
-            <p className="text-xs text-[#475569] font-medium">
-              Gestión de flujo de trabajo en tiempo real con SLA y cálculo dinámico de exoneración.
+            <p className="text-xs text-[#475569] font-medium flex items-center gap-1.5 pt-0.5">
+              <span>Arrastra y suelta (Drag &amp; Drop) cualquier tarjeta entre columnas para actualizar su fase operativa.</span>
             </p>
           </div>
 
@@ -301,394 +401,199 @@ export default function TableroDespachoPage() {
           </div>
         </div>
 
-        {/* 1. Estructura del Tablero: Contenedor con scroll horizontal suave */}
+        {/* 1. Estructura del Tablero: Contenedor con scroll horizontal suave y soporte Drag & Drop */}
         <div className="flex-1 overflow-x-auto pb-6">
           <div className="flex gap-4 min-w-[1100px] items-start">
             
-            {/* ======================================================== */}
-            {/* COLUMNA 1: LEAD_NUEVO */}
-            {/* ======================================================== */}
-            <div className="w-72 sm:w-80 shrink-0 bg-slate-50/80 border border-[#E2E8F0] rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)]">
-              {/* Cabecera Sticky Glassmorphism */}
-              <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-[#0A1525]">
-                    1. NUEVOS LEADS
-                  </h2>
-                </div>
-                <span className="font-mono text-xs font-black bg-[#E2E8F0] text-[#0A1525] px-2.5 py-0.5 rounded-full">
-                  {leadsNuevos.length}
-                </span>
-              </div>
+            {COLUMNAS.map((columna) => {
+              const ordenesDeColumna = ordenes.filter((o) =>
+                columna.estadosValidos.includes(o.estado)
+              );
+              const isDragOver = dragOverColId === columna.id;
 
-              {/* Zona de Drop/Tarjetas con gap-3 y padding */}
-              <div className="p-3 space-y-3 overflow-y-auto flex-1">
-                {leadsNuevos.length === 0 ? (
-                  <div className="p-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-2xl text-xs text-[#475569] font-medium">
-                    Sin nuevos leads por ahora
+              return (
+                <div
+                  key={columna.id}
+                  onDragOver={(e) => handleDragOverColumn(e, columna.id)}
+                  onDragLeave={handleDragLeaveColumn}
+                  onDrop={(e) => handleDropOnColumn(e, columna.id)}
+                  className={`w-72 sm:w-80 shrink-0 rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)] transition-all duration-200 ${
+                    isDragOver
+                      ? `${columna.colorDragOver} border-2 border-dashed`
+                      : 'bg-slate-50/80 border border-[#E2E8F0]'
+                  }`}
+                >
+                  {/* Cabecera Sticky Glassmorphism */}
+                  <div className="sticky top-0 z-10 backdrop-blur-md bg-white/85 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${columna.colorDot}`}></span>
+                      <h2 className="text-xs font-black uppercase tracking-wider text-[#0A1525]">
+                        {columna.titulo}
+                      </h2>
+                    </div>
+                    <span className="font-mono text-xs font-black bg-[#E2E8F0] text-[#0A1525] px-2.5 py-0.5 rounded-full">
+                      {ordenesDeColumna.length}
+                    </span>
                   </div>
-                ) : (
-                  leadsNuevos.map((orden) => {
-                    const sla = calcularSLA(orden.created_at);
-                    const vehiculo =
-                      [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
-                        .filter(Boolean)
-                        .join(' ') || orden.vehiculo_modelo;
-                    const isUpdating = actualizandoId === orden.id;
 
-                    return (
+                  {/* Zona de Drop/Tarjetas */}
+                  <div className="p-3 space-y-3 overflow-y-auto flex-1 min-h-[320px]">
+                    {/* Indicador visual al arrastrar encima */}
+                    {isDragOver && (
                       <motion.div
-                        key={orden.id}
-                        layout
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        transition={{ duration: 0.2 }}
-                        className="bg-white rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] p-4 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-3"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="p-3 text-center rounded-xl bg-blue-100/60 border-2 border-dashed border-[#1E56B0] text-xs font-extrabold text-[#1E56B0]"
                       >
-                        {/* Arriba: Vehículo en negrita y Nombre del Cliente */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-0.5">
-                            <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug">
-                              {vehiculo}
-                            </h3>
-                            <p className="text-xs font-semibold text-[#475569]">
-                              {orden.cliente_nombre || 'Cliente Particular'}
-                            </p>
-                          </div>
-
-                          {/* SLA Chip Dinámico */}
-                          <span
-                            className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap ${
-                              sla.critico
-                                ? 'bg-[#FEE2E2] text-rose-700'
-                                : 'bg-[#F0FDF4] text-emerald-700'
-                            }`}
-                          >
-                            {sla.texto}
-                          </span>
-                        </div>
-
-                        {/* Medio: Falla Reportada (truncada) */}
-                        <p className="text-xs text-[#475569] line-clamp-2 leading-relaxed">
-                          {orden.falla_reportada}
-                        </p>
-
-                        {/* Abajo: Sector y Botón Circular de Acción Rápida */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="truncate max-w-[150px]">{orden.sector}</span>
-                          </div>
-
-                          {/* Botón Circular: fondo #1E56B0, hover #CCFF00 */}
-                          <motion.button
-                            type="button"
-                            disabled={isUpdating}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => moverOrden(orden.id, 'DIAGNOSTICO_AGENDADO')}
-                            className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-colors shadow-xs cursor-pointer shrink-0"
-                            title="Mover a Diagnóstico"
-                          >
-                            {isUpdating ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            )}
-                          </motion.button>
-                        </div>
+                        Soltar aquí para mover a {columna.titulo}
                       </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+                    )}
 
-            {/* ======================================================== */}
-            {/* COLUMNA 2: DIAGNOSTICO_AGENDADO */}
-            {/* ======================================================== */}
-            <div className="w-72 sm:w-80 shrink-0 bg-slate-50/80 border border-[#E2E8F0] rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)]">
-              {/* Cabecera Sticky Glassmorphism (Puntito Azul) */}
-              <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#1E56B0]"></span>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-[#0A1525]">
-                    2. DIAGNÓSTICO
-                  </h2>
-                </div>
-                <span className="font-mono text-xs font-black bg-[#E2E8F0] text-[#0A1525] px-2.5 py-0.5 rounded-full">
-                  {enDiagnostico.length}
-                </span>
-              </div>
+                    {ordenesDeColumna.length === 0 ? (
+                      <div className="p-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-2xl text-xs text-[#475569] font-medium flex flex-col items-center justify-center gap-2 h-44">
+                        <span className="text-slate-300">Arrastra tarjetas aquí</span>
+                        <span className="text-slate-400 text-[11px]">{columna.textoVacio}</span>
+                      </div>
+                    ) : (
+                      ordenesDeColumna.map((orden) => {
+                        const sla = calcularSLA(orden.created_at);
+                        const vehiculo =
+                          [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
+                            .filter(Boolean)
+                            .join(' ') || orden.vehiculo_modelo;
+                        const isUpdating = actualizandoId === orden.id;
+                        const isBeingDragged = draggedCardId === orden.id;
 
-              {/* Zona de Drop/Tarjetas */}
-              <div className="p-3 space-y-3 overflow-y-auto flex-1">
-                {enDiagnostico.length === 0 ? (
-                  <div className="p-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-2xl text-xs text-[#475569] font-medium">
-                    Sin órdenes en diagnóstico
-                  </div>
-                ) : (
-                  enDiagnostico.map((orden) => {
-                    const sla = calcularSLA(orden.created_at);
-                    const vehiculo =
-                      [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
-                        .filter(Boolean)
-                        .join(' ') || orden.vehiculo_modelo;
-
-                    return (
-                      <motion.div
-                        key={orden.id}
-                        layout
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        transition={{ duration: 0.2 }}
-                        className="bg-white rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] p-4 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-3"
-                      >
-                        {/* Arriba: Vehículo y Nombre */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-0.5">
-                            <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug">
-                              {vehiculo}
-                            </h3>
-                            <p className="text-xs font-semibold text-[#475569]">
-                              {orden.cliente_nombre || 'Cliente Particular'}
-                            </p>
-                          </div>
-
-                          <span
-                            className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap ${
-                              sla.critico
-                                ? 'bg-[#FEE2E2] text-rose-700'
-                                : 'bg-[#F0FDF4] text-emerald-700'
+                        return (
+                          <motion.div
+                            key={orden.id}
+                            layout
+                            draggable={!isUpdating}
+                            onDragStart={(e: any) => handleDragStart(e, orden.id)}
+                            onDragEnd={handleDragEnd}
+                            whileHover={{ scale: isBeingDragged ? 1 : 1.02, y: isBeingDragged ? 0 : -2 }}
+                            transition={{ duration: 0.2 }}
+                            className={`bg-white rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-3 cursor-grab active:cursor-grabbing select-none ${
+                              isBeingDragged
+                                ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
+                                : 'border-[#E2E8F0] hover:border-[#1E56B0]'
                             }`}
                           >
-                            {sla.texto}
-                          </span>
-                        </div>
+                            {/* Arriba: Grip Icon, Vehículo en negrita y Nombre */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-1.5 flex-1">
+                                <GripVertical className="w-4 h-4 text-slate-300 shrink-0 mt-0.5 hover:text-[#0A1525]" />
+                                <div className="space-y-0.5">
+                                  <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug">
+                                    {vehiculo}
+                                  </h3>
+                                  <p className="text-xs font-semibold text-[#475569]">
+                                    {orden.cliente_nombre || 'Cliente Particular'}
+                                  </p>
+                                </div>
+                              </div>
 
-                        {/* Medio: Falla */}
-                        <p className="text-xs text-[#475569] line-clamp-2 leading-relaxed">
-                          {orden.falla_reportada}
-                        </p>
-
-                        {/* Abajo: Sector, Botón Asignar y Botón Circular */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOrdenParaAsignar(orden);
-                              setModalAsignarOpen(true);
-                            }}
-                            className="text-[11px] font-black text-[#1E56B0] hover:text-[#0A1525] bg-blue-50 hover:bg-[#CCFF00] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                          >
-                            + Asignar
-                          </button>
-
-                          <div className="flex items-center gap-1.5">
-                            <div className="text-[10px] text-[#475569] font-medium hidden sm:block">
-                              {orden.sector}
+                              {/* SLA Chip Dinámico */}
+                              <span
+                                className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0 ${
+                                  sla.critico
+                                    ? 'bg-[#FEE2E2] text-rose-700'
+                                    : 'bg-[#F0FDF4] text-emerald-700'
+                                }`}
+                              >
+                                {sla.texto}
+                              </span>
                             </div>
-                            <motion.button
-                              type="button"
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => {
-                                setOrdenParaAsignar(orden);
-                                setModalAsignarOpen(true);
-                              }}
-                              className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-colors shadow-xs cursor-pointer shrink-0"
-                              title="Asignar y avanzar"
-                            >
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </motion.button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
 
-            {/* ======================================================== */}
-            {/* COLUMNA 3: ASIGNADOS */}
-            {/* ======================================================== */}
-            <div className="w-72 sm:w-80 shrink-0 bg-slate-50/80 border border-[#E2E8F0] rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)]">
-              {/* Cabecera Sticky Glassmorphism (Puntito Púrpura) */}
-              <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-[#0A1525]">
-                    3. ASIGNADOS
-                  </h2>
-                </div>
-                <span className="font-mono text-xs font-black bg-[#E2E8F0] text-[#0A1525] px-2.5 py-0.5 rounded-full">
-                  {asignados.length}
-                </span>
-              </div>
-
-              {/* Zona de Drop/Tarjetas */}
-              <div className="p-3 space-y-3 overflow-y-auto flex-1">
-                {asignados.length === 0 ? (
-                  <div className="p-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-2xl text-xs text-[#475569] font-medium">
-                    Sin técnicos en ruta
-                  </div>
-                ) : (
-                  asignados.map((orden) => {
-                    const vehiculo =
-                      [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
-                        .filter(Boolean)
-                        .join(' ') || orden.vehiculo_modelo;
-                    const isUpdating = actualizandoId === orden.id;
-
-                    return (
-                      <motion.div
-                        key={orden.id}
-                        layout
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        transition={{ duration: 0.2 }}
-                        className="bg-white rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] p-4 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-3"
-                      >
-                        {/* Arriba: Vehículo y Estado */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-0.5">
-                            <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug">
-                              {vehiculo}
-                            </h3>
-                            <p className="text-xs font-semibold text-[#475569]">
-                              {orden.cliente_nombre || 'Cliente Particular'}
+                            {/* Medio: Falla Reportada (truncada) */}
+                            <p className="text-xs text-[#475569] line-clamp-2 leading-relaxed pl-5">
+                              {orden.falla_reportada}
                             </p>
-                          </div>
 
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                            En Ruta
-                          </span>
-                        </div>
-
-                        {/* Técnico Asignado */}
-                        <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                          <span className="font-bold text-[#0A1525] flex items-center gap-1.5">
-                            <UserCheck className="w-3.5 h-3.5 text-[#1E56B0]" />
-                            Carlos Mendoza
-                          </span>
-                          <span className="font-mono text-[10px] text-[#475569] font-semibold">
-                            #TTM-0842
-                          </span>
-                        </div>
-
-                        {/* Abajo: Sector y Botón Circular */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{orden.sector}</span>
-                          </div>
-
-                          <motion.button
-                            type="button"
-                            disabled={isUpdating}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => moverOrden(orden.id, 'EN_EJECUCION')}
-                            className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-colors shadow-xs cursor-pointer shrink-0"
-                            title="Iniciar Ejecución"
-                          >
-                            {isUpdating ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <ArrowRight className="w-3.5 h-3.5" />
+                            {/* Datos complementarios según columna */}
+                            {columna.id === 'ASIGNADO' && (
+                              <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs ml-5">
+                                <span className="font-bold text-[#0A1525] flex items-center gap-1.5">
+                                  <UserCheck className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                  Carlos Mendoza
+                                </span>
+                                <span className="font-mono text-[10px] text-[#475569] font-semibold">
+                                  #TTM-0842
+                                </span>
+                              </div>
                             )}
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
 
-            {/* ======================================================== */}
-            {/* COLUMNA 4: EN_EJECUCION */}
-            {/* ======================================================== */}
-            <div className="w-72 sm:w-80 shrink-0 bg-slate-50/80 border border-[#E2E8F0] rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)]">
-              {/* Cabecera Sticky Glassmorphism (Puntito Verde Esmeralda) */}
-              <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <h2 className="text-xs font-black uppercase tracking-wider text-[#0A1525]">
-                    4. EN EJECUCIÓN
-                  </h2>
-                </div>
-                <span className="font-mono text-xs font-black bg-[#E2E8F0] text-[#0A1525] px-2.5 py-0.5 rounded-full">
-                  {enEjecucion.length}
-                </span>
-              </div>
+                            {/* Abajo: Sector y Acciones Rápidas */}
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between pl-5">
+                              <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
+                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span className="truncate max-w-[120px]">{orden.sector}</span>
+                              </div>
 
-              {/* Zona de Drop/Tarjetas */}
-              <div className="p-3 space-y-3 overflow-y-auto flex-1">
-                {enEjecucion.length === 0 ? (
-                  <div className="p-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-2xl text-xs text-[#475569] font-medium">
-                    Sin servicios activos en sitio
+                              <div className="flex items-center gap-1.5">
+                                {/* Botón de asignación en columna diagnóstico */}
+                                {columna.id === 'DIAGNOSTICO_AGENDADO' && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOrdenParaAsignar(orden);
+                                      setModalAsignarOpen(true);
+                                    }}
+                                    className="text-[11px] font-black text-[#1E56B0] hover:text-[#0A1525] bg-blue-50 hover:bg-[#CCFF00] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                                  >
+                                    + Asignar
+                                  </button>
+                                )}
+
+                                {/* Enlace carnet en ejecución */}
+                                {columna.id === 'EN_EJECUCION' && (
+                                  <Link
+                                    href="/carnet/TTM-0842"
+                                    target="_blank"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5 mr-1"
+                                  >
+                                    <span>Carnet</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </Link>
+                                )}
+
+                                {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente */}
+                                {columna.estadoSiguiente && (
+                                  <motion.button
+                                    type="button"
+                                    disabled={isUpdating}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (columna.id === 'DIAGNOSTICO_AGENDADO') {
+                                        setOrdenParaAsignar(orden);
+                                        setModalAsignarOpen(true);
+                                      } else {
+                                        moverOrden(orden.id, columna.estadoSiguiente!);
+                                      }
+                                    }}
+                                    className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-colors shadow-xs cursor-pointer shrink-0"
+                                    title={`Mover a ${columna.estadoSiguiente}`}
+                                  >
+                                    {isUpdating ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <ArrowRight className="w-3.5 h-3.5" />
+                                    )}
+                                  </motion.button>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })
+                    )}
                   </div>
-                ) : (
-                  enEjecucion.map((orden) => {
-                    const vehiculo =
-                      [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
-                        .filter(Boolean)
-                        .join(' ') || orden.vehiculo_modelo;
-
-                    return (
-                      <motion.div
-                        key={orden.id}
-                        layout
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        transition={{ duration: 0.2 }}
-                        className="bg-white rounded-2xl border-2 border-emerald-300 p-4 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-3"
-                      >
-                        {/* Arriba: Vehículo y Badge Activo */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-0.5">
-                            <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug">
-                              {vehiculo}
-                            </h3>
-                            <p className="text-xs font-semibold text-[#475569]">
-                              {orden.cliente_nombre || 'Cliente Particular'}
-                            </p>
-                          </div>
-
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping"></span>
-                            Activo
-                          </span>
-                        </div>
-
-                        {/* Medio: Falla */}
-                        <p className="text-xs text-[#475569] line-clamp-2 leading-relaxed">
-                          {orden.falla_reportada}
-                        </p>
-
-                        {/* Abajo: Enlace al Carnet y Acción Cotizar */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <Link
-                            href="/carnet/TTM-0842"
-                            target="_blank"
-                            className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-1"
-                          >
-                            <span>Ver Carnet</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </Link>
-
-                          <motion.button
-                            type="button"
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => setModalCotizadorOpen(true)}
-                            className="h-8 px-3 rounded-full bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-extrabold flex items-center gap-1 transition-colors shadow-xs cursor-pointer"
-                          >
-                            <Calculator className="w-3.5 h-3.5" />
-                            <span>Cotizar</span>
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })}
 
           </div>
         </div>
