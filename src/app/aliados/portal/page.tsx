@@ -88,6 +88,7 @@ export default function PortalAliadosPage() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [aceptandoId, setAceptandoId] = useState<string | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
+  const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
   const [filtroServicios, setFiltroServicios] = useState<'todos' | 'asignados' | 'disponibles'>('todos');
   const [toastAceptado, setToastAceptado] = useState<string | null>(null);
   const [creandoOrdenPrueba, setCreandoOrdenPrueba] = useState<boolean>(false);
@@ -102,6 +103,13 @@ export default function PortalAliadosPage() {
 
   // Obtener geolocalización al montar el componente
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const visto = localStorage.getItem('onboarding_seen_mecanico');
+      if (!visto) {
+        setMostrarBotonTutorial(true);
+      }
+    }
+
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -424,15 +432,17 @@ export default function PortalAliadosPage() {
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#CCFF00] ring-2 ring-white"></span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setMostrarTutorial(true)}
-              className="p-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E56B0] transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
-              title="Ver tutorial de bienvenida"
-            >
-              <Sparkles className="w-4 h-4 text-[#1E56B0]" />
-              <span className="hidden sm:inline">Tutorial</span>
-            </button>
+            {mostrarBotonTutorial && (
+              <button
+                type="button"
+                onClick={() => setMostrarTutorial(true)}
+                className="p-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E56B0] transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+                title="Ver tutorial de bienvenida (Solo primera visita)"
+              >
+                <Sparkles className="w-4 h-4 text-[#1E56B0]" />
+                <span className="hidden sm:inline">Tutorial</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -1130,7 +1140,13 @@ export default function PortalAliadosPage() {
       <OnboardingModal
         rol="MECANICO"
         isOpen={mostrarTutorial ? true : undefined}
-        onClose={() => setMostrarTutorial(false)}
+        onClose={() => {
+          setMostrarTutorial(false);
+          setMostrarBotonTutorial(false);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('onboarding_seen_mecanico', 'true');
+          }
+        }}
       />
 
       {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}

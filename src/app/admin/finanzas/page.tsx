@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -175,6 +175,16 @@ export default function FinanzasAdminPage() {
   const [toastNotificacion, setToastNotificacion] = useState<string | null>(null);
   const [diaHover, setDiaHover] = useState<typeof DIAS_SEMANA[0] | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState(false);
+  const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const visto = localStorage.getItem('onboarding_seen_admin');
+      if (!visto) {
+        setMostrarBotonTutorial(true);
+      }
+    }
+  }, []);
 
   // Manejador para Liberar Pago al Mecánico
   const handleLiberarPago = (id: string, mecanicoNombre: string, montoNeto: number) => {
@@ -283,15 +293,17 @@ export default function FinanzasAdminPage() {
                 <span className="hidden lg:inline">Descargar Balance</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setMostrarTutorial(true)}
-                className="h-10 px-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-                title="Ver tutorial de bienvenida"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
-                <span className="hidden sm:inline">Tutorial</span>
-              </button>
+              {mostrarBotonTutorial && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarTutorial(true)}
+                  className="h-10 px-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                  title="Ver tutorial de bienvenida (Solo primera visita)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+                  <span className="hidden sm:inline">Tutorial</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -856,7 +868,13 @@ export default function FinanzasAdminPage() {
       <OnboardingModal
         rol="ADMIN"
         isOpen={mostrarTutorial ? true : undefined}
-        onClose={() => setMostrarTutorial(false)}
+        onClose={() => {
+          setMostrarTutorial(false);
+          setMostrarBotonTutorial(false);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('onboarding_seen_admin', 'true');
+          }
+        }}
       />
 
       {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}

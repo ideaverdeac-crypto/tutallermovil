@@ -434,6 +434,7 @@ export default function TableroDespachoPage() {
   const [modalMecanicoDetalleOpen, setModalMecanicoDetalleOpen] = useState(false);
   const [ordenParaAsignar, setOrdenParaAsignar] = useState<OrdenKanban | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState(false);
+  const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState(false);
   const [modalEvidenciaOpen, setModalEvidenciaOpen] = useState(false);
   const [ordenParaEvidencia, setOrdenParaEvidencia] = useState<OrdenKanban | null>(null);
   const [tabEvidenciaModal, setTabEvidenciaModal] = useState<'odometro' | 'repuesto_viejo' | 'repuesto_nuevo'>('odometro');
@@ -542,6 +543,14 @@ export default function TableroDespachoPage() {
 
   // 5. Supabase Realtime: Suscripción a cambios
   useEffect(() => {
+    // El botón solo sale cuando entras por primera vez (no registrado o tutorial no visto)
+    if (typeof window !== 'undefined') {
+      const visto = localStorage.getItem('onboarding_seen_operadora');
+      if (!visto) {
+        setMostrarBotonTutorial(true);
+      }
+    }
+
     cargarOrdenes();
     cargarCatalogoRepuestos();
 
@@ -1243,15 +1252,17 @@ export default function TableroDespachoPage() {
               <RefreshCw className="w-4 h-4" />
             </button>
 
-            <button
-              type="button"
-              onClick={() => setMostrarTutorial(true)}
-              className="h-10 px-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-              title="Ver tutorial de bienvenida"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
-              <span className="hidden sm:inline">Tutorial</span>
-            </button>
+            {mostrarBotonTutorial && (
+              <button
+                type="button"
+                onClick={() => setMostrarTutorial(true)}
+                className="h-10 px-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Ver tutorial de bienvenida (Solo primera visita)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+                <span className="hidden sm:inline">Tutorial</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -2877,7 +2888,13 @@ export default function TableroDespachoPage() {
       <OnboardingModal
         rol="OPERADORA"
         isOpen={mostrarTutorial ? true : undefined}
-        onClose={() => setMostrarTutorial(false)}
+        onClose={() => {
+          setMostrarTutorial(false);
+          setMostrarBotonTutorial(false);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('onboarding_seen_operadora', 'true');
+          }
+        }}
       />
 
       {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}

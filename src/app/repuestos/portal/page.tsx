@@ -83,6 +83,7 @@ export default function PortalRepuestosPage() {
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
   const [toastExito, setToastExito] = useState<string | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
+  const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
 
   // Formulario Bento
   const [formNombre, setFormNombre] = useState<string>('');
@@ -212,6 +213,12 @@ export default function PortalRepuestosPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const visto = localStorage.getItem('onboarding_seen_repuestos');
+      if (!visto) {
+        setMostrarBotonTutorial(true);
+      }
+    }
     cargarRepuestos();
   }, []);
 
@@ -478,15 +485,17 @@ export default function PortalRepuestosPage() {
               <span>Publicar Repuesto</span>
             </motion.button>
 
-            <button
-              type="button"
-              onClick={() => setMostrarTutorial(true)}
-              className="h-10 px-3.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-              title="Ver tutorial de bienvenida"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
-              <span className="hidden sm:inline">Tutorial</span>
-            </button>
+            {mostrarBotonTutorial && (
+              <button
+                type="button"
+                onClick={() => setMostrarTutorial(true)}
+                className="h-10 px-3.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Ver tutorial de bienvenida (Solo primera visita)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+                <span className="hidden sm:inline">Tutorial</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -1221,7 +1230,13 @@ export default function PortalRepuestosPage() {
       <OnboardingModal
         rol="REPUESTOS"
         isOpen={mostrarTutorial ? true : undefined}
-        onClose={() => setMostrarTutorial(false)}
+        onClose={() => {
+          setMostrarTutorial(false);
+          setMostrarBotonTutorial(false);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('onboarding_seen_repuestos', 'true');
+          }
+        }}
       />
 
       {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}

@@ -62,6 +62,7 @@ export default function RunnerPortalPage() {
   // Toast de Éxito al Entregar
   const [toastExito, setToastExito] = useState<string | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
+  const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
 
   // Cargar órdenes en REPUESTOS_EN_RUTA de Supabase
   const cargarOrdenesRunner = async () => {
@@ -124,6 +125,13 @@ export default function RunnerPortalPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const visto = localStorage.getItem('onboarding_seen_runner');
+      if (!visto) {
+        setMostrarBotonTutorial(true);
+      }
+    }
+
     cargarOrdenesRunner();
 
     // Supabase Realtime: Suscripción para recibir órdenes asignadas en tiempo real
@@ -288,15 +296,17 @@ export default function RunnerPortalPage() {
                       </div>
 
                       {/* Botón Tutorial */}
-                      <button
-                        type="button"
-                        onClick={() => setMostrarTutorial(true)}
-                        className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E56B0] transition-colors shadow-2xs cursor-pointer shrink-0 flex items-center gap-1.5 text-xs font-bold"
-                        title="Ver tutorial de bienvenida"
-                      >
-                        <Sparkles className="w-4 h-4 text-[#1E56B0]" />
-                        <span className="hidden sm:inline">Tutorial</span>
-                      </button>
+                      {mostrarBotonTutorial && (
+                        <button
+                          type="button"
+                          onClick={() => setMostrarTutorial(true)}
+                          className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E56B0] transition-colors shadow-2xs cursor-pointer shrink-0 flex items-center gap-1.5 text-xs font-bold"
+                          title="Ver tutorial de bienvenida (Solo primera visita)"
+                        >
+                          <Sparkles className="w-4 h-4 text-[#1E56B0]" />
+                          <span className="hidden sm:inline">Tutorial</span>
+                        </button>
+                      )}
 
                       {/* Botón Cerrar Sesión */}
                       <button
@@ -636,7 +646,13 @@ export default function RunnerPortalPage() {
                                       <OnboardingModal
                                         rol="RUNNER"
                                         isOpen={mostrarTutorial ? true : undefined}
-                                        onClose={() => setMostrarTutorial(false)}
+                                        onClose={() => {
+                                          setMostrarTutorial(false);
+                                          setMostrarBotonTutorial(false);
+                                          if (typeof window !== 'undefined') {
+                                            localStorage.setItem('onboarding_seen_runner', 'true');
+                                          }
+                                        }}
                                       />
 
                                       {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
