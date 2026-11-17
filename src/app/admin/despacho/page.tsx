@@ -147,24 +147,98 @@ const COLUMNAS = [
   }
 ];
 
-// Cálculo de SLA (Tiempo Restante de Respuesta objetivo 45 min)
-function calcularSLA(createdAt?: string): { texto: string; critico: boolean } {
-  if (!createdAt) return { texto: '⏱ 45 min', critico: false };
-  const diffMs = Date.now() - new Date(createdAt).getTime();
-  const transcurridoMin = Math.floor(diffMs / 60000);
-  const restanteMin = 45 - transcurridoMin;
+const FOTO_MECANICO_OFICIAL =
+  'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=100&q=80';
 
-  if (restanteMin <= 0) {
-    return {
-      texto: `⏱ Vencido hace ${Math.abs(restanteMin)}m`,
-      critico: true
+// Formato de hora de creación (HH:MM AM/PM)
+function formatearHoraCreacion(createdAt?: string): string {
+  if (!createdAt) return '12:00 PM';
+  const d = new Date(createdAt);
+  if (isNaN(d.getTime())) return '12:00 PM';
+  return d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+// Cronómetro Animado con cálculo de tiempo transcurrido en vivo (SLA 45 min)
+function CronometroSLA({ createdAt }: { createdAt?: string }) {
+  const [segundosTranscurridos, setSegundosTranscurridos] = useState<number>(() => {
+    if (!createdAt) return 120;
+    const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
+    return diff > 0 ? diff : 0;
+  });
+
+  useEffect(() => {
+    if (!createdAt) return;
+
+    const actualizar = () => {
+      const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
+      setSegundosTranscurridos(diff > 0 ? diff : 0);
     };
-  }
 
-  return {
-    texto: `⏱ ${restanteMin} min`,
-    critico: restanteMin < 15
-  };
+    actualizar();
+    const interval = setInterval(actualizar, 1000);
+    return () => clearInterval(interval);
+  }, [createdAt]);
+
+  const minutos = Math.floor(segundosTranscurridos / 60);
+  const segundos = segundosTranscurridos % 60;
+  const tiempoFormateado = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+
+  // UX Visual SLA:
+  // < 35 min: verde (#16A34A)
+  // 35 a 44 min: naranja (#F59E0B)
+  // >= 45 min: rojo (#DC2626) con animación sutil de pulso
+  const esVencido = minutos >= 45;
+  const esAlerta = minutos >= 35 && minutos < 45;
+
+  const colorTexto = esVencido
+    ? 'text-[#DC2626]'
+    : esAlerta
+    ? 'text-[#F59E0B]'
+    : 'text-[#16A34A]';
+
+  return (
+    <div
+      className={`flex items-center gap-1 font-mono text-[11px] font-black ${colorTexto} ${
+        esVencido ? 'animate-pulse' : ''
+      }`}
+      title={
+        esVencido
+          ? 'SLA de 45 min vencido'
+          : esAlerta
+          ? 'Próximo a vencer SLA (45 min)'
+          : 'Tiempo dentro de SLA'
+      }
+    >
+      <Clock className="w-3 h-3 stroke-[2.5]" />
+      <span>{tiempoFormateado}</span>
+      {esVencido && <span className="text-[9px] uppercase font-sans font-bold">!</span>}
+    </div>
+  );
+}
+
+// Avatar del mecánico asignado con anillo sutil y alineación horizontal
+function MecanicoAsignadoBadge() {
+  return (
+    <div className="flex items-center gap-2">
+      <img
+        src={FOTO_MECANICO_OFICIAL}
+        alt="Carlos Mendoza"
+        className="w-6 h-6 rounded-full object-cover ring-2 ring-[#E2E8F0] shrink-0"
+      />
+      <div className="flex items-baseline gap-1.5 min-w-0">
+        <span className="text-xs font-bold text-[#0A1525] truncate">
+          Carlos Mendoza
+        </span>
+        <span className="font-mono text-[10px] text-slate-500 font-semibold shrink-0">
+          #TTM-0842
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function TableroDespachoPage() {
@@ -491,7 +565,6 @@ export default function TableroDespachoPage() {
                       </div>
                     ) : (
                       ordenesDeColumna.map((orden) => {
-                        const sla = calcularSLA(orden.created_at);
                         const vehiculo =
                           [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
                             .filter(Boolean)
@@ -508,36 +581,38 @@ export default function TableroDespachoPage() {
                             onDragEnd={handleDragEnd}
                             whileHover={{ scale: isBeingDragged ? 1 : 1.02, y: isBeingDragged ? 0 : -2 }}
                             transition={{ duration: 0.2 }}
-                            className={`bg-white rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-3 cursor-grab active:cursor-grabbing select-none ${
+                            className={`bg-white rounded-2xl border p-3.5 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-2.5 cursor-grab active:cursor-grabbing select-none ${
                               isBeingDragged
                                 ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
                                 : 'border-[#E2E8F0] hover:border-[#1E56B0]'
                             }`}
                           >
-                            {/* Arriba: Grip Icon, Vehículo en negrita y Nombre */}
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start gap-1.5 flex-1">
+                            {/* 1. Barra Superior: Hora de Solicitud (HH:MM AM/PM) y Cronómetro Animado SLA */}
+                            <div className="flex items-center justify-between bg-[#F8FAFC] border border-[#E2E8F0] px-2.5 py-1.5 rounded-xl text-xs transition-colors">
+                              <div className="flex items-center gap-1.5 text-slate-500 font-semibold text-[11px]">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span>Solicitud:</span>
+                                <span className="font-mono font-bold text-[#0A1525]">
+                                  {formatearHoraCreacion(orden.created_at)}
+                                </span>
+                              </div>
+
+                              <CronometroSLA createdAt={orden.created_at} />
+                            </div>
+
+                            {/* 2. Grip Icon, Vehículo en negrita y Nombre del Cliente */}
+                            <div className="flex items-start justify-between gap-2 pt-0.5">
+                              <div className="flex items-start gap-1.5 flex-1 min-w-0">
                                 <GripVertical className="w-4 h-4 text-slate-300 shrink-0 mt-0.5 hover:text-[#0A1525]" />
-                                <div className="space-y-0.5">
-                                  <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug">
+                                <div className="space-y-0.5 min-w-0">
+                                  <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug truncate">
                                     {vehiculo}
                                   </h3>
-                                  <p className="text-xs font-semibold text-[#475569]">
+                                  <p className="text-xs font-semibold text-[#475569] truncate">
                                     {orden.cliente_nombre || 'Cliente Particular'}
                                   </p>
                                 </div>
                               </div>
-
-                              {/* SLA Chip Dinámico */}
-                              <span
-                                className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0 ${
-                                  sla.critico
-                                    ? 'bg-[#FEE2E2] text-rose-700'
-                                    : 'bg-[#F0FDF4] text-emerald-700'
-                                }`}
-                              >
-                                {sla.texto}
-                              </span>
                             </div>
 
                             {/* Medio: Falla Reportada (truncada) */}
@@ -548,56 +623,56 @@ export default function TableroDespachoPage() {
                             {/* Datos complementarios según columna */}
                             {columna.id === 'ASIGNADO' && (
                               <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs ml-5">
-                                <span className="font-bold text-[#0A1525] flex items-center gap-2">
-                                  <img
-                                    src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=150&q=80"
-                                    alt="Carlos Mendoza"
-                                    className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#CBD5E1]"
-                                  />
-                                  Carlos Mendoza
-                                </span>
-                                <span className="font-mono text-[10px] text-[#475569] font-semibold">
-                                  #TTM-0842
-                                </span>
+                                <MecanicoAsignadoBadge />
                               </div>
                             )}
 
-                            {/* En REPUESTOS_EN_RUTA: Badge azul con icono de moto 'Runner asignado' */}
+                            {/* En REPUESTOS_EN_RUTA: Avatar del Mecánico Asignado + Badge de Runner */}
                             {columna.id === 'REPUESTOS_EN_RUTA' && (
-                              <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs ml-5">
-                                <span className="font-extrabold text-[#1E56B0] flex items-center gap-1.5">
-                                  <Bike className="w-4 h-4 text-[#1E56B0]" />
-                                  Runner asignado
-                                </span>
-                                <span className="font-mono text-[10px] text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-100 font-bold">
-                                  Repuestos en ruta
-                                </span>
+                              <div className="space-y-1.5 ml-5">
+                                <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
+                                  <MecanicoAsignadoBadge />
+                                </div>
+                                <div className="p-1.5 px-2.5 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs">
+                                  <span className="font-extrabold text-[#1E56B0] flex items-center gap-1.5 text-[11px]">
+                                    <Bike className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                    Runner asignado
+                                  </span>
+                                  <span className="font-mono text-[9px] text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-100 font-bold">
+                                    Repuestos en ruta
+                                  </span>
+                                </div>
                               </div>
                             )}
 
-                            {/* En EN_EJECUCION: Botón verde sutil 'Ver Checklist TTM' */}
+                            {/* En EN_EJECUCION: Avatar del Mecánico Asignado + Botón verde sutil 'Ver Checklist TTM' */}
                             {columna.id === 'EN_EJECUCION' && (
-                              <div className="flex items-center justify-between ml-5 pt-1">
-                                <Link
-                                  href={`/aliados/servicio/${orden.id}`}
-                                  target="_blank"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="h-8 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black flex items-center gap-1.5 border border-emerald-200 transition-colors shadow-2xs"
-                                  title="Ver Checklist TTM y Candado de Odómetro"
-                                >
-                                  <ClipboardCheck className="w-3.5 h-3.5 text-emerald-700" />
-                                  <span>Ver Checklist TTM</span>
-                                  <ExternalLink className="w-3 h-3 text-emerald-600" />
-                                </Link>
-                                <Link
-                                  href="/carnet/TTM-0842"
-                                  target="_blank"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
-                                >
-                                  <span>Carnet</span>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </Link>
+                              <div className="space-y-2 ml-5">
+                                <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
+                                  <MecanicoAsignadoBadge />
+                                </div>
+                                <div className="flex items-center justify-between pt-0.5">
+                                  <Link
+                                    href={`/aliados/servicio/${orden.id}`}
+                                    target="_blank"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-8 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black flex items-center gap-1.5 border border-emerald-200 transition-colors shadow-2xs"
+                                    title="Ver Checklist TTM y Candado de Odómetro"
+                                  >
+                                    <ClipboardCheck className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>Ver Checklist TTM</span>
+                                    <ExternalLink className="w-3 h-3 text-emerald-600" />
+                                  </Link>
+                                  <Link
+                                    href="/carnet/TTM-0842"
+                                    target="_blank"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5"
+                                  >
+                                    <span>Carnet</span>
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </Link>
+                                </div>
                               </div>
                             )}
 
