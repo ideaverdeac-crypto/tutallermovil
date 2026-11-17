@@ -5,18 +5,17 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  ShieldCheck,
-  CheckCircle2,
-  ArrowLeft,
-  Share2,
+  BadgeCheck,
+  Star,
+  Wrench,
+  Shield,
   Bike,
   Navigation,
-  Star,
+  ArrowLeft,
+  Share2,
+  ShieldCheck,
   Check,
-  Award,
-  Lock,
-  Sparkles,
-  Car
+  Sparkles
 } from 'lucide-react';
 
 interface CarnetCardProps {
@@ -33,42 +32,16 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
 
   const qrUrl = `https://tutallermovil.vercel.app/carnet/${encodeURIComponent(codigo)}`;
 
-  // Datos públicos del técnico según el PRD
-  const tecnico = {
-    nombre: 'Carlos Mendoza',
-    cedula: 'V-12.345.678',
-    id: idOficial,
-    rango: 'Mecánico 1 — Especialista Senior (OBD2 y Electrónica)',
-    calificacion: '4.9 / 5.0',
-    fotoUrl: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=150&q=80',
-    certificaciones: [
-      'Diagnóstico OBD2',
-      'Frenos e Hidráulica',
-      'Inyección Eléctrica',
-      'Puntualidad < 45 min'
-    ],
-    unidadTraslado: {
-      tipo: 'Moto Yamaha FZ',
-      color: 'Negro',
-      placa: 'AB123CD'
-    },
-    ordenActiva: {
-      vehiculo: 'Chevrolet Aveo LT',
-      placa: 'AD456EF',
-      cuadrante: 'Chacao'
-    }
-  };
-
   const handleShare = async () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: `Credencial Oficial TTM - ${tecnico.nombre}`,
-          text: `Credencial verificada de especialista en TuTallerMóvil: ${tecnico.nombre} (${tecnico.id})`,
+          title: `Credencial Oficial TTM - Carlos Mendoza`,
+          text: `Credencial verificada de especialista en TuTallerMóvil: Carlos Mendoza (${idOficial})`,
           url: qrUrl
         });
       } catch (err) {
-        // Cancelado por el usuario
+        // Cancelado
       }
     } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(qrUrl);
@@ -77,217 +50,210 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-[#0A1525] flex flex-col justify-center items-center p-4 sm:p-6 py-10 selection:bg-[#CCFF00] selection:text-[#0A1525]">
+    <div className="min-h-screen bg-[#070E1A] text-white flex flex-col justify-center items-center p-4 sm:p-6 py-10 selection:bg-[#CCFF00] selection:text-[#0A1525]">
       
       {/* Botones Superiores de Navegación */}
-      <div className="w-full max-w-md flex items-center justify-between mb-4 px-1">
+      <div className="w-full max-w-sm flex items-center justify-between mb-4 px-1">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#0A1525] bg-white border border-[#CBD5E1] px-3.5 py-1.5 rounded-xl transition-all shadow-xs hover:border-[#1E56B0]"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 border border-white/15 px-3.5 py-1.5 rounded-xl transition-all shadow-xs backdrop-blur-md"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Volver</span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1E56B0] hover:text-[#0A1525] bg-white border border-[#CBD5E1] px-3.5 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer hover:border-[#1E56B0]"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Compartir</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#CCFF00] hover:text-white bg-white/10 hover:bg-white/15 border border-white/15 px-3.5 py-1.5 rounded-xl transition-all shadow-xs backdrop-blur-md cursor-pointer"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+          <span>Compartir</span>
+        </button>
       </div>
 
-      {/* Tarjeta de Identificación estilo Apple Wallet / Corporate ID */}
+      {/* Tarjeta Vertical Dribbble Style con Entrada 3D */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.92, y: 30, rotateX: 5 }}
-        animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0 }}
+        initial={{ opacity: 0, y: 50, rotateX: 10 }}
+        animate={{ opacity: 1, y: 0, rotateX: 0 }}
         transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] as const }}
         style={{ transformPerspective: 1200 }}
-        className="w-full max-w-md bg-white rounded-3xl border-2 border-[#CBD5E1] shadow-2xl overflow-hidden relative"
+        className="w-full max-w-sm bg-[#0A1525] rounded-3xl border border-white/15 shadow-2xl overflow-hidden relative flex flex-col"
       >
-        {/* Banda Holográfica / Cinta Superior Apple Wallet */}
-        <div className="h-2.5 bg-gradient-to-r from-[#0A1525] via-[#1E56B0] to-[#CCFF00] w-full" />
+        {/* 1. Imagen de Fondo Inmersiva y Degradado */}
+        <div className="relative min-h-[260px] sm:min-h-[290px] w-full flex flex-col justify-between p-5 overflow-hidden">
+          {/* Fotografía de Fondo */}
+          <img
+            src="https://images.unsplash.com/photo-1613214150384-4b12d2a50125?q=80&w=600&auto=format&fit=crop"
+            alt="Carlos Mendoza - Especialista TuTallerMóvil"
+            className="absolute inset-0 w-full h-full object-cover object-top scale-105"
+          />
 
-        <div className="p-6 sm:p-7 space-y-6">
-          
-          {/* 1. Cabecera y Estatus */}
-          <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-[#0A1525] flex items-center justify-center text-[#CCFF00] font-black text-lg shadow-sm">
-                TTM
-              </div>
-              <div>
-                <span className="text-base font-black tracking-tight text-[#0A1525] block leading-none">
-                  TuTallerMóvil
-                </span>
-                <span className="text-[10px] font-bold tracking-widest uppercase text-slate-400">
-                  Credencial Oficial
-                </span>
-              </div>
+          {/* Degradado Superpuesto Inmersivo */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A1525] via-[#0A1525]/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+
+          {/* Barra Superior sobre la foto: Logo y Badge */}
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 bg-[#0A1525]/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/15">
+              <span className="font-black text-sm tracking-tighter text-[#CCFF00]">TTM</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-white">TuTallerMóvil</span>
             </div>
 
-            {/* Badge en color Verde Lima (#CCFF00) con texto oscuro */}
-            <div className="inline-flex items-center gap-1 bg-[#CCFF00] text-[#0A1525] px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-tight border border-[#0A1525]/10 shadow-xs text-right">
-              <Check className="w-3.5 h-3.5 text-[#0A1525] stroke-[3]" />
-              <span>TÉCNICO VERIFICADO • ACTIVO</span>
-            </div>
-          </div>
-
-          {/* 2. Identidad del Técnico (Grid 2 Columnas) */}
-          <div className="grid grid-cols-12 gap-4 items-center">
-            {/* Foto del técnico con uniforme */}
-            <div className="col-span-4 sm:col-span-4 flex justify-center">
-              <div className="relative">
-                <div className="w-24 h-24 sm:w-26 sm:h-26 rounded-2xl overflow-hidden border-2 border-[#CBD5E1] shadow-md bg-slate-100 p-0.5">
-                  <img
-                    src={tecnico.fotoUrl}
-                    alt={tecnico.nombre}
-                    className="w-full h-full object-cover rounded-xl"
-                  />
-                </div>
-                {/* Micro badge sobre la foto */}
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center border-2 border-white shadow-xs">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
-              </div>
-            </div>
-
-            {/* Datos Personales del Técnico */}
-            <div className="col-span-8 sm:col-span-8 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-[#0A1525] tracking-tight leading-tight">
-                  {tecnico.nombre}
-                </h1>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-medium">
-                <span className="font-semibold text-slate-600">CI: {tecnico.cedula}</span>
-                <span>•</span>
-                <span className="font-mono font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                  {tecnico.id}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-700 font-semibold leading-snug pt-1">
-                {tecnico.rango}
-              </p>
+            {/* Badge de la Marca: Verde Lima (#CCFF00), texto oscuro */}
+            <div className="inline-flex items-center gap-1 bg-[#CCFF00] text-[#0A1525] px-2.5 py-1 rounded-full text-[10px] font-black tracking-tight shadow-md">
+              <Check className="w-3 h-3 stroke-[3]" />
+              <span>TÉCNICO VERIFICADO</span>
             </div>
           </div>
 
-          {/* 3. Insignias de Certificación & Calificación */}
-          <div className="space-y-2.5 pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 flex items-center gap-1">
-                <Award className="w-3.5 h-3.5 text-[#1E56B0]" /> Certificaciones Aprobadas
+          {/* 2. Identidad (Parte inferior de la imagen) */}
+          <div className="relative z-10 space-y-1 pt-12">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-2xl font-black text-white tracking-tight drop-shadow-sm">
+                Carlos Mendoza
+              </h1>
+              <BadgeCheck className="w-6 h-6 text-[#1E56B0] fill-white shrink-0" />
+            </div>
+
+            <p className="text-xs text-slate-300 font-semibold leading-tight drop-shadow-xs">
+              Mecánico 1 — Especialista Senior (OBD2 y Electrónica)
+            </p>
+
+            <div className="pt-0.5">
+              <span className="font-mono text-[11px] font-bold text-slate-400">
+                V-12.345.678 • <strong className="text-[#CCFF00]">{idOficial}</strong>
               </span>
+            </div>
+          </div>
+        </div>
 
-              {/* Calificación 4.9 / 5.0 ★ */}
-              <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full text-xs font-black">
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                <span>{tecnico.calificacion} ★</span>
+        {/* Contenido Interior del Carnet */}
+        <div className="px-5 pb-5 pt-3 space-y-4 bg-[#0A1525]">
+          
+          {/* 3. Fila de Estadísticas */}
+          <div className="grid grid-cols-3 bg-white/5 border border-white/10 rounded-2xl py-3 text-center backdrop-blur-xs">
+            {/* Columna 1: Rating */}
+            <div className="border-r border-white/20 px-2 space-y-0.5">
+              <div className="flex items-center justify-center gap-1 text-amber-400 font-black text-base">
+                <Star className="w-4 h-4 fill-amber-400" />
+                <span>4.9</span>
               </div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                Rating
+              </span>
             </div>
 
-            {/* Chips de Especialidades */}
+            {/* Columna 2: Servicios */}
+            <div className="border-r border-white/20 px-2 space-y-0.5">
+              <div className="flex items-center justify-center gap-1 text-[#CCFF00] font-black text-base">
+                <Wrench className="w-4 h-4 text-[#CCFF00]" />
+                <span>124</span>
+              </div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                Servicios
+              </span>
+            </div>
+
+            {/* Columna 3: Rango */}
+            <div className="px-2 space-y-0.5">
+              <div className="flex items-center justify-center gap-1 text-emerald-400 font-black text-base">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span>Senior</span>
+              </div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                Rango
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Insignias de Certificación (Chips con white/10 y borde white/20) */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+              Especialidades Certificadas
+            </span>
             <div className="flex flex-wrap gap-1.5">
-              {tecnico.certificaciones.map((cert) => (
+              {['Diagnóstico OBD2', 'Frenos e Hidráulica', 'Inyección Eléctrica', 'Puntualidad < 45 min'].map((chip) => (
                 <span
-                  key={cert}
-                  className="inline-flex items-center gap-1 bg-[#F8FAFC] text-slate-700 border border-[#CBD5E1] text-[11px] font-semibold px-2.5 py-1 rounded-lg"
+                  key={chip}
+                  className="bg-white/10 border border-white/20 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1"
                 >
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                  {cert}
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]"></span>
+                  {chip}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* 4. Unidad de Traslado (Autorización de Garita) */}
-          <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-200/80 flex items-center justify-center text-slate-700 shrink-0">
-              <Bike className="w-5 h-5 text-[#0A1525]" />
-            </div>
-            <div className="text-xs leading-snug">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
-                Autorización de Garita / Vigilancia
-              </span>
-              <p className="font-extrabold text-[#0A1525]">
-                Unidad de Traslado: {tecnico.unidadTraslado.tipo} • Color {tecnico.unidadTraslado.color} • Placa{' '}
-                <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-300 text-[#1E56B0]">
-                  {tecnico.unidadTraslado.placa}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          {/* 5. Vinculación con Orden Activa */}
-          <div className="bg-blue-50/70 border-2 border-[#1E56B0] rounded-2xl p-3.5 flex items-center gap-3 shadow-xs">
-            <div className="w-9 h-9 rounded-xl bg-[#1E56B0] flex items-center justify-center text-[#CCFF00] shrink-0 shadow-xs">
-              <Navigation className="w-5 h-5" />
-            </div>
-            <div className="text-xs leading-snug">
-              <span className="text-[10px] uppercase font-black tracking-wider text-[#1E56B0] flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                Despacho Oficial en Curso
-              </span>
-              <p className="font-extrabold text-[#0A1525] pt-0.5">
-                Atendiendo a: {tecnico.ordenActiva.vehiculo} • Placa{' '}
-                <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200 text-[#1E56B0]">
-                  {tecnico.ordenActiva.placa}
-                </span>{' '}
-                • Cuadrante: {tecnico.ordenActiva.cuadrante}
-              </p>
-            </div>
-          </div>
-
-          {/* 6. Respaldo y QR Dinámico */}
-          <div className="border-t border-slate-100 pt-4 flex items-center justify-between gap-4">
-            {/* Código QR con qrcode.react */}
-            <div className="p-2.5 bg-white border-2 border-[#0A1525] rounded-2xl shadow-sm shrink-0 flex items-center justify-center">
-              <QRCodeSVG
-                value={qrUrl}
-                size={92}
-                level="M"
-                includeMargin={false}
-                fgColor="#0A1525"
-                bgColor="#FFFFFF"
-              />
-            </div>
-
-            {/* Sello de Garantía y Respaldo */}
-            <div className="space-y-1.5 flex-1">
-              <div className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Garantía TuTallerMóvil</span>
+          {/* 5. Seguridad y Logística (Tarjetas translúcidas) */}
+          <div className="space-y-2">
+            {/* Recuadro A (Unidad) */}
+            <div className="backdrop-blur-md bg-white/10 border border-white/15 rounded-xl p-3 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-white shrink-0">
+                <Bike className="w-4 h-4 text-[#CCFF00]" />
               </div>
-              <p className="text-xs font-bold text-[#0A1525] leading-snug">
-                Servicio respaldado con Garantía Total TuTallerMóvil
-              </p>
-              <p className="text-[10px] text-slate-400 font-medium leading-tight">
-                Escanea el código QR con cualquier teléfono para validar la autenticidad en tiempo real.
-              </p>
+              <div className="text-xs leading-snug">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Unidad de Traslado (Garita)
+                </span>
+                <p className="font-bold text-white">
+                  Moto Yamaha FZ • Negro • Placa <span className="font-mono text-[#CCFF00]">AB123CD</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Recuadro B (Orden Activa - con borde izquierdo verde lima) */}
+            <div className="backdrop-blur-md bg-white/10 border border-white/15 border-l-4 border-l-[#CCFF00] rounded-xl p-3 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-[#CCFF00] shrink-0">
+                <Navigation className="w-4 h-4 text-[#CCFF00]" />
+              </div>
+              <div className="text-xs leading-snug">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#CCFF00] block">
+                  Orden Activa en Curso
+                </span>
+                <p className="font-bold text-white">
+                  Atendiendo: Chevrolet Aveo • <span className="font-mono text-slate-200">AD456EF</span> • Chacao
+                </p>
+              </div>
             </div>
           </div>
 
         </div>
 
-        {/* Footer Corporativo estilo Apple Wallet */}
-        <div className="bg-[#0A1525] text-white px-6 py-3 flex items-center justify-between text-[10px] font-bold tracking-wider">
-          <span className="text-slate-400 uppercase">IDENTIFICACIÓN PÚBLICA OFICIAL</span>
-          <span className="text-[#CCFF00] flex items-center gap-1 font-mono">
-            <Lock className="w-3 h-3 text-[#CCFF00]" /> SEGURIDAD TTM
-          </span>
+        {/* 6. Footer del Carnet (Fondo Blanco Puro con QR y Garantía) */}
+        <div className="bg-white text-[#0A1525] p-4 sm:p-5 flex items-center justify-between gap-4 border-t-2 border-[#CCFF00]">
+          {/* Código QR a la izquierda */}
+          <div className="p-1.5 bg-white border-2 border-[#0A1525] rounded-xl shadow-xs shrink-0 flex items-center justify-center">
+            <QRCodeSVG
+              value={qrUrl}
+              size={76}
+              level="M"
+              includeMargin={false}
+              fgColor="#0A1525"
+              bgColor="#FFFFFF"
+            />
+          </div>
+
+          {/* Texto de Garantía a la derecha */}
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Garantía Oficial</span>
+            </div>
+            <p className="text-xs font-black text-[#0A1525] leading-snug">
+              Servicio respaldado con Garantía Total TuTallerMóvil
+            </p>
+            <p className="text-[10px] text-slate-500 font-medium leading-tight">
+              Escanea el QR para validar credencial oficial en vivo.
+            </p>
+          </div>
         </div>
 
       </motion.div>
 
-      {/* Nota Legal Inferior */}
-      <p className="text-[11px] text-slate-400 mt-5 text-center max-w-sm">
-        Esta credencial es emitida exclusivamente por TuTallerMóvil para validar al personal técnico autorizado en sitio.
+      {/* Nota legal y copyright */}
+      <p className="text-[11px] text-slate-500 mt-4 text-center max-w-xs">
+        TuTallerMóvil CCS • Credencial pública verificada mediante clave única.
       </p>
 
     </div>
