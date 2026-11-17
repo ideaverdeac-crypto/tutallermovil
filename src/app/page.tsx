@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wrench,
   Search,
@@ -14,8 +14,10 @@ import {
   Clock,
   ArrowRight,
   Sparkles,
-  Car
+  Car,
+  X
 } from 'lucide-react';
+import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 
 const heroContainerVariants = {
   hidden: { opacity: 0 },
@@ -43,11 +45,20 @@ const heroItemVariants = {
 export default function Home() {
   const router = useRouter();
   const [plate, setPlate] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handleSearchPlate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanPlate = (plate || 'AD456EF').trim().toUpperCase();
     router.push(`/historial/${encodeURIComponent(cleanPlate)}`);
+  };
+
+  const handleShowToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 5500);
   };
 
   return (
@@ -145,6 +156,7 @@ export default function Home() {
               >
                 <motion.button
                   type="button"
+                  onClick={() => setModalOpen(true)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
@@ -326,6 +338,7 @@ export default function Home() {
 
               <motion.button
                 type="button"
+                onClick={() => setModalOpen(true)}
                 whileTap={{ scale: 0.98 }}
                 className="w-full h-12 text-base font-semibold bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
               >
@@ -473,6 +486,47 @@ export default function Home() {
           <p className="text-slate-400">Caracas, Venezuela • Servicio mecánico a domicilio</p>
         </div>
       </footer>
+
+      {/* Modal Dialog de Solicitud de Mecánico */}
+      <SolicitarMecanicoModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onSuccessToast={handleShowToast}
+      />
+
+      {/* Notificación Toast en pantalla */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed bottom-6 right-6 z-50 max-w-md bg-[#0A1525] text-white p-4 rounded-2xl shadow-2xl border-2 border-[#CCFF00] flex items-center justify-between gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#CCFF00] flex items-center justify-center text-[#0A1525] shrink-0 font-bold">
+                <CheckCircle2 className="w-5 h-5 text-[#0A1525]" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#CCFF00] uppercase tracking-wider">
+                  ¡Orden Despachada!
+                </p>
+                <p className="text-sm font-semibold text-white">
+                  {toastMessage}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastMessage(null)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -119,8 +119,33 @@ export default function PortalAliadosPage() {
     }
   };
 
+  // 2. Cargar órdenes iniciales y activar Supabase Realtime
   useEffect(() => {
     cargarOrdenes();
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel('realtime_ordenes_aliados')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ordenes'
+        },
+        (payload) => {
+          console.log('⚡ Cambio en tiempo real detectado en ordenes:', payload);
+          // Recargar órdenes disponibles sin pantalla completa de carga
+          cargarOrdenes(false);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Estado de Supabase Realtime:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // 3. Ordenar por cercanía (Haversine) si hay coordenadas del usuario
