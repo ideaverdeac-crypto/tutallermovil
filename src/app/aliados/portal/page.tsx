@@ -34,7 +34,11 @@ import {
   ExternalLink,
   Phone,
   Plus,
-  ChevronRight
+  ChevronRight,
+  Lock,
+  ShieldAlert,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
@@ -67,9 +71,9 @@ function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: num
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -77,7 +81,7 @@ function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: num
 export default function PortalAliadosPage() {
   const [estado, setEstado] = useState<EstadoMecanico>('DISPONIBLE');
   const [activeTab, setActiveTab] = useState<'inicio' | 'historial' | 'billetera' | 'perfil'>('inicio');
-  
+
   // Órdenes reales desde Supabase
   const [ordenes, setOrdenes] = useState<OrdenSupabase[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
@@ -87,6 +91,8 @@ export default function PortalAliadosPage() {
   const [filtroServicios, setFiltroServicios] = useState<'todos' | 'asignados' | 'disponibles'>('todos');
   const [toastAceptado, setToastAceptado] = useState<string | null>(null);
   const [creandoOrdenPrueba, setCreandoOrdenPrueba] = useState<boolean>(false);
+  const [modalBloqueoOrden, setModalBloqueoOrden] = useState<boolean>(false);
+  const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
 
   const MECANICO_ID_ACTUAL = '123e4567-e89b-12d3-a456-426614174000';
 
@@ -210,15 +216,25 @@ export default function PortalAliadosPage() {
   // Clasificación de órdenes
   const ordenesAsignadas = useMemo(() => {
     return ordenesConDistancia.filter((o) =>
-      o.mecanico_id === MECANICO_ID_ACTUAL ||
-      ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO'].includes(o.estado)
+      (o.mecanico_id === MECANICO_ID_ACTUAL ||
+      ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)) &&
+      !['FINALIZADO', 'CANCELADO'].includes(o.estado)
     );
   }, [ordenesConDistancia]);
+
+  // REGLA DE NEGOCIO P0: El mecánico solo puede tomar UNA orden por vez hasta terminarla
+  const ordenActivaEnCurso = useMemo(() => {
+    return ordenesAsignadas.find((o) =>
+      ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)
+    );
+  }, [ordenesAsignadas]);
+
+  const tieneOrdenActiva = Boolean(ordenActivaEnCurso);
 
   const ordenesDisponibles = useMemo(() => {
     return ordenesConDistancia.filter((o) =>
       ['DISPONIBLE', 'LEAD_NUEVO', 'DIAGNOSTICO_AGENDADO'].includes(o.estado) ||
-      (!o.mecanico_id && o.estado !== 'FINALIZADO')
+      (!o.mecanico_id && !['FINALIZADO', 'CANCELADO'].includes(o.estado))
     );
   }, [ordenesConDistancia]);
 
@@ -227,6 +243,36 @@ export default function PortalAliadosPage() {
     if (filtroServicios === 'disponibles') return ordenesDisponibles;
     return ordenesConDistancia;
   }, [filtroServicios, ordenesAsignadas, ordenesDisponibles, ordenesConDistancia]);
+
+  // Acción para Finalizar y Completar un Servicio (Liberando el cupo del mecánico)
+  const handleFinalizarServicio = async (ordenId: string) => {
+    if (finalizandoId) return;
+    setFinalizandoId(ordenId);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('ordenes')
+        .update({ estado: 'FINALIZADO' })
+        .eq('id', ordenId);
+
+      if (!error) {
+        setToastAceptado('✓ Servicio completado y marcado como FINALIZADO. Ya puedes tomar una nueva orden.');
+        setTimeout(() => setToastAceptado(null), 4500);
+        setModalBloqueoOrden(false);
+        setOrdenes((prev) =>
+          prev.map((o) => (o.id === ordenId ? { ...o, estado: 'FINALIZADO' } : o))
+        );
+        await cargarOrdenes(true);
+      } else {
+        alert('Error al finalizar el servicio: ' + error.message);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión al finalizar el servicio');
+    } finally {
+      setFinalizandoId(null);
+    }
+  };
 
   // Crear orden de prueba en vivo en Supabase con 1 clic
   const handleCrearOrdenPrueba = async () => {
@@ -280,6 +326,12 @@ export default function PortalAliadosPage() {
 
   // 4 y 5. Acción de Aceptar con Supabase RPC y manejo de Race Conditions
   const handleAceptarServicio = async (orden: OrdenSupabase) => {
+    // REGLA P0: El mecánico solo puede tomar UNA orden por vez hasta terminarla
+    if (tieneOrdenActiva) {
+      setModalBloqueoOrden(true);
+      return;
+    }
+
     if (aceptandoId) return;
     setAceptandoId(orden.id);
 
@@ -332,7 +384,7 @@ export default function PortalAliadosPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col font-sans pb-28 md:pb-12 selection:bg-[#CCFF00] selection:text-[#0A1525]">
-      
+
       {/* Barra Superior */}
       <header className="bg-white border-b border-[#CBD5E1] sticky top-0 z-30 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -400,7 +452,7 @@ export default function PortalAliadosPage() {
         {/* 1. Header del Perfil */}
         <section className="bg-white border border-[#CBD5E1] rounded-2xl p-5 sm:p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 text-center sm:text-left">
-            
+
             {/* Avatar y Datos Personales */}
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="relative">
@@ -413,13 +465,12 @@ export default function PortalAliadosPage() {
                 </div>
                 {/* Indicador de estado en el avatar */}
                 <span
-                  className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${
-                    estado === 'DISPONIBLE'
-                      ? 'bg-[#CCFF00]'
-                      : estado === 'EN_SERVICIO'
+                  className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${estado === 'DISPONIBLE'
+                    ? 'bg-[#CCFF00]'
+                    : estado === 'EN_SERVICIO'
                       ? 'bg-[#1E56B0]'
                       : 'bg-slate-400'
-                  }`}
+                    }`}
                 ></span>
               </div>
 
@@ -485,16 +536,15 @@ export default function PortalAliadosPage() {
 
             {/* Botones de Selección */}
             <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto bg-[#F8FAFC] p-1 rounded-xl border border-[#CBD5E1]">
-              
+
               {/* DISPONIBLE */}
               <button
                 type="button"
                 onClick={() => setEstado('DISPONIBLE')}
-                className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  estado === 'DISPONIBLE'
-                    ? 'bg-[#CCFF00] text-[#0A1525] shadow-xs'
-                    : 'text-slate-500 hover:text-[#0A1525]'
-                }`}
+                className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${estado === 'DISPONIBLE'
+                  ? 'bg-[#CCFF00] text-[#0A1525] shadow-xs'
+                  : 'text-slate-500 hover:text-[#0A1525]'
+                  }`}
               >
                 <span className={`w-2 h-2 rounded-full ${estado === 'DISPONIBLE' ? 'bg-[#0A1525] animate-ping' : 'bg-slate-300'}`}></span>
                 <span>DISPONIBLE</span>
@@ -504,11 +554,10 @@ export default function PortalAliadosPage() {
               <button
                 type="button"
                 onClick={() => setEstado('EN_SERVICIO')}
-                className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  estado === 'EN_SERVICIO'
-                    ? 'bg-[#1E56B0] text-white shadow-xs'
-                    : 'text-slate-500 hover:text-[#0A1525]'
-                }`}
+                className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${estado === 'EN_SERVICIO'
+                  ? 'bg-[#1E56B0] text-white shadow-xs'
+                  : 'text-slate-500 hover:text-[#0A1525]'
+                  }`}
               >
                 <span className={`w-2 h-2 rounded-full ${estado === 'EN_SERVICIO' ? 'bg-[#CCFF00]' : 'bg-slate-300'}`}></span>
                 <span>EN SERVICIO</span>
@@ -518,11 +567,10 @@ export default function PortalAliadosPage() {
               <button
                 type="button"
                 onClick={() => setEstado('INACTIVO')}
-                className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  estado === 'INACTIVO'
-                    ? 'bg-slate-500 text-white shadow-xs'
-                    : 'text-slate-500 hover:text-[#0A1525]'
-                }`}
+                className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${estado === 'INACTIVO'
+                  ? 'bg-slate-500 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-[#0A1525]'
+                  }`}
               >
                 <span className="w-2 h-2 rounded-full bg-slate-300"></span>
                 <span>INACTIVO</span>
@@ -532,47 +580,74 @@ export default function PortalAliadosPage() {
           </div>
         </section>
 
-        {/* Banner Destacado: Servicio Activo en Ejecución */}
-        {estado === 'EN_SERVICIO' && (
+        {/* Banner Destacado: Servicio Activo en Ejecución (Regla: 1 Orden por Vez) */}
+        {(tieneOrdenActiva && ordenActivaEnCurso) && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-[#0A1525] text-white rounded-2xl p-4 border-2 border-[#CCFF00] shadow-md flex flex-col sm:flex-row items-center justify-between gap-3"
+            className="bg-[#0A1525] text-white rounded-2xl p-4 sm:p-5 border-2 border-[#CCFF00] shadow-md flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shrink-0">
-                <Wrench className="w-5 h-5 text-[#0A1525]" />
+            <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+              <div className="w-12 h-12 rounded-2xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shrink-0 shadow-sm">
+                <Wrench className="w-6 h-6 text-[#0A1525]" />
               </div>
-              <div className="text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#CCFF00] animate-ping"></span>
                   <span className="text-[11px] font-black uppercase tracking-wider text-[#CCFF00]">
-                    Servicio en Ejecución Activa
+                    1 Orden Activa por Vez • {ordenActivaEnCurso.estado}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-white/10 text-slate-200 px-2 py-0.5 rounded">
+                    #{ordenActivaEnCurso.id.slice(0, 8).toUpperCase()}
                   </span>
                 </div>
-                <h3 className="text-sm font-black text-white">
-                  Toyota Corolla 2018 • Placa AB123CD
+                <h3 className="text-base font-black text-white truncate">
+                  {[ordenActivaEnCurso.vehiculo_marca, ordenActivaEnCurso.vehiculo_modelo, ordenActivaEnCurso.vehiculo_anio]
+                    .filter(Boolean)
+                    .join(' ') || ordenActivaEnCurso.vehiculo_modelo || 'Vehículo en Atención'}
                 </h3>
-                <p className="text-xs text-slate-300">
-                  María Rodríguez • Diagnóstico OBD2 y Checklist de 25 Puntos
+                <p className="text-xs text-slate-300 line-clamp-1">
+                  Cliente: <strong className="text-white">{ordenActivaEnCurso.cliente_nombre}</strong> • Falla: {ordenActivaEnCurso.falla_reportada}
+                </p>
+                <p className="text-[11px] text-amber-300 font-semibold flex items-center gap-1 pt-0.5">
+                  <Lock className="w-3 h-3 shrink-0" />
+                  <span>Por política SLA, debes finalizar este servicio para poder tomar una nueva orden de la bolsa.</span>
                 </p>
               </div>
             </div>
 
-            <Link
-              href="/aliados/servicio/TTM-0842"
-              className="h-11 px-5 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
-            >
-              <span>Abrir Consola de Ejecución</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto shrink-0 justify-end pt-2 lg:pt-0 border-t lg:border-t-0 border-white/10">
+              <Link
+                href={`/aliados/servicio/${ordenActivaEnCurso.id}`}
+                className="flex-1 sm:flex-initial h-11 px-4 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <ClipboardCheck className="w-4 h-4 text-[#0A1525]" />
+                <span>Ejecutar Servicio</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+
+              <button
+                type="button"
+                disabled={finalizandoId === ordenActivaEnCurso.id}
+                onClick={() => handleFinalizarServicio(ordenActivaEnCurso.id)}
+                className="h-11 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                title="Completar y finalizar servicio para poder tomar una nueva orden"
+              >
+                {finalizandoId === ordenActivaEnCurso.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <Check className="w-4 h-4 stroke-[3]" />
+                )}
+                <span>Finalizar Servicio</span>
+              </button>
+            </div>
           </motion.div>
         )}
 
         {/* 3. Tablero de Rendimiento (KPIs) */}
         <section>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            
+
             {/* KPI 1: Servicios Realizados */}
             <motion.div
               whileHover={{ y: -2 }}
@@ -702,16 +777,14 @@ export default function PortalAliadosPage() {
             <button
               type="button"
               onClick={() => setFiltroServicios('todos')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                filtroServicios === 'todos'
-                  ? 'bg-[#0A1525] text-white shadow-xs'
-                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
-              }`}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'todos'
+                ? 'bg-[#0A1525] text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+                }`}
             >
               <span>Todas las Órdenes</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                filtroServicios === 'todos' ? 'bg-white/20 text-[#CCFF00]' : 'bg-slate-100 text-slate-600'
-              }`}>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'todos' ? 'bg-white/20 text-[#CCFF00]' : 'bg-slate-100 text-slate-600'
+                }`}>
                 {ordenesConDistancia.length}
               </span>
             </button>
@@ -719,17 +792,15 @@ export default function PortalAliadosPage() {
             <button
               type="button"
               onClick={() => setFiltroServicios('asignados')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                filtroServicios === 'asignados'
-                  ? 'bg-[#1E56B0] text-white shadow-xs'
-                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
-              }`}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'asignados'
+                ? 'bg-[#1E56B0] text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+                }`}
             >
               <ClipboardCheck className="w-3.5 h-3.5" />
               <span>Mis Servicios Asignados</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                filtroServicios === 'asignados' ? 'bg-white/20 text-[#CCFF00]' : 'bg-blue-50 text-[#1E56B0]'
-              }`}>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'asignados' ? 'bg-white/20 text-[#CCFF00]' : 'bg-blue-50 text-[#1E56B0]'
+                }`}>
                 {ordenesAsignadas.length}
               </span>
             </button>
@@ -737,17 +808,15 @@ export default function PortalAliadosPage() {
             <button
               type="button"
               onClick={() => setFiltroServicios('disponibles')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                filtroServicios === 'disponibles'
-                  ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs'
-                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
-              }`}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'disponibles'
+                ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs'
+                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+                }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>Solicitudes Disponibles</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                filtroServicios === 'disponibles' ? 'bg-[#CCFF00] text-[#0A1525]' : 'bg-emerald-50 text-emerald-700'
-              }`}>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'disponibles' ? 'bg-[#CCFF00] text-[#0A1525]' : 'bg-emerald-50 text-emerald-700'
+                }`}>
                 {ordenesDisponibles.length}
               </span>
             </button>
@@ -794,8 +863,8 @@ export default function PortalAliadosPage() {
                   {filtroServicios === 'asignados'
                     ? 'No tienes servicios asignados actualmente'
                     : filtroServicios === 'disponibles'
-                    ? 'No hay solicitudes disponibles en este momento'
-                    : 'No hay órdenes registradas'}
+                      ? 'No hay solicitudes disponibles en este momento'
+                      : 'No hay órdenes registradas'}
                 </h3>
                 <p className="text-xs sm:text-sm text-[#475569] font-medium max-w-sm mx-auto">
                   {filtroServicios === 'asignados'
@@ -847,14 +916,13 @@ export default function PortalAliadosPage() {
                     viewport={{ once: true, margin: '-20px' }}
                     transition={{ duration: 0.35, delay: index * 0.05, ease: 'easeOut' }}
                     whileHover={{ scale: 1.008 }}
-                    className={`bg-white border-2 rounded-2xl p-5 sm:p-6 shadow-sm transition-all ${
-                      estaAsignado
-                        ? 'border-[#1E56B0]/40 hover:border-[#1E56B0] shadow-blue-50/50'
-                        : 'border-[#CBD5E1] hover:border-[#0A1525]'
-                    }`}
+                    className={`bg-white border-2 rounded-2xl p-5 sm:p-6 shadow-sm transition-all ${estaAsignado
+                      ? 'border-[#1E56B0]/40 hover:border-[#1E56B0] shadow-blue-50/50'
+                      : 'border-[#CBD5E1] hover:border-[#0A1525]'
+                      }`}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      
+
                       {/* Datos de la Orden (Falla, Modelo, Sector, Distancia) */}
                       <div className="space-y-2 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -932,15 +1000,33 @@ export default function PortalAliadosPage() {
                         </div>
 
                         {estaAsignado ? (
-                          /* Botón directo a Ejecutar Servicio y Checklist Odómetro */
-                          <Link
-                            href={`/aliados/servicio/${orden.id}`}
-                            className="w-full lg:w-48 h-12 text-sm font-black rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer bg-[#0A1525] hover:bg-[#1E56B0] text-white active:scale-95"
-                          >
-                            <ClipboardCheck className="w-4 h-4 text-[#CCFF00]" />
-                            <span>Ejecutar Servicio</span>
-                            <ChevronRight className="w-4 h-4 text-slate-400" />
-                          </Link>
+                          <div className="flex items-center gap-2 w-full lg:w-auto">
+                            {/* Botón directo a Ejecutar Servicio y Checklist Odómetro */}
+                            <Link
+                              href={`/aliados/servicio/${orden.id}`}
+                              className="flex-1 lg:w-44 h-12 text-sm font-black rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer bg-[#0A1525] hover:bg-[#1E56B0] text-white active:scale-95"
+                            >
+                              <ClipboardCheck className="w-4 h-4 text-[#CCFF00]" />
+                              <span>Ejecutar</span>
+                              <ChevronRight className="w-4 h-4 text-slate-400" />
+                            </Link>
+
+                            {/* Botón para Finalizar Servicio y liberar cupo */}
+                            <button
+                              type="button"
+                              disabled={finalizandoId === orden.id}
+                              onClick={() => handleFinalizarServicio(orden.id)}
+                              className="h-12 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+                              title="Marcar como finalizado para tomar la siguiente orden"
+                            >
+                              {finalizandoId === orden.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                              ) : (
+                                <Check className="w-4 h-4 stroke-[3]" />
+                              )}
+                              <span className="hidden sm:inline">Finalizar</span>
+                            </button>
+                          </div>
                         ) : (
                           /* Botón Aceptar Servicio para solicitudes libres */
                           <motion.button
@@ -948,14 +1034,27 @@ export default function PortalAliadosPage() {
                             disabled={isAccepting}
                             whileHover={{ scale: isAccepting ? 1 : 1.02 }}
                             whileTap={{ scale: isAccepting ? 1 : 0.98 }}
-                            onClick={() => handleAceptarServicio(orden)}
-                            className={`w-full lg:w-44 h-12 text-base font-extrabold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 ${
-                              isAccepting
-                                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                                : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
+                            onClick={() => {
+                              if (tieneOrdenActiva) {
+                                setModalBloqueoOrden(true);
+                                return;
+                              }
+                              handleAceptarServicio(orden);
+                            }}
+                            className={`w-full lg:w-48 h-12 text-xs font-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border ${
+                              tieneOrdenActiva
+                                ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300'
+                                : isAccepting
+                                ? 'bg-slate-200 text-slate-500 cursor-not-allowed border-transparent'
+                                : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border-[#0A1525]/10'
                             }`}
                           >
-                            {isAccepting ? (
+                            {tieneOrdenActiva ? (
+                              <>
+                                <Lock className="w-4 h-4 text-slate-500" />
+                                <span>1 Orden por Vez</span>
+                              </>
+                            ) : isAccepting ? (
                               <>
                                 <Loader2 className="w-4 h-4 animate-spin text-[#0A1525]" />
                                 <span>Aceptando...</span>
@@ -983,13 +1082,12 @@ export default function PortalAliadosPage() {
       {/* 5. Navegación Móvil (Bottom Nav Fija) */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#CBD5E1] shadow-xl py-2 px-6 backdrop-blur-md bg-white/95 md:hidden">
         <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
-          
+
           <button
             type="button"
             onClick={() => setActiveTab('inicio')}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${
-              activeTab === 'inicio' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-            }`}
+            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'inicio' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
+              }`}
           >
             <HomeIcon className="w-5 h-5" />
             <span className="text-[10px]">Inicio</span>
@@ -998,9 +1096,8 @@ export default function PortalAliadosPage() {
           <button
             type="button"
             onClick={() => setActiveTab('historial')}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${
-              activeTab === 'historial' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-            }`}
+            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'historial' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
+              }`}
           >
             <HistoryIcon className="w-5 h-5" />
             <span className="text-[10px]">Historial</span>
@@ -1009,9 +1106,8 @@ export default function PortalAliadosPage() {
           <button
             type="button"
             onClick={() => setActiveTab('billetera')}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${
-              activeTab === 'billetera' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-            }`}
+            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'billetera' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
+              }`}
           >
             <Wallet className="w-5 h-5" />
             <span className="text-[10px]">Billetera</span>
@@ -1020,9 +1116,8 @@ export default function PortalAliadosPage() {
           <button
             type="button"
             onClick={() => setActiveTab('perfil')}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${
-              activeTab === 'perfil' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-            }`}
+            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'perfil' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
+              }`}
           >
             <UserIcon className="w-5 h-5" />
             <span className="text-[10px]">Perfil</span>
@@ -1067,6 +1162,98 @@ export default function PortalAliadosPage() {
               ✕
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL DIALOG: REGLA 1 ORDEN POR VEZ                     */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalBloqueoOrden && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/75 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 15 }}
+              className="w-full max-w-md bg-white rounded-3xl p-6 text-center space-y-5 border border-[#CBD5E1] shadow-2xl relative"
+            >
+              <button
+                type="button"
+                onClick={() => setModalBloqueoOrden(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto shadow-inner border border-amber-200">
+                <Lock className="w-8 h-8 stroke-[2.5]" />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200">
+                  Regla Operativa SLA • 1 Orden por Mecánico
+                </span>
+                <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
+                  Ya tienes un servicio en curso
+                </h3>
+                <p className="text-xs text-[#475569] leading-relaxed">
+                  Para asegurar el tiempo de respuesta (SLA &lt; 30 min) y la máxima calidad de atención técnica, debes terminar tu servicio activo antes de aceptar una nueva orden.
+                </p>
+              </div>
+
+              {ordenActivaEnCurso && (
+                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 text-left space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-mono font-bold text-slate-500">
+                      #{ordenActivaEnCurso.id.slice(0, 8).toUpperCase()}
+                    </span>
+                    <span className="text-[10px] font-black uppercase bg-blue-100 text-[#1E56B0] px-2 py-0.5 rounded">
+                      {ordenActivaEnCurso.estado}
+                    </span>
+                  </div>
+                  <p className="text-sm font-black text-[#0A1525]">
+                    {[ordenActivaEnCurso.vehiculo_marca, ordenActivaEnCurso.vehiculo_modelo, ordenActivaEnCurso.vehiculo_anio]
+                      .filter(Boolean)
+                      .join(' ') || ordenActivaEnCurso.vehiculo_modelo || 'Vehículo'}
+                  </p>
+                  <p className="text-xs text-slate-600 line-clamp-1">
+                    {ordenActivaEnCurso.falla_reportada}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                {ordenActivaEnCurso && (
+                  <>
+                    <Link
+                      href={`/aliados/servicio/${ordenActivaEnCurso.id}`}
+                      onClick={() => setModalBloqueoOrden(false)}
+                      className="flex-1 h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <ClipboardCheck className="w-4 h-4 text-[#CCFF00]" />
+                      <span>Ir al Servicio Actual</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      disabled={finalizandoId === ordenActivaEnCurso.id}
+                      onClick={() => handleFinalizarServicio(ordenActivaEnCurso.id)}
+                      className="h-12 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                      title="Marcar como finalizado para desbloquear la toma de órdenes"
+                    >
+                      {finalizandoId === ordenActivaEnCurso.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <Check className="w-4 h-4 stroke-[3]" />
+                      )}
+                      <span>Finalizar Servicio</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
