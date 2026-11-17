@@ -29,7 +29,10 @@ import {
   BadgeCheck,
   GripVertical,
   Bike,
-  ClipboardCheck
+  ClipboardCheck,
+  Shield,
+  Phone,
+  Star
 } from 'lucide-react';
 
 interface OrdenKanban {
@@ -220,24 +223,32 @@ function CronometroSLA({ createdAt }: { createdAt?: string }) {
   );
 }
 
-// Avatar del mecánico asignado con anillo sutil y alineación horizontal
-function MecanicoAsignadoBadge() {
+// Avatar del mecánico asignado con anillo sutil, interactivo (abre ficha Bento de garita)
+function MecanicoAsignadoBadge({ onClick }: { onClick?: () => void }) {
   return (
-    <div className="flex items-center gap-2">
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClick) onClick();
+      }}
+      className="flex items-center gap-2 hover:bg-slate-100/90 px-2 py-1 -mx-2 -my-1 rounded-xl transition-all cursor-pointer text-left w-full group select-none"
+      title="Ver ficha operativa de Carlos Mendoza (#TTM-0842)"
+    >
       <img
         src={FOTO_MECANICO_OFICIAL}
         alt="Carlos Mendoza"
-        className="w-6 h-6 rounded-full object-cover ring-2 ring-[#E2E8F0] shrink-0"
+        className="w-6 h-6 rounded-full object-cover ring-2 ring-[#E2E8F0] group-hover:ring-[#1E56B0] shrink-0 transition-all shadow-2xs"
       />
-      <div className="flex items-baseline gap-1.5 min-w-0">
-        <span className="text-xs font-bold text-[#0A1525] truncate">
+      <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+        <span className="text-xs font-bold text-[#0A1525] group-hover:text-[#1E56B0] transition-colors truncate">
           Carlos Mendoza
         </span>
         <span className="font-mono text-[10px] text-slate-500 font-semibold shrink-0">
           #TTM-0842
         </span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -253,6 +264,7 @@ export default function TableroDespachoPage() {
   // Estados de Modales
   const [modalCotizadorOpen, setModalCotizadorOpen] = useState(false);
   const [modalAsignarOpen, setModalAsignarOpen] = useState(false);
+  const [modalMecanicoDetalleOpen, setModalMecanicoDetalleOpen] = useState(false);
   const [ordenParaAsignar, setOrdenParaAsignar] = useState<OrdenKanban | null>(null);
 
   // Estado del Cotizador
@@ -623,7 +635,7 @@ export default function TableroDespachoPage() {
                             {/* Datos complementarios según columna */}
                             {columna.id === 'ASIGNADO' && (
                               <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs ml-5">
-                                <MecanicoAsignadoBadge />
+                                <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
                               </div>
                             )}
 
@@ -631,7 +643,7 @@ export default function TableroDespachoPage() {
                             {columna.id === 'REPUESTOS_EN_RUTA' && (
                               <div className="space-y-1.5 ml-5">
                                 <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                  <MecanicoAsignadoBadge />
+                                  <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
                                 </div>
                                 <div className="p-1.5 px-2.5 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs">
                                   <span className="font-extrabold text-[#1E56B0] flex items-center gap-1.5 text-[11px]">
@@ -649,7 +661,7 @@ export default function TableroDespachoPage() {
                             {columna.id === 'EN_EJECUCION' && (
                               <div className="space-y-2 ml-5">
                                 <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                  <MecanicoAsignadoBadge />
+                                  <MecanicoAsignadoBadge onClick={() => setModalMecanicoDetalleOpen(true)} />
                                 </div>
                                 <div className="flex items-center justify-between pt-0.5">
                                   <Link
@@ -1048,6 +1060,182 @@ export default function TableroDespachoPage() {
                 >
                   Cancelar
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* 4. MODAL PERFIL OPERATIVO DEL MECÁNICO (Bento Box UI)     */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalMecanicoDetalleOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 20 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-md bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 relative overflow-hidden space-y-5"
+            >
+              {/* Botón de Cierre */}
+              <button
+                type="button"
+                onClick={() => setModalMecanicoDetalleOpen(false)}
+                className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Cabecera: Foto Grande w-20 h-20, Nombre, Código y Calificación */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1 text-center sm:text-left">
+                <img
+                  src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80"
+                  alt="Carlos Mendoza"
+                  className="w-20 h-20 rounded-full object-cover ring-4 ring-[#E2E8F0] shadow-md shrink-0"
+                />
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
+                      Carlos Mendoza
+                    </h2>
+                    <span className="w-5 h-5 rounded-full bg-[#16a34a] flex items-center justify-center shrink-0 shadow-2xs" title="Técnico Verificado Oficial">
+                      <Check className="w-3 h-3 text-white stroke-[3.5]" />
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <span className="font-mono text-xs font-black text-[#1E56B0] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                      #TTM-0842
+                    </span>
+                    <span className="text-xs font-bold text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      <Star className="w-3.5 h-3.5 fill-amber-500 stroke-amber-500" />
+                      4.9 / 5.0
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid de Datos (Bento Grid 2x2 con Stagger) */}
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.08 }
+                  }
+                }}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              >
+                {/* 1. Rango / Especialidad */}
+                <motion.div
+                  variants={{
+                    hidden: { opacity: 0, y: 12 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1"
+                >
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Shield className="w-4 h-4 text-[#1E56B0]" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
+                      Rango / Especialidad
+                    </span>
+                  </div>
+                  <p className="text-xs font-black text-[#0A1525]">
+                    Mecánico 1 — Senior
+                  </p>
+                </motion.div>
+
+                {/* 4. Zona Actual */}
+                <motion.div
+                  variants={{
+                    hidden: { opacity: 0, y: 12 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1"
+                >
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <MapPin className="w-4 h-4 text-emerald-600" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
+                      Zona Actual
+                    </span>
+                  </div>
+                  <p className="text-xs font-black text-[#0A1525]">
+                    Chacao
+                  </p>
+                </motion.div>
+
+                {/* 2. Unidad de Traslado (Vital para Garita) */}
+                <motion.div
+                  variants={{
+                    hidden: { opacity: 0, y: 12 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1 sm:col-span-2"
+                >
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Bike className="w-4 h-4 text-[#0A1525]" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 font-black">
+                      Unidad de Traslado (Autorización Garita)
+                    </span>
+                  </div>
+                  <p className="text-xs font-black text-[#0A1525]">
+                    Moto Yamaha FZ • Negro • Placa{' '}
+                    <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-300 text-[#1E56B0]">
+                      AB123CD
+                    </span>
+                  </p>
+                </motion.div>
+
+                {/* 3. Teléfono */}
+                <motion.div
+                  variants={{
+                    hidden: { opacity: 0, y: 12 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1 sm:col-span-2"
+                >
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Phone className="w-4 h-4 text-[#1E56B0]" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
+                      Contacto Directo
+                    </span>
+                  </div>
+                  <p className="text-xs font-black font-mono text-[#0A1525]">
+                    +58 412-1234567
+                  </p>
+                </motion.div>
+              </motion.div>
+
+              {/* Botones de Acción Rápida (Footer del Modal) */}
+              <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                <a
+                  href="tel:+584121234567"
+                  className="flex-1 h-12 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>Llamar al Mecánico</span>
+                </a>
+
+                <Link
+                  href="/carnet/TTM-0842"
+                  target="_blank"
+                  className="flex-1 h-12 rounded-xl bg-white hover:bg-slate-50 text-[#0A1525] border border-[#CBD5E1] hover:border-[#1E56B0] text-xs font-black flex items-center justify-center gap-2 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                >
+                  <span>Ver Carnet QR</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#1E56B0]" />
+                </Link>
+              </div>
+
+              {/* Nota de UX en el footer */}
+              <div className="pt-2 text-center border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>Verificado por TuTallerMóvil • Activo en ruta</span>
               </div>
             </motion.div>
           </div>
