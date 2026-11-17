@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
+import FloatingSupportButton from '@/components/ui/floating-support-button';
 
 interface OrdenRunner {
   id: string;
@@ -637,6 +638,9 @@ export default function RunnerPortalPage() {
                                         isOpen={mostrarTutorial ? true : undefined}
                                         onClose={() => setMostrarTutorial(false)}
                                       />
+
+                                      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
+                                      <FloatingSupportButton mensajePersonalizado="Hola, soy runner de TuTallerMóvil y necesito soporte técnico en ruta." />
                                     </div>
                                     );
 }

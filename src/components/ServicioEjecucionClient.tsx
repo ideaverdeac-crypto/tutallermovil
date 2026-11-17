@@ -25,6 +25,8 @@ import {
   X
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import FloatingSupportButton from '@/components/ui/floating-support-button';
 
 interface ServicioEjecucionClientProps {
   id: string;
@@ -181,9 +183,14 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   };
 
   const handleToggleChecklist = (itemId: string, valor: 'OK' | 'CAMBIO') => {
-    // Si el odómetro no está válido, advertir
+    // Si el odómetro no está válido, advertir con microcopia empática
     if (!odometroValido) {
-      mostrarErrores();
+      if (!fotoSubida) {
+        setToastMensaje(['¡Casi listo! Necesitamos la foto del tablero para proteger tu pago']);
+        setTimeout(() => setToastMensaje(null), 4500);
+      } else {
+        mostrarErrores();
+      }
       return;
     }
 
@@ -201,7 +208,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       errores.push(`El kilometraje (${nuevoKmNum.toLocaleString()} km) debe ser mayor a ${KILOMETRAJE_ANTERIOR.toLocaleString()} km.`);
     }
     if (!fotoSubida) {
-      errores.push(`Falta tomar la foto de evidencia del tablero.`);
+      errores.push('¡Casi listo! Necesitamos la foto del tablero para proteger tu pago');
     }
     if (!checklistCompleto) {
       const pendientes = totalItemsChecklist - itemsCompletados;
@@ -422,30 +429,40 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
             />
 
             {!fotoOdometro ? (
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (fileInputRef.current) {
-                    fileInputRef.current.click();
-                  } else {
-                    handleCapturarFoto();
-                  }
-                }}
-                className="w-full h-32 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50/50 hover:border-[#1E56B0] transition-all flex flex-col items-center justify-center gap-2 cursor-pointer active:bg-blue-100/50"
-              >
-                <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[#1E56B0] shadow-2xs">
-                  <Camera className="w-6 h-6 stroke-[2.2]" />
-                </div>
-                <div className="text-center">
-                  <span className="text-sm font-extrabold text-[#0A1525] block">
-                    Tomar foto del tablero
-                  </span>
-                  <span className="text-[11px] font-medium text-slate-500">
-                    Abre la cámara y enfoca los números del odómetro
-                  </span>
-                </div>
-              </motion.button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.click();
+                      } else {
+                        handleCapturarFoto();
+                      }
+                    }}
+                    className="w-full h-32 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50/50 hover:border-[#1E56B0] transition-all flex flex-col items-center justify-center gap-2 cursor-pointer active:bg-blue-100/50 group"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[#1E56B0] shadow-2xs group-hover:scale-105 transition-transform">
+                      <Camera className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div className="text-center">
+                      <span className="text-sm font-extrabold text-[#0A1525] block">
+                        Tomar foto del tablero
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-500">
+                        Abre la cámara y enfoca los números del odómetro
+                      </span>
+                    </div>
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="bg-[#0A1525] text-white">
+                  <p className="font-bold text-xs text-[#CCFF00]">Evidencia de Odómetro</p>
+                  <p className="text-[11px] text-slate-200">
+                    Obligatorio para validar el kilometraje real
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             ) : (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -493,8 +510,8 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
 
           {/* Advertencia si no se ha completado el candado */}
           {!odometroValido && (
-            <p className="text-[11px] font-semibold text-slate-500 text-center pt-1">
-              🔒 El checklist táctil permanecerá bloqueado hasta ingresar el kilometraje correcto y capturar la foto.
+            <p className="text-[11px] font-semibold text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-center">
+              🔒 ¡Casi listo! Necesitamos la foto del tablero para proteger tu pago y habilitar el checklist técnico.
             </p>
           )}
         </section>
@@ -860,6 +877,12 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
+      <FloatingSupportButton
+        className="bottom-24"
+        mensajePersonalizado="Hola, estoy ejecutando un servicio técnico en campo con TuTallerMóvil y requiero soporte."
+      />
 
     </div>
   );

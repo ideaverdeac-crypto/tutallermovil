@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
+import FloatingSupportButton from '@/components/ui/floating-support-button';
 
 type EstadoMecanico = 'DISPONIBLE' | 'EN_SERVICIO' | 'INACTIVO';
 
@@ -641,16 +642,26 @@ export default function PortalAliadosPage() {
             </div>
           ) : ordenesConDistancia.length === 0 ? (
             /* 5. Mensaje Vacío si no hay órdenes */
-            <div className="bg-white border border-[#CBD5E1] rounded-2xl p-12 text-center space-y-3 shadow-xs">
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-400">
-                <Inbox className="w-7 h-7" />
+            <div className="bg-white border border-[#CBD5E1] rounded-3xl p-10 sm:p-12 text-center space-y-4 shadow-xs">
+              <div className="relative w-16 h-16 rounded-3xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-400 shadow-2xs">
+                <Inbox className="w-8 h-8 stroke-[1.8] text-slate-400" />
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                </span>
               </div>
-              <h3 className="text-base font-bold text-[#0A1525]">
-                No hay servicios disponibles en tu zona por ahora
-              </h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Las nuevas solicitudes de auxilio mecánico y diagnóstico aparecerán aquí automáticamente.
-              </p>
+              <div className="space-y-1">
+                <h3 className="text-base sm:text-lg font-black text-[#0A1525]">
+                  No hay servicios cerca
+                </h3>
+                <p className="text-xs sm:text-sm text-[#475569] font-medium max-w-sm mx-auto">
+                  Mantente conectado, te avisaremos en tiempo real cuando un cliente solicite asistencia en tu zona.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3.5 py-1.5 rounded-full border border-emerald-200 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Radar GPS activo y escuchando</span>
+              </div>
             </div>
           ) : (
             /* Feed de Servicios con Datos Reales y Ordenados por Distancia */
@@ -827,6 +838,12 @@ export default function PortalAliadosPage() {
         rol="MECANICO"
         isOpen={mostrarTutorial ? true : undefined}
         onClose={() => setMostrarTutorial(false)}
+      />
+
+      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
+      <FloatingSupportButton
+        className="bottom-20 sm:bottom-6"
+        mensajePersonalizado="Hola, soy especialista de TuTallerMóvil y necesito soporte técnico en mi portal."
       />
 
     </div>

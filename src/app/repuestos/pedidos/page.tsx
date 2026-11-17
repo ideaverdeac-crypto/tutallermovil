@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
+import FloatingSupportButton from '@/components/ui/floating-support-button';
 
 interface RepuestoItem {
   id?: string;
@@ -1001,6 +1002,9 @@ export default function PedidosProveedorPage() {
         isOpen={mostrarTutorial ? true : undefined}
         onClose={() => setMostrarTutorial(false)}
       />
+
+      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
+      <FloatingSupportButton mensajePersonalizado="Hola, soy proveedor de la Casa de Repuestos en TuTallerMóvil y necesito soporte con un pedido." />
 
     </div>
   );

@@ -41,10 +41,15 @@ import {
   Package,
   FileDown,
   Landmark,
-  LogOut
+  LogOut,
+  HelpCircle,
+  Inbox,
+  Ghost
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import FloatingSupportButton from '@/components/ui/floating-support-button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -293,22 +298,24 @@ function CronometroSLA({ createdAt }: { createdAt?: string }) {
     : 'text-[#16A34A]';
 
   return (
-    <div
-      className={`flex items-center gap-1 font-mono text-[11px] font-black ${colorTexto} ${
-        esVencido ? 'animate-pulse' : ''
-      }`}
-      title={
-        esVencido
-          ? 'SLA de 45 min vencido'
-          : esAlerta
-          ? 'Próximo a vencer SLA (45 min)'
-          : 'Tiempo dentro de SLA'
-      }
-    >
-      <Clock className="w-3 h-3 stroke-[2.5]" />
-      <span>{tiempoFormateado}</span>
-      {esVencido && <span className="text-[9px] uppercase font-sans font-bold">!</span>}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={`inline-flex items-center gap-1 font-mono text-[11px] font-black ${colorTexto} ${
+            esVencido ? 'animate-pulse' : ''
+          } cursor-help`}
+        >
+          <Clock className="w-3 h-3 stroke-[2.5]" />
+          <span>{tiempoFormateado}</span>
+          {esVencido && <span className="text-[9px] uppercase font-sans font-bold">!</span>}
+          <HelpCircle className="w-2.5 h-2.5 text-slate-400 hover:text-slate-600 transition-colors ml-0.5" />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="bg-[#0A1525] text-white">
+        <p className="font-bold text-xs text-[#CCFF00]">Cronómetro SLA (45 min)</p>
+        <p className="text-[11px] text-slate-200">El color rojo indica que el mecánico está retrasado.</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -1136,17 +1143,36 @@ export default function TableroDespachoPage() {
               <span className="hidden md:inline">Finanzas & QA</span>
             </Link>
 
-            {/* Botón Cotizador Orden (Fondo #0A1525, texto blanco) */}
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setModalCotizadorOpen(true)}
-              className="h-10 px-4 text-xs font-black bg-[#0A1525] hover:bg-slate-800 text-white rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border border-white/10"
-            >
-              <Calculator className="w-4 h-4 text-[#CCFF00]" />
-              <span>Cotizar Orden</span>
-            </motion.button>
+            {/* Botón Cotizador Orden con Tooltip explicativo */}
+            <div className="flex items-center gap-1">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setModalCotizadorOpen(true)}
+                className="h-10 px-4 text-xs font-black bg-[#0A1525] hover:bg-slate-800 text-white rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border border-white/10"
+              >
+                <Calculator className="w-4 h-4 text-[#CCFF00]" />
+                <span>Cotizar Orden</span>
+              </motion.button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-8 h-10 flex items-center justify-center text-slate-400 hover:text-[#1E56B0] hover:bg-blue-50/80 rounded-xl transition-colors cursor-help"
+                    aria-label="Ayuda sobre Cotización"
+                  >
+                    <HelpCircle className="w-4 h-4 stroke-[2.2]" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-[#0A1525] text-white max-w-xs">
+                  <p className="font-bold text-xs text-[#CCFF00]">Regla de Exoneración P0</p>
+                  <p className="text-[11px] text-slate-200 leading-snug">
+                    La regla de negocio exonerará los $15 si la cotización supera los $40.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
             {/* Indicador Realtime */}
             <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#475569] bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-xl shadow-2xs">
@@ -1261,9 +1287,27 @@ export default function TableroDespachoPage() {
                     )}
 
                     {ordenesDeColumna.length === 0 ? (
-                      <div className="p-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-2xl text-xs text-[#475569] font-medium flex flex-col items-center justify-center gap-2 h-44">
-                        <span className="text-slate-300">Arrastra tarjetas aquí</span>
-                        <span className="text-slate-400 text-[11px]">{columna.textoVacio}</span>
+                      <div className="p-8 text-center border-2 border-dashed border-[#CBD5E1]/80 rounded-2xl bg-white/60 text-xs text-[#475569] font-medium flex flex-col items-center justify-center gap-2.5 h-48 select-none">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100/90 border border-slate-200 flex items-center justify-center text-slate-400 shadow-2xs">
+                          {columna.id === 'LEAD_NUEVO' ? (
+                            <Ghost className="w-6 h-6 stroke-[1.8] text-slate-400" />
+                          ) : (
+                            <Inbox className="w-6 h-6 stroke-[1.8] text-slate-400" />
+                          )}
+                        </div>
+                        <div className="space-y-0.5 text-center">
+                          <p className="text-xs font-black text-[#0A1525]">
+                            {columna.id === 'LEAD_NUEVO'
+                              ? 'Esperando nuevos leads...'
+                              : 'Todo al día'}
+                          </p>
+                          <p className="text-[11px] text-[#475569] font-medium max-w-[200px]">
+                            {columna.textoVacio || 'Sin órdenes en esta etapa por ahora'}
+                          </p>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                          Arrastra tarjetas aquí
+                        </span>
                       </div>
                     ) : (
                       ordenesDeColumna.map((orden) => {
@@ -1505,9 +1549,28 @@ export default function TableroDespachoPage() {
                     <Calculator className="w-5 h-5 text-[#CCFF00]" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
-                      Cotizador Táctico con Repuestos del Catálogo
-                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
+                        Cotizador Táctico con Repuestos del Catálogo
+                      </h2>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="p-1 text-slate-400 hover:text-[#1E56B0] rounded-lg transition-colors cursor-help"
+                            aria-label="Regla de exoneración de diagnóstico"
+                          >
+                            <HelpCircle className="w-4 h-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="bg-[#0A1525] text-white max-w-xs">
+                          <p className="font-bold text-xs text-[#CCFF00]">Regla de Exoneración P0</p>
+                          <p className="text-[11px] text-slate-200">
+                            La regla de negocio exonerará los $15 si la cotización supera los $40.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     <p className="text-xs text-[#475569] font-medium">
                       Regla de Negocio P0: Diagnóstico de $15 100% GRATIS en reparaciones &gt; $40
                     </p>
@@ -2469,6 +2532,9 @@ export default function TableroDespachoPage() {
         isOpen={mostrarTutorial ? true : undefined}
         onClose={() => setMostrarTutorial(false)}
       />
+
+      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
+      <FloatingSupportButton mensajePersonalizado="Hola, soy operadora de TuTallerMóvil y necesito soporte técnico con el Tablero de Despacho." />
 
     </div>
   );

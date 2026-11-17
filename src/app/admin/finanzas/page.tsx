@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
+import FloatingSupportButton from '@/components/ui/floating-support-button';
 
 interface LiquidacionMecanico {
   id: string;
@@ -857,6 +858,9 @@ export default function FinanzasAdminPage() {
         isOpen={mostrarTutorial ? true : undefined}
         onClose={() => setMostrarTutorial(false)}
       />
+
+      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
+      <FloatingSupportButton mensajePersonalizado="Hola, soy administrador de TuTallerMóvil y requiero soporte técnico con el módulo de Finanzas." />
 
     </div>
   );
