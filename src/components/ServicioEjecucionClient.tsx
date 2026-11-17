@@ -15,6 +15,7 @@ import {
   Unlock,
   CheckCircle2,
   XCircle,
+  Ban,
   FileText,
   DollarSign,
   Sparkles,
@@ -175,6 +176,13 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   const [toastMensaje, setToastMensaje] = useState<string[] | null>(null);
   const [modalFotoZoom, setModalFotoZoom] = useState<string | null>(null);
 
+  // Resiliencia ante fallas de red en subida de fotos
+  const [fotoPendienteReintento, setFotoPendienteReintento] = useState<File | null>(null);
+  const [tipoFotoPendiente, setTipoFotoPendiente] = useState<{
+    prefijo: string;
+    nombreLegible: string;
+  } | null>(null);
+
   // Refs para inputs de archivo
   const fileInputOdometroInicialRef = useRef<HTMLInputElement>(null);
   const fileInputRepuestoViejoRef = useRef<HTMLInputElement>(null);
@@ -184,6 +192,9 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   // Helper para calcular fase según estado de la orden
   const calcularFasePorEstado = (estado?: string): number => {
     switch (estado) {
+      case 'CANCELADO':
+      case 'RECHAZADO':
+        return 0; // Estado terminal de cancelación/rechazo
       case 'COTIZADO':
       case 'EN_INSPECCION':
         return 2;
@@ -301,16 +312,49 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       }
 
       onSuccess(urlPublica);
+      // Limpiar archivo pendiente de reintento si fue exitoso
+      setFotoPendienteReintento(null);
+      setTipoFotoPendiente(null);
       setToastMensaje(['✓ Evidencia subida con éxito al bucket']);
       setTimeout(() => setToastMensaje(null), 3500);
     } catch (err: any) {
       console.error('Error al subir evidencia:', err);
-      const msg = err?.message || 'Error al subir la evidencia. Intenta nuevamente.';
+      // Resiliencia ante fallas de red: guardar archivo en memoria local para reintento
+      setFotoPendienteReintento(file);
+      const nombresLegibles: Record<string, string> = {
+        odometro_inicial: 'Odómetro Inicial',
+        repuesto_viejo: 'Repuesto Usado',
+        repuesto_nuevo: 'Repuesto Nuevo',
+        odometro_final: 'Odómetro Final'
+      };
+      setTipoFotoPendiente({
+        prefijo,
+        nombreLegible: nombresLegibles[prefijo] || 'Foto de evidencia'
+      });
+      const msg = err?.message || 'Error al subir la evidencia por falla de conexión. Puedes reintentar sin volver a tomar la foto.';
       setToastMensaje([msg]);
       setTimeout(() => setToastMensaje(null), 4500);
     } finally {
       setSubiendoFotoTipo(null);
     }
+  };
+
+  // Reintento de subida resiliente para el archivo guardado en memoria
+  const handleReintentarSubida = async () => {
+    if (!fotoPendienteReintento || !tipoFotoPendiente) return;
+    const archivo = fotoPendienteReintento;
+    const prefijo = tipoFotoPendiente.prefijo;
+
+    let callback = setFotoOdometroInicial;
+    if (prefijo === 'repuesto_viejo') callback = setFotoRepuestoViejo;
+    else if (prefijo === 'repuesto_nuevo') callback = setFotoRepuestoNuevo;
+    else if (prefijo === 'odometro_final') callback = setFotoOdometroFinal;
+
+    await handleSubirArchivo(archivo, prefijo, (url) => {
+      callback(url);
+      setFotoPendienteReintento(null);
+      setTipoFotoPendiente(null);
+    });
   };
 
   // Validaciones Fase 1
@@ -440,6 +484,9 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
     setFaseActual(4);
   };
 
+  // Identificador de servicio cancelado o rechazado
+  const esCanceladoORechazado = estadoOrden === 'CANCELADO' || estadoOrden === 'RECHAZADO' || faseActual === 0;
+
   return (
     <div className="max-w-md mx-auto min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col selection:bg-[#CCFF00] selection:text-[#0A1525] relative pb-24 font-sans">
       
@@ -480,60 +527,162 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
         </div>
 
         {/* ======================================================== */}
-        {/* STEPPER VISUAL DE 5 PASOS                                */}
+        {/* STEPPER VISUAL DE 5 PASOS (Oculto si se canceló)         */}
         {/* ======================================================== */}
-        <div className="mt-3 pt-3 border-t border-slate-100">
-          <div className="flex items-center justify-between relative">
-            
-            {/* Barra de progreso de fondo */}
-            <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-1 bg-slate-200 z-0" />
-            
-            {/* Barra de progreso activa */}
-            <motion.div
-              initial={false}
-              animate={{ width: `${((faseActual - 1) / (PASOS_WIZARD.length - 1)) * 100}%` }}
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-[#1E56B0] to-[#CCFF00] z-0 transition-all duration-500"
-            />
+        {!esCanceladoORechazado && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between relative">
+              
+              {/* Barra de progreso de fondo */}
+              <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-1 bg-slate-200 z-0" />
+              
+              {/* Barra de progreso activa */}
+              <motion.div
+                initial={false}
+                animate={{ width: `${((faseActual - 1) / (PASOS_WIZARD.length - 1)) * 100}%` }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-[#1E56B0] to-[#CCFF00] z-0 transition-all duration-500"
+              />
 
-            {PASOS_WIZARD.map((paso) => {
-              const isPast = faseActual > paso.id;
-              const isCurrent = faseActual === paso.id;
-              const IconComp = paso.icon;
+              {PASOS_WIZARD.map((paso) => {
+                const isPast = faseActual > paso.id;
+                const isCurrent = faseActual === paso.id;
+                const IconComp = paso.icon;
 
-              return (
-                <div key={paso.id} className="relative z-10 flex flex-col items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                      isCurrent
-                        ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-md font-black scale-110'
-                        : isPast
-                        ? 'bg-[#1E56B0] text-white'
-                        : 'bg-white text-slate-400 border border-slate-300'
-                    }`}
-                  >
-                    {isPast ? (
-                      <Check className="w-4 h-4 stroke-[3]" />
-                    ) : (
-                      <IconComp className="w-3.5 h-3.5 stroke-[2.5]" />
-                    )}
+                return (
+                  <div key={paso.id} className="relative z-10 flex flex-col items-center">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                        isCurrent
+                          ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-md font-black scale-110'
+                          : isPast
+                          ? 'bg-[#1E56B0] text-white'
+                          : 'bg-white text-slate-400 border border-slate-300'
+                      }`}
+                    >
+                      {isPast ? (
+                        <Check className="w-4 h-4 stroke-[3]" />
+                      ) : (
+                        <IconComp className="w-3.5 h-3.5 stroke-[2.5]" />
+                      )}
+                    </div>
+                    <span
+                      className={`text-[9px] font-black tracking-tight mt-1 transition-colors ${
+                        isCurrent ? 'text-[#0A1525]' : isPast ? 'text-[#1E56B0]' : 'text-slate-400'
+                      }`}
+                    >
+                      {paso.nombre}
+                    </span>
                   </div>
-                  <span
-                    className={`text-[9px] font-black tracking-tight mt-1 transition-colors ${
-                      isCurrent ? 'text-[#0A1525]' : isPast ? 'text-[#1E56B0]' : 'text-slate-400'
-                    }`}
-                  >
-                    {paso.nombre}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Contenido Dinámico de las Fases con AnimatePresence */}
       <main className="flex-1 p-4 space-y-4">
-        <AnimatePresence mode="wait">
+        {/* Cartel de advertencia: Resiliencia ante Fallas de Red en Subida */}
+        {fotoPendienteReintento && (
+          <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 shadow-md flex items-center justify-between gap-3 text-amber-950 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-xs font-black text-amber-950 truncate">
+                  Falla de conexión al subir {tipoFotoPendiente?.nombreLegible || 'evidencia'}
+                </p>
+                <p className="text-[11px] text-amber-900 font-medium truncate">
+                  Archivo guardado ({fotoPendienteReintento.name}). No necesitas tomar la foto de nuevo.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleReintentarSubida}
+                disabled={Boolean(subiendoFotoTipo)}
+                className="px-3 py-2 rounded-xl bg-[#0A1525] hover:bg-slate-800 text-[#CCFF00] text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {subiendoFotoTipo ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5" />
+                )}
+                <span>Reintentar Subida</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFotoPendienteReintento(null);
+                  setTipoFotoPendiente(null);
+                }}
+                className="p-1.5 rounded-lg hover:bg-amber-200/50 text-amber-900 transition-colors cursor-pointer"
+                title="Descartar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {esCanceladoORechazado ? (
+          <motion.div
+            key="cancelado"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 border-2 border-red-200 shadow-xl space-y-6 text-center my-6"
+          >
+            <div className="w-20 h-20 rounded-3xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center mx-auto shadow-sm">
+              <Ban className="w-10 h-10 stroke-[2.2]" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-red-700 bg-red-100 px-3 py-1 rounded-full border border-red-200">
+                Servicio {estadoOrden === 'RECHAZADO' ? 'Rechazado' : 'Cancelado'}
+              </span>
+              <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
+                Este servicio ha sido cancelado o rechazado por el cliente
+              </h2>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                No se requieren más acciones en este vehículo. Tu tiempo y diagnóstico inicial quedan registrados en el sistema central.
+              </p>
+            </div>
+
+            {/* Resumen de la Orden Cancelada */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-2 font-medium text-slate-700">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Vehículo:</span>
+                <span className="font-bold text-[#0A1525]">{vehiculo}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Placa:</span>
+                <span className="font-mono font-bold text-[#1E56B0]">{placa}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Cliente:</span>
+                <span className="font-bold text-[#0A1525]">{clienteNombre}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Estado de la Orden:</span>
+                <span className="font-mono font-black text-red-600 uppercase bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                  {estadoOrden}
+                </span>
+              </div>
+            </div>
+
+            <Link
+              href="/aliados/portal"
+              className="w-full h-14 rounded-2xl bg-[#0A1525] hover:bg-slate-800 text-white font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+              <span>Volver a mi Portal</span>
+            </Link>
+          </motion.div>
+        ) : (
+          <AnimatePresence mode="wait">
 
           {/* ======================================================== */}
           {/* FASE 1: LLEGADA Y DIAGNÓSTICO INICIAL                    */}
@@ -812,18 +961,20 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                   </div>
                 </div>
 
-                {/* Botón Simulador de Prueba Demo */}
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={simularPasoAprobacionDemo}
-                    className="w-full h-11 rounded-xl bg-slate-100 hover:bg-[#CCFF00] hover:text-[#0A1525] text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200 active:scale-95"
-                    title="Avanzar simulando que el cliente aprobó en despacho"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span>⚡ Simular Aprobación & Runner (Demo)</span>
-                  </button>
-                </div>
+                {/* Botón Simulador de Prueba Demo (Oculto en Producción) */}
+                {process.env.NODE_ENV !== 'production' && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={simularPasoAprobacionDemo}
+                      className="w-full h-11 rounded-xl bg-slate-100 hover:bg-[#CCFF00] hover:text-[#0A1525] text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200 active:scale-95"
+                      title="Avanzar simulando que el cliente aprobó en despacho"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      <span>⚡ Simular Aprobación & Runner (Demo)</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -892,15 +1043,17 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                   🔒 <strong>Aún bloqueado para montar:</strong> Espera la entrega física del repuesto para iniciar la instalación.
                 </div>
 
-                {/* Botón Simulador de Entrega */}
-                <button
-                  type="button"
-                  onClick={simularEntregaRunnerDemo}
-                  className="w-full h-11 rounded-xl bg-slate-100 hover:bg-[#CCFF00] hover:text-[#0A1525] text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200 active:scale-95"
-                >
-                  <PackageCheck className="w-4 h-4 text-emerald-600" />
-                  <span>⚡ Simular Entrega del Runner en Sitio (Demo)</span>
-                </button>
+                {/* Botón Simulador de Entrega (Oculto en Producción) */}
+                {process.env.NODE_ENV !== 'production' && (
+                  <button
+                    type="button"
+                    onClick={simularEntregaRunnerDemo}
+                    className="w-full h-11 rounded-xl bg-slate-100 hover:bg-[#CCFF00] hover:text-[#0A1525] text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200 active:scale-95"
+                  >
+                    <PackageCheck className="w-4 h-4 text-emerald-600" />
+                    <span>⚡ Simular Entrega del Runner en Sitio (Demo)</span>
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
@@ -1208,6 +1361,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           )}
 
         </AnimatePresence>
+        )}
       </main>
 
       {/* ======================================================== */}
