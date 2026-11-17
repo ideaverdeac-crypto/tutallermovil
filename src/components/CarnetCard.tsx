@@ -166,7 +166,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
             </div>
           </div>
 
-          {/* 5. Especialidades: Etiquetas elegantes bg-[#F1F5F9], text-[#0A1525], rounded-full px-4 py-1.5, text-sm, con check verde esmeralda */}
+          {/* 5. Especialidades: Etiquetas elegantes con círculo verde relleno y check blanco exacto a la referencia */}
           <div className="space-y-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
               Especialidades Certificadas
@@ -180,9 +180,11 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
               ].map((chip) => (
                 <span
                   key={chip}
-                  className="bg-[#F1F5F9] text-[#0A1525] text-sm font-semibold rounded-full px-4 py-1.5 flex items-center gap-1.5 shadow-2xs"
+                  className="bg-[#F1F5F9] text-[#0A1525] text-sm font-semibold rounded-full px-3.5 py-1.5 flex items-center gap-2 shadow-2xs"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="w-4 h-4 rounded-full bg-emerald-600 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                  </span>
                   <span>{chip}</span>
                 </span>
               ))}
