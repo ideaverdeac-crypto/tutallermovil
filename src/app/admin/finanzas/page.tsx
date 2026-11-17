@@ -44,6 +44,8 @@ import {
   X
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/client';
+import { obtenerBitacoraOperaciones, type RegistroBitacora } from '@/lib/audit';
 import OnboardingModal from '@/components/ui/onboarding-modal';
 import FloatingSupportButton from '@/components/ui/floating-support-button';
 
@@ -233,10 +235,67 @@ export default function FinanzasAdminPage() {
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
   const [mensajeOperadora, setMensajeOperadora] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
 
+  // Estado de Bitácora de Auditoría Conectada a Supabase Realtime
+  const [bitacoraItems, setBitacoraItems] = useState<any[]>(BITACORA_AUDITORIA);
+
+  useEffect(() => {
+    const cargarBitacora = async () => {
+      const logs = await obtenerBitacoraOperaciones();
+      if (logs.length > 0) {
+        const formateados = logs.map((log) => ({
+          id: log.id,
+          hora: new Date(log.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+          fecha: 'Hoy',
+          usuario: log.operadora_nombre || 'Operadora',
+          accion: log.orden_id ? `${log.accion} (Orden #${log.orden_id.slice(0, 8)})` : log.accion,
+          badge: log.badge || 'Despacho Táctico',
+          tipo: 'operadora'
+        }));
+        setBitacoraItems(formateados);
+      }
+    };
+    cargarBitacora();
+
+    // Supabase Realtime para Bitácora de Operaciones en Vivo
+    const supabase = createClient();
+    const canal = supabase
+      .channel('realtime_bitacora_admin')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'bitacora_operaciones' },
+        (payload) => {
+          if (payload.new) {
+            const nuevo = payload.new;
+            const itemNuevo = {
+              id: nuevo.id,
+              hora: new Date(nuevo.created_at || Date.now()).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+              fecha: 'En vivo',
+              usuario: nuevo.operadora_nombre || 'Operadora',
+              accion: nuevo.orden_id ? `${nuevo.accion} (Orden #${nuevo.orden_id.slice(0, 8)})` : nuevo.accion,
+              badge: 'Despacho Táctico',
+              tipo: 'operadora'
+            };
+            setBitacoraItems((prev) => [itemNuevo, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const estaRegistrado = typeof document !== 'undefined' && Boolean(
+        document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
+        document.cookie.match(/(^| )ttm_role=([^;]+)/)
+      );
       const visto = localStorage.getItem('onboarding_seen_admin');
-      if (!visto) {
+      if (estaRegistrado || visto) {
+        setMostrarBotonTutorial(false);
+      } else {
         setMostrarBotonTutorial(true);
       }
 
@@ -900,7 +959,7 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
 
               {/* Timeline Vertical */}
               <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E2E8F0]">
-                {BITACORA_AUDITORIA.map((item, idx) => (
+                {bitacoraItems.slice(0, 10).map((item, idx) => (
                   <div key={item.id} className="relative group">
                     
                     {/* Punto del Timeline */}

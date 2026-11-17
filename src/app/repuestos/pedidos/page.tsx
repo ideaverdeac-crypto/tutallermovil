@@ -256,8 +256,14 @@ export default function PedidosProveedorPage() {
   // Configuración de Supabase Realtime para escuchar cambios en la tabla 'ordenes'
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const estaRegistrado = typeof document !== 'undefined' && Boolean(
+        document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
+        document.cookie.match(/(^| )ttm_role=([^;]+)/)
+      );
       const visto = localStorage.getItem('onboarding_seen_repuestos');
-      if (!visto) {
+      if (estaRegistrado || visto) {
+        setMostrarBotonTutorial(false);
+      } else {
         setMostrarBotonTutorial(true);
       }
     }

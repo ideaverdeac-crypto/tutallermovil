@@ -104,8 +104,14 @@ export default function PortalAliadosPage() {
   // Obtener geolocalización al montar el componente
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const estaRegistrado = typeof document !== 'undefined' && Boolean(
+        document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
+        document.cookie.match(/(^| )ttm_role=([^;]+)/)
+      );
       const visto = localStorage.getItem('onboarding_seen_mecanico');
-      if (!visto) {
+      if (estaRegistrado || visto) {
+        setMostrarBotonTutorial(false);
+      } else {
         setMostrarBotonTutorial(true);
       }
     }

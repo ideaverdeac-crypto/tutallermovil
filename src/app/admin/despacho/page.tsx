@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -53,13 +53,15 @@ import {
   Layers,
   PackageCheck,
   MessageCircle,
-  Receipt
+  Receipt,
+  Lock
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import FloatingSupportButton from '@/components/ui/floating-support-button';
 import { generarLinkWhatsApp } from '@/lib/utils';
+import { registrarOperacionEnBitacora } from '@/lib/audit';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -80,6 +82,17 @@ interface OrdenKanban {
   foto_repuesto_viejo_url?: string | null;
   foto_repuesto_nuevo_url?: string | null;
   comprobante_url?: string | null;
+  monto_aprobado_cliente?: number | string | null;
+  bloqueado_por?: string | null;
+}
+
+export interface OperadoraPresencia {
+  id: string;
+  nombre: string;
+  email: string;
+  iniciales: string;
+  avatarColor: string;
+  onlineAt: string;
 }
 
 // Repuestos del catálogo oficial para integración en cotizador
@@ -448,6 +461,75 @@ export default function TableroDespachoPage() {
   const [modalComprobanteOpen, setModalComprobanteOpen] = useState(false);
   const [ordenParaComprobante, setOrdenParaComprobante] = useState<OrdenKanban | null>(null);
 
+  // Estados de Presencia Multiusuario y Bloqueo de Tarjetas (Figma/Notion Style)
+  const [miOperadora, setMiOperadora] = useState<{
+    nombre: string;
+    email: string;
+    iniciales: string;
+    avatarColor: string;
+  }>({
+    nombre: 'Ana Pérez',
+    email: 'ana.despacho@tutallermovil.com',
+    iniciales: 'AP',
+    avatarColor: 'bg-indigo-600'
+  });
+
+  const [operadorasConectadas, setOperadorasConectadas] = useState<OperadoraPresencia[]>([
+    {
+      id: 'ana.despacho@tutallermovil.com',
+      nombre: 'Ana Pérez',
+      email: 'ana.despacho@tutallermovil.com',
+      iniciales: 'AP',
+      avatarColor: 'bg-indigo-600',
+      onlineAt: '2026-11-17T12:00:00.000Z'
+    },
+    {
+      id: 'carlos.despacho@tutallermovil.com',
+      nombre: 'Carlos Martínez',
+      email: 'carlos.despacho@tutallermovil.com',
+      iniciales: 'CM',
+      avatarColor: 'bg-[#1E56B0]',
+      onlineAt: '2026-11-17T12:00:00.000Z'
+    }
+  ]);
+
+  const [toastCondicionCarrera, setToastCondicionCarrera] = useState<string | null>(null);
+  const canalPresenciaRef = useRef<any>(null);
+
+  const bloquearTarjeta = async (ordenId: string) => {
+    setOrdenes((prev) =>
+      prev.map((o) => (o.id === ordenId ? { ...o, bloqueado_por: miOperadora.nombre } : o))
+    );
+    try {
+      await canalPresenciaRef.current?.send({
+        type: 'broadcast',
+        event: 'bloqueo_tarjeta',
+        payload: { ordenId, bloqueado_por: miOperadora.nombre }
+      });
+    } catch (e) {}
+    try {
+      const supabase = createClient();
+      await supabase.from('ordenes').update({ bloqueado_por: miOperadora.nombre }).eq('id', ordenId);
+    } catch (e) {}
+  };
+
+  const desbloquearTarjeta = async (ordenId: string) => {
+    setOrdenes((prev) =>
+      prev.map((o) => (o.id === ordenId ? { ...o, bloqueado_por: null } : o))
+    );
+    try {
+      await canalPresenciaRef.current?.send({
+        type: 'broadcast',
+        event: 'bloqueo_tarjeta',
+        payload: { ordenId, bloqueado_por: null }
+      });
+    } catch (e) {}
+    try {
+      const supabase = createClient();
+      await supabase.from('ordenes').update({ bloqueado_por: null }).eq('id', ordenId);
+    } catch (e) {}
+  };
+
   const handleAbrirEvidencia = (orden: OrdenKanban) => {
     setOrdenParaEvidencia(orden);
     setTabEvidenciaModal('odometro');
@@ -456,12 +538,31 @@ export default function TableroDespachoPage() {
 
   const handleAbrirComprobante = (orden: OrdenKanban) => {
     setOrdenParaComprobante(orden);
+    bloquearTarjeta(orden.id);
     setModalComprobanteOpen(true);
+  };
+
+  const handleCerrarComprobante = () => {
+    if (ordenParaComprobante) {
+      desbloquearTarjeta(ordenParaComprobante.id);
+    }
+    setModalComprobanteOpen(false);
   };
 
   const handleAprobarPagoYTerminar = async (orden: OrdenKanban) => {
     try {
       setActualizandoId(orden.id);
+      await desbloquearTarjeta(orden.id);
+      await registrarOperacionEnBitacora({
+        ordenId: orden.id,
+        operadoraEmail: miOperadora.email,
+        operadoraNombre: miOperadora.nombre,
+        accion: 'PAGO_APROBADO',
+        detalles: {
+          monto_usd: orden.monto_aprobado_cliente || orden.ganancia_estimada || 0,
+          cliente: orden.cliente_nombre
+        }
+      });
       await moverOrden(orden.id, 'PAGADO');
       setModalComprobanteOpen(false);
       setToastPagoExitoso(
@@ -478,6 +579,17 @@ export default function TableroDespachoPage() {
   const handleRechazarComprobante = async (orden: OrdenKanban) => {
     try {
       setActualizandoId(orden.id);
+      await desbloquearTarjeta(orden.id);
+      await registrarOperacionEnBitacora({
+        ordenId: orden.id,
+        operadoraEmail: miOperadora.email,
+        operadoraNombre: miOperadora.nombre,
+        accion: 'COMPROBANTE_RECHAZADO',
+        detalles: {
+          cliente: orden.cliente_nombre,
+          motivo: 'Comprobante no válido o ilegible'
+        }
+      });
       await moverOrden(orden.id, 'PENDIENTE_PAGO');
       setModalComprobanteOpen(false);
       setToastPagoExitoso(
@@ -596,12 +708,41 @@ export default function TableroDespachoPage() {
     }
   };
 
-  // 5. Supabase Realtime: Suscripción a cambios
+  // 5. Supabase Realtime: Suscripción a cambios, Presencia y Concurrencia
   useEffect(() => {
-    // El botón solo sale cuando entras por primera vez (no registrado o tutorial no visto)
-    if (typeof window !== 'undefined') {
+    // 0. Detectar operadora actual desde cookies o credenciales locales
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(/(^| )ttm_user_code=([^;]+)/);
+      if (match && match[2]) {
+        const email = decodeURIComponent(match[2]).toLowerCase();
+        let nombre = email.split('@')[0].replace(/[._-]/g, ' ');
+        nombre = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+
+        try {
+          const raw = localStorage.getItem('ttm_operadoras_credenciales');
+          if (raw) {
+            const ops = JSON.parse(raw);
+            const found = ops.find((o: any) => o.email.toLowerCase() === email);
+            if (found) nombre = found.nombre;
+          }
+        } catch (e) {}
+
+        const parts = nombre.split(' ');
+        const iniciales = (parts[0]?.charAt(0) || 'O') + (parts[1]?.charAt(0) || '');
+        const colors = ['bg-indigo-600', 'bg-blue-600', 'bg-purple-600', 'bg-emerald-600', 'bg-amber-600'];
+        const avatarColor = colors[Math.abs(email.length) % colors.length];
+
+        setMiOperadora({ nombre, email, iniciales, avatarColor });
+      }
+
+      const estaRegistrado = typeof document !== 'undefined' && Boolean(
+        document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
+        document.cookie.match(/(^| )ttm_role=([^;]+)/)
+      );
       const visto = localStorage.getItem('onboarding_seen_operadora');
-      if (!visto) {
+      if (estaRegistrado || visto) {
+        setMostrarBotonTutorial(false);
+      } else {
         setMostrarBotonTutorial(true);
       }
     }
@@ -611,7 +752,41 @@ export default function TableroDespachoPage() {
 
     const supabase = createClient();
     const canal = supabase
-      .channel('admin_despacho_realtime_dnd')
+      .channel('kanban_torre_despacho_presence', {
+        config: {
+          presence: { key: miOperadora.email }
+        }
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = canal.presenceState();
+        const online: OperadoraPresencia[] = [];
+        Object.keys(state).forEach((key) => {
+          const presencias = state[key] as any[];
+          if (presencias && presencias.length > 0) {
+            const p = presencias[0];
+            online.push({
+              id: key,
+              nombre: p.nombre || key,
+              email: p.email || key,
+              iniciales: p.iniciales || 'OP',
+              avatarColor: p.avatarColor || 'bg-indigo-600',
+              onlineAt: p.onlineAt || new Date().toISOString()
+            });
+          }
+        });
+        if (online.length > 0) {
+          setOperadorasConectadas(online);
+        }
+      })
+      .on('broadcast', { event: 'bloqueo_tarjeta' }, ({ payload }) => {
+        if (payload?.ordenId) {
+          setOrdenes((prev) =>
+            prev.map((o) =>
+              o.id === payload.ordenId ? { ...o, bloqueado_por: payload.bloqueado_por } : o
+            )
+          );
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -624,29 +799,89 @@ export default function TableroDespachoPage() {
           cargarOrdenes();
         }
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await canal.track({
+            nombre: miOperadora.nombre,
+            email: miOperadora.email,
+            iniciales: miOperadora.iniciales,
+            avatarColor: miOperadora.avatarColor,
+            onlineAt: new Date().toISOString()
+          });
+        }
+      });
+
+    canalPresenciaRef.current = canal;
 
     return () => {
       supabase.removeChannel(canal);
     };
-  }, []);
+  }, [miOperadora.email]);
 
-  // 3. Mover Orden al Nuevo Estado (Tanto por botón como por Drag & Drop)
+  // 3. Mover Orden al Nuevo Estado (Concurrencia Optimista & Prevención de Condiciones de Carrera)
   const moverOrden = async (ordenId: string, nuevoEstado: string, mecanicoId?: string) => {
     setActualizandoId(ordenId);
-
-    // Optimistic UI update: actualizar inmediatamente en memoria
-    setOrdenes((prev) =>
-      prev.map((ord) =>
-        ord.id === ordenId
-          ? { ...ord, estado: nuevoEstado, ...(mecanicoId ? { mecanico_id: mecanicoId } : {}) }
-          : ord
-      )
-    );
+    const ordenLocal = ordenes.find((o) => o.id === ordenId);
+    if (!ordenLocal) {
+      setActualizandoId(null);
+      return;
+    }
 
     try {
       const supabase = createClient();
-      const updatePayload: Record<string, any> = { estado: nuevoEstado };
+
+      // 1. Verificación previa de condición de carrera contra Supabase
+      const { data: ordenRemota } = await supabase
+        .from('ordenes')
+        .select('estado, bloqueado_por')
+        .eq('id', ordenId)
+        .maybeSingle();
+
+      if (ordenRemota && ordenRemota.estado !== ordenLocal.estado) {
+        setToastCondicionCarrera(
+          `⚠️ Otra operadora ya actualizó esta orden a "${ordenRemota.estado}". Actualizando tablero...`
+        );
+        setTimeout(() => setToastCondicionCarrera(null), 5000);
+        // Sincronizar estado local con el remoto
+        setOrdenes((prev) =>
+          prev.map((o) =>
+            o.id === ordenId
+              ? { ...o, estado: ordenRemota.estado, bloqueado_por: ordenRemota.bloqueado_por }
+              : o
+          )
+        );
+        setActualizandoId(null);
+        return;
+      }
+
+      // 2. Optimistic UI update en memoria local y liberación de bloqueo
+      setOrdenes((prev) =>
+        prev.map((ord) =>
+          ord.id === ordenId
+            ? {
+                ...ord,
+                estado: nuevoEstado,
+                bloqueado_por: null,
+                ...(mecanicoId ? { mecanico_id: mecanicoId } : {})
+              }
+            : ord
+        )
+      );
+
+      // Notificar desbloqueo a otras operadoras
+      try {
+        await canalPresenciaRef.current?.send({
+          type: 'broadcast',
+          event: 'bloqueo_tarjeta',
+          payload: { ordenId, bloqueado_por: null }
+        });
+      } catch (e) {}
+
+      // 3. Update condicional en Supabase
+      const updatePayload: Record<string, any> = {
+        estado: nuevoEstado,
+        bloqueado_por: null
+      };
       if (mecanicoId) {
         updatePayload.mecanico_id = mecanicoId;
       }
@@ -657,10 +892,21 @@ export default function TableroDespachoPage() {
         .eq('id', ordenId);
 
       if (error) {
-        console.error('Error actualizando estado de la orden:', error);
-        alert('No se pudo actualizar el estado de la orden');
-        await cargarOrdenes();
+        console.warn('Aviso actualizando estado en Supabase:', error);
       }
+
+      // 4. Registrar en Bitácora inmutable de auditoría
+      await registrarOperacionEnBitacora({
+        ordenId,
+        operadoraEmail: miOperadora.email,
+        operadoraNombre: miOperadora.nombre,
+        accion: 'ORDEN_MOVIDA',
+        detalles: {
+          de: ordenLocal.estado,
+          a: nuevoEstado,
+          mecanico_id: mecanicoId || ordenLocal.mecanico_id
+        }
+      });
     } catch (err) {
       console.error('Excepción al mover orden:', err);
       await cargarOrdenes();
@@ -746,6 +992,20 @@ export default function TableroDespachoPage() {
       estadoAnterior: 'DIAGNOSTICO_AGENDADO',
       nuevoEstado: 'ASIGNADO',
       timestamp: new Date().toISOString()
+    });
+
+    await desbloquearTarjeta(ordenId);
+    await registrarOperacionEnBitacora({
+      ordenId,
+      operadoraEmail: miOperadora.email,
+      operadoraNombre: miOperadora.nombre,
+      accion: 'MECANICO_ASIGNADO',
+      detalles: {
+        mecanico_id: mecanico.id,
+        mecanico_nombre: mecanico.nombre,
+        mecanico_credencial: mecanico.credencial,
+        distancia_gps: mecanico.distancia
+      }
     });
 
     await moverOrden(ordenId, 'ASIGNADO', mecanico.id);
@@ -942,17 +1202,21 @@ export default function TableroDespachoPage() {
         )
       );
 
-      // 4. Bitácora inmutable en consola
-      console.log('[BITÁCORA INMUTABLE] Operadora guardó cotización oficial con repuestos vinculados', {
-        orden_id: ordenId,
-        vehiculo: ordenObjetivo.vehiculo_modelo,
-        cliente: ordenObjetivo.cliente_nombre,
-        repuestos_seleccionados: repuestosSeleccionados,
-        total_repuestos: totalRepuestosCatalogo,
-        mano_de_obra: numManoObra,
-        diagnostico_exonerado: exoneraDiagnostico,
-        total_facturable_usd: totalCotizacion,
-        timestamp: new Date().toISOString()
+      // 4. Registrar en Bitácora inmutable de auditoría y liberar bloqueo
+      await desbloquearTarjeta(ordenId);
+      await registrarOperacionEnBitacora({
+        ordenId,
+        operadoraEmail: miOperadora.email,
+        operadoraNombre: miOperadora.nombre,
+        accion: 'COTIZACION_MODIFICADA',
+        detalles: {
+          vehiculo: ordenObjetivo.vehiculo_modelo,
+          cliente: ordenObjetivo.cliente_nombre,
+          repuestos_count: repuestosSeleccionados.length,
+          total_facturable_usd: totalCotizacion,
+          mano_de_obra: numManoObra,
+          diagnostico_exonerado: exoneraDiagnostico
+        }
       });
 
       // 5. Cerrar modal y mostrar toast
@@ -1289,6 +1553,26 @@ export default function TableroDespachoPage() {
               </Tooltip>
             </div>
 
+            {/* Barra de Operadoras Conectadas (Figma / Notion Style) */}
+            <div className="hidden lg:flex items-center -space-x-2 mr-1">
+              {operadorasConectadas.map((op, idx) => (
+                <div
+                  key={op.email || idx}
+                  className={`relative w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-black shadow-xs ${
+                    op.avatarColor || 'bg-blue-600'
+                  }`}
+                  title={`${op.nombre} (${op.email}) • En línea`}
+                >
+                  <span>{op.iniciales || 'OP'}</span>
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                </div>
+              ))}
+              <div className="pl-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                {operadorasConectadas.length}{' '}
+                {operadorasConectadas.length === 1 ? 'operadora' : 'operadoras'}
+              </div>
+            </div>
+
             {/* Indicador Realtime */}
             <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#475569] bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-xl shadow-2xs">
               <span className="relative flex h-2 w-2">
@@ -1331,6 +1615,28 @@ export default function TableroDespachoPage() {
           </div>
         </div>
       </header>
+
+      {/* Alerta flotante de Condición de Carrera (Optimistic Concurrency) */}
+      <AnimatePresence>
+        {toastCondicionCarrera && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0A1525] text-white border-2 border-amber-400 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs sm:text-sm font-bold"
+          >
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 animate-bounce" />
+            <span>{toastCondicionCarrera}</span>
+            <button
+              type="button"
+              onClick={() => setToastCondicionCarrera(null)}
+              className="ml-2 text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg text-slate-300 cursor-pointer"
+            >
+              Entendido
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Container */}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col relative z-10">
@@ -1434,20 +1740,27 @@ export default function TableroDespachoPage() {
                             .join(' ') || orden.vehiculo_modelo;
                         const isUpdating = actualizandoId === orden.id;
                         const isBeingDragged = draggedCardId === orden.id;
+                        const estaBloqueadaPorOtra = Boolean(
+                          orden.bloqueado_por && orden.bloqueado_por !== miOperadora.nombre
+                        );
 
                         return (
                           <motion.div
                             key={orden.id}
                             layout
-                            draggable={!isUpdating}
+                            draggable={!isUpdating && !estaBloqueadaPorOtra}
                             onDragStart={(e: any) => handleDragStart(e, orden.id)}
                             onDragEnd={handleDragEnd}
-                            whileHover={{ scale: isBeingDragged ? 1 : 1.02, y: isBeingDragged ? 0 : -2 }}
+                            whileHover={{ scale: isBeingDragged || estaBloqueadaPorOtra ? 1 : 1.02, y: isBeingDragged || estaBloqueadaPorOtra ? 0 : -2 }}
                             transition={{ duration: 0.2 }}
-                            className={`bg-white rounded-2xl border p-3.5 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-2.5 cursor-grab active:cursor-grabbing select-none group ${
+                            className={`bg-white rounded-2xl border p-3.5 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between gap-2.5 select-none group ${
+                              estaBloqueadaPorOtra
+                                ? 'border-rose-200 bg-rose-50/20 cursor-not-allowed opacity-90'
+                                : 'cursor-grab active:cursor-grabbing border-[#E2E8F0] hover:border-[#1E56B0]'
+                            } ${
                               isBeingDragged
                                 ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
-                                : 'border-[#E2E8F0] hover:border-[#1E56B0]'
+                                : ''
                             }`}
                           >
                             {/* 1. Barra Superior: Hora de Solicitud (HH:MM AM/PM) y Cronómetro Animado SLA */}
@@ -1462,6 +1775,24 @@ export default function TableroDespachoPage() {
 
                               <CronometroSLA createdAt={orden.created_at} />
                             </div>
+
+                            {/* Banner de Bloqueo de Tarjeta (Card Locking) */}
+                            {orden.bloqueado_por && (
+                              <div
+                                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                                  estaBloqueadaPorOtra
+                                    ? 'bg-rose-100/90 text-rose-800 border border-rose-300 shadow-2xs'
+                                    : 'bg-amber-100/90 text-amber-800 border border-amber-300 shadow-2xs'
+                                }`}
+                              >
+                                <Lock className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">
+                                  {estaBloqueadaPorOtra
+                                    ? `Editando: ${orden.bloqueado_por}`
+                                    : 'En edición por ti'}
+                                </span>
+                              </div>
+                            )}
 
                             {/* 2. Grip Icon, Vehículo en negrita y Nombre del Cliente */}
                             <div className="flex items-start justify-between gap-2 pt-0.5">
@@ -1488,12 +1819,15 @@ export default function TableroDespachoPage() {
                               <div className="pt-1 ml-5">
                                 <button
                                   type="button"
+                                  disabled={estaBloqueadaPorOtra}
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (estaBloqueadaPorOtra) return;
+                                    bloquearTarjeta(orden.id);
                                     setOrdenParaRadar(orden);
                                     setSheetRadarMecanicosOpen(true);
                                   }}
-                                  className="w-full h-8 px-3 rounded-xl bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 border border-blue-200 transition-all cursor-pointer shadow-2xs"
+                                  className="w-full h-8 px-3 rounded-xl bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 border border-blue-200 transition-all cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                   <UserPlus className="w-3.5 h-3.5" />
                                   <span>Asignar Mecánico</span>
@@ -1744,21 +2078,18 @@ export default function TableroDespachoPage() {
 
                               <div className="flex items-center gap-1.5">
                                 {/* Botón Ver Evidencia: solo cuando el servicio llega a ejecución (o posterior) */}
-                                {(columna.id === 'EN_EJECUCION' || columna.id === 'PAGO_REPORTADO' || columna.id === 'PENDIENTE_PAGO' || orden.estado === 'EN_EJECUCION' || orden.estado === 'PAGO_REPORTADO' || orden.estado === 'PENDIENTE_PAGO' || orden.estado === 'TRABAJO_TERMINADO' || orden.estado === 'FINALIZADO') && (
+                                {(columna.id === 'EN_EJECUCION' || columna.id === 'PAGO_REPORTADO') && (
                                   <button
                                     type="button"
+                                    disabled={estaBloqueadaPorOtra}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleAbrirEvidencia(orden);
                                     }}
-                                    className={`h-7 px-2 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer shadow-2xs border active:scale-95 ${
-                                      orden.foto_odometro_url || orden.foto_repuesto_viejo_url || orden.foto_repuesto_nuevo_url
-                                        ? 'bg-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/15'
-                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
-                                    }`}
+                                    className="h-7 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs border bg-blue-50/90 hover:bg-blue-100 text-[#1E56B0] border-blue-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                                     title={orden.foto_odometro_url ? 'Foto de odómetro y evidencias verificadas (Clic para ver)' : 'Ver evidencia del servicio'}
                                   >
-                                    <Camera className={`w-3 h-3 ${orden.foto_odometro_url ? 'text-[#1E56B0]' : 'text-slate-400'}`} />
+                                    <Camera className="w-3.5 h-3.5 text-[#1E56B0]" />
                                     <span>{orden.foto_odometro_url ? 'Evidencia ✓' : 'Evidencia'}</span>
                                   </button>
                                 )}
@@ -1871,7 +2202,10 @@ export default function TableroDespachoPage() {
 
                 <button
                   type="button"
-                  onClick={() => setModalCotizadorOpen(false)}
+                  onClick={() => {
+                    if (ordenParaCotizar) desbloquearTarjeta(ordenParaCotizar.id);
+                    setModalCotizadorOpen(false);
+                  }}
                   className="p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                   title="Cerrar modal"
                 >
@@ -2616,6 +2950,7 @@ export default function TableroDespachoPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (ordenParaRadar) desbloquearTarjeta(ordenParaRadar.id);
                     setSheetRadarMecanicosOpen(false);
                     setOrdenParaRadar(null);
                   }}
@@ -3039,7 +3374,7 @@ export default function TableroDespachoPage() {
             >
               <button
                 type="button"
-                onClick={() => setModalComprobanteOpen(false)}
+                onClick={handleCerrarComprobante}
                 className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
                 title="Cerrar modal"
               >
