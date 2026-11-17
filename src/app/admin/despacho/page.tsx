@@ -52,7 +52,8 @@ const MECANICOS_DISPONIBLES = [
     credencial: '#TTM-0842',
     especialidad: 'Especialista Senior (OBD2 & Inyección)',
     unidad: 'Moto Yamaha FZ • AB123CD',
-    rating: '4.9 ★'
+    rating: '4.9 ★',
+    foto: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80'
   },
   {
     id: '223e4567-e89b-12d3-a456-426614174001',
@@ -60,7 +61,8 @@ const MECANICOS_DISPONIBLES = [
     credencial: '#TTM-0912',
     especialidad: 'Mecánica Ligera & Frenos',
     unidad: 'Moto Suzuki GN • AC456DF',
-    rating: '4.95 ★'
+    rating: '4.95 ★',
+    foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
   },
   {
     id: '323e4567-e89b-12d3-a456-426614174002',
@@ -68,7 +70,8 @@ const MECANICOS_DISPONIBLES = [
     credencial: '#TTM-0341',
     especialidad: 'Electricidad Automotriz & Baterías',
     unidad: 'Moto Bera SBR • AE789GH',
-    rating: '4.8 ★'
+    rating: '4.8 ★',
+    foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
   }
 ];
 
@@ -513,8 +516,12 @@ export default function TableroDespachoPage() {
                             {/* Datos complementarios según columna */}
                             {columna.id === 'ASIGNADO' && (
                               <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs ml-5">
-                                <span className="font-bold text-[#0A1525] flex items-center gap-1.5">
-                                  <UserCheck className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                <span className="font-bold text-[#0A1525] flex items-center gap-2">
+                                  <img
+                                    src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=150&q=80"
+                                    alt="Carlos Mendoza"
+                                    className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#CBD5E1]"
+                                  />
                                   Carlos Mendoza
                                 </span>
                                 <span className="font-mono text-[10px] text-[#475569] font-semibold">
@@ -841,16 +848,23 @@ export default function TableroDespachoPage() {
                     key={mec.id}
                     className="p-3.5 rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] bg-[#F8FAFC] hover:bg-blue-50/40 transition-all flex items-center justify-between gap-3 shadow-2xs"
                   >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-[#0A1525]">{mec.nombre}</span>
-                        <span className="font-mono text-[10px] font-black text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                          {mec.credencial}
-                        </span>
-                        <span className="text-[11px] font-bold text-amber-600">{mec.rating}</span>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={mec.foto}
+                        alt={mec.nombre}
+                        className="w-11 h-11 rounded-xl object-cover border border-[#CBD5E1] shadow-2xs shrink-0"
+                      />
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-[#0A1525]">{mec.nombre}</span>
+                          <span className="font-mono text-[10px] font-black text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                            {mec.credencial}
+                          </span>
+                          <span className="text-[11px] font-bold text-amber-600">{mec.rating}</span>
+                        </div>
+                        <p className="text-xs text-[#475569] font-medium">{mec.especialidad}</p>
+                        <p className="text-[11px] text-slate-400">{mec.unidad}</p>
                       </div>
-                      <p className="text-xs text-[#475569] font-medium">{mec.especialidad}</p>
-                      <p className="text-[11px] text-slate-400">{mec.unidad}</p>
                     </div>
 
                     <button

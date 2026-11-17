@@ -313,9 +313,11 @@ export default function PortalAliadosPage() {
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="relative">
                 <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#0A1525] border-2 border-[#CBD5E1] p-1 overflow-hidden flex items-center justify-center text-white shadow-md">
-                  <div className="w-full h-full rounded-xl bg-slate-800 flex items-center justify-center font-bold text-2xl tracking-tighter text-[#CCFF00]">
-                    CM
-                  </div>
+                  <img
+                    src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80"
+                    alt="Carlos Mendoza - Especialista TuTallerMóvil"
+                    className="w-full h-full rounded-xl object-cover object-center"
+                  />
                 </div>
                 {/* Indicador de estado en el avatar */}
                 <span
