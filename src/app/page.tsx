@@ -17,6 +17,7 @@ import {
   ArrowRight,
   Sparkles,
   Car,
+  Settings,
   X
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
@@ -145,15 +146,14 @@ export default function Home() {
               </Link>
             )}
 
-            {/* Acceso Staff / Aliados */}
+            {/* Acceso Staff / Aliados (Disimulado con icono de configuración sutil) */}
             <Link
               href="/login"
-              className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-black bg-[#0A1525] hover:bg-slate-800 text-white rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-xs border border-white/10 active:scale-95"
-              title="Acceso exclusivo para Staff Operativo, Aliados y Despacho"
+              className="w-10 h-10 rounded-xl text-slate-400 hover:text-[#0A1525] hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer border border-transparent hover:border-slate-200 active:scale-95 group/staff"
+              title="Acceso Staff & Aliados"
+              aria-label="Acceso Staff & Aliados"
             >
-              <UserCircle className="w-4 h-4 text-[#CCFF00] shrink-0" />
-              <span className="hidden sm:inline">Acceso Staff</span>
-              <span className="sm:hidden">Staff</span>
+              <Settings className="w-4 h-4 text-slate-400 group-hover/staff:text-[#0A1525] transition-transform duration-300 group-hover/staff:rotate-45" />
             </Link>
           </div>
         </div>
