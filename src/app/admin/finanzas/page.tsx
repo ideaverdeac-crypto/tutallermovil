@@ -30,8 +30,10 @@ import {
   FileText,
   BadgeCheck,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
+import { cerrarSesion } from '@/lib/auth';
 
 interface LiquidacionMecanico {
   id: string;
@@ -275,7 +277,17 @@ export default function FinanzasAdminPage() {
                 className="h-10 px-4 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black tracking-wide flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5 text-[#CCFF00]" />
-                <span>Descargar Balance</span>
+                <span className="hidden lg:inline">Descargar Balance</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={cerrarSesion}
+                className="h-10 px-3.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Cerrar sesión"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                <span className="hidden sm:inline">Salir</span>
               </button>
             </div>
 

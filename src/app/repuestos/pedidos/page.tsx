@@ -26,8 +26,10 @@ import {
   Clock,
   ChevronRight,
   ShieldCheck,
-  Hash
+  Hash,
+  LogOut
 } from 'lucide-react';
+import { cerrarSesion } from '@/lib/auth';
 
 interface RepuestoItem {
   id?: string;
@@ -430,6 +432,16 @@ export default function PedidosProveedorPage() {
                 <Bike className="w-4 h-4 text-[#CCFF00]" />
                 <span className="hidden sm:inline">Centro de Despacho</span>
               </Link>
+
+              <button
+                type="button"
+                onClick={cerrarSesion}
+                className="h-10 px-3.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Cerrar sesión"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                <span className="hidden sm:inline">Salir</span>
+              </button>
             </div>
           </div>
         </div>

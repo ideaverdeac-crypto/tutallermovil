@@ -21,8 +21,10 @@ import {
   ArrowRight,
   ArrowDown,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
+import { cerrarSesion } from '@/lib/auth';
 
 interface OrdenRunner {
   id: string;
@@ -270,15 +272,27 @@ export default function RunnerPortalPage() {
                     </div>
                   </div>
 
-                    {/* Recuadro Saldo Hoy: $12.50 */}
-                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-3.5 py-2 text-right shadow-2xs">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
-                        Saldo hoy:
-                      </span>
+                    <div className="flex items-center gap-2">
+                      {/* Recuadro Saldo Hoy: $12.50 */}
+                      <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-3.5 py-2 text-right shadow-2xs">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#475569] block">
+                          Saldo hoy:
+                        </span>
                         <p className="text-base font-black text-[#1E56B0] font-mono tracking-tight leading-none pt-0.5">
                           ${saldoHoy.toFixed(2)}{' '}
                           <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
                         </p>
+                      </div>
+
+                      {/* Botón Cerrar Sesión */}
+                      <button
+                        type="button"
+                        onClick={cerrarSesion}
+                        className="p-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors shadow-2xs cursor-pointer shrink-0"
+                        title="Cerrar sesión"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-600" />
+                      </button>
                     </div>
                   </div>
 

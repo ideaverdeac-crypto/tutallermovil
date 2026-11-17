@@ -100,13 +100,13 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Acceso Staff / Aliados */}
+          {/* Acceso Staff / Aliados / Clientes */}
           <Link
-            href="/aliados/portal"
-            className="h-12 px-5 text-base font-semibold border border-[#CBD5E1] text-[#0A1525] hover:bg-[#F8FAFC] hover:border-[#1E56B0] hover:text-[#1E56B0] rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+            href="/login"
+            className="h-11 px-4 sm:px-5 text-xs sm:text-sm font-black bg-[#0A1525] hover:bg-[#1E56B0] text-white rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-xs border border-white/10"
           >
-            <UserCircle className="w-5 h-5 text-[#1E56B0]" />
-            <span>Acceso Staff/Aliados</span>
+            <UserCircle className="w-4 h-4 text-[#CCFF00]" />
+            <span>Acceso al Sistema</span>
           </Link>
         </div>
       </header>

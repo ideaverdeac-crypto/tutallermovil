@@ -26,8 +26,10 @@ import {
   Loader2,
   RefreshCw,
   Inbox,
-  LocateFixed
+  LocateFixed,
+  LogOut
 } from 'lucide-react';
+import { cerrarSesion } from '@/lib/auth';
 
 type EstadoMecanico = 'DISPONIBLE' | 'EN_SERVICIO' | 'INACTIVO';
 
@@ -298,6 +300,16 @@ export default function PortalAliadosPage() {
             >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#CCFF00] ring-2 ring-white"></span>
+            </button>
+
+            <button
+              type="button"
+              onClick={cerrarSesion}
+              className="p-2 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4 text-rose-600" />
+              <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
