@@ -119,7 +119,7 @@ export default function PortalAliadosPage() {
     }
   };
 
-  // 2. Cargar órdenes iniciales y activar Supabase Realtime
+  // 2. Cargar órdenes iniciales y activar Supabase Realtime (INSERT y UPDATE)
   useEffect(() => {
     cargarOrdenes();
 
@@ -129,18 +129,50 @@ export default function PortalAliadosPage() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'ordenes'
         },
         (payload) => {
-          console.log('⚡ Cambio en tiempo real detectado en ordenes:', payload);
-          // Recargar órdenes disponibles sin pantalla completa de carga
-          cargarOrdenes(false);
+          console.log('Nueva orden recibida en tiempo real:', payload);
+          const nuevaOrden = payload.new as OrdenSupabase;
+          if (nuevaOrden && nuevaOrden.estado === 'DISPONIBLE') {
+            setOrdenes((prev) => {
+              // Evitar duplicados si ya está en la lista
+              if (prev.some((o) => o.id === nuevaOrden.id)) return prev;
+              return [nuevaOrden, ...prev];
+            });
+          }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Estado de Supabase Realtime:', status);
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'ordenes'
+        },
+        (payload) => {
+          console.log('Orden actualizada en tiempo real:', payload);
+          const ordenActualizada = payload.new as OrdenSupabase;
+          if (ordenActualizada) {
+            setOrdenes((prev) => {
+              // Si ya no está DISPONIBLE (ej. otro mecánico la aceptó), se quita del feed
+              if (ordenActualizada.estado !== 'DISPONIBLE') {
+                return prev.filter((o) => o.id !== ordenActualizada.id);
+              }
+              // Si sigue DISPONIBLE, se actualiza o se inserta
+              const exists = prev.some((o) => o.id === ordenActualizada.id);
+              if (exists) {
+                return prev.map((o) => (o.id === ordenActualizada.id ? ordenActualizada : o));
+              }
+              return [ordenActualizada, ...prev];
+            });
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('📡 Estado de suscripción Supabase Realtime:', status, err || '');
       });
 
     return () => {
