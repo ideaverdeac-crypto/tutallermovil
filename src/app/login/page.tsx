@@ -98,6 +98,41 @@ function LoginForm() {
         return;
       }
 
+      // 0. Verificar si es una credencial de operadora creada por el dueño en su panel
+      if (typeof window !== 'undefined') {
+        try {
+          const rawOps = localStorage.getItem('ttm_operadoras_credenciales');
+          if (rawOps) {
+            const listaOps = JSON.parse(rawOps);
+            const opEncontrada = listaOps.find((op: any) => op.email && op.email.toLowerCase() === email);
+            if (opEncontrada) {
+              if (opEncontrada.estado === 'SUSPENDIDA') {
+                setErrorMensaje('⚠️ Tu cuenta de operadora ha sido suspendida por la Dirección de TuTallerMóvil.');
+                setCargando(false);
+                return;
+              }
+              if (opEncontrada.passwordTemporal && opEncontrada.passwordTemporal !== password) {
+                setErrorMensaje('Contraseña incorrecta. Contacta al Administrador de TuTallerMóvil.');
+                setCargando(false);
+                return;
+              }
+
+              // Autenticación de Operadora creada por el dueño exitosa
+              document.cookie = `ttm_role=OPERADORA; path=/; max-age=86400; SameSite=Lax;`;
+              document.cookie = `ttm_user_code=${email}; path=/; max-age=86400; SameSite=Lax;`;
+
+              setExitoMensaje(`¡Bienvenida ${opEncontrada.nombre}! Accediendo al Centro de Despacho...`);
+              setTimeout(() => {
+                redirigirPorRol('OPERADORA', redirectParam);
+              }, 500);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('[LOGIN] Error verificando operadoras locales:', e);
+        }
+      }
+
       const supabase = createClient();
       let rolDetectado: string = 'OPERADORA';
 
