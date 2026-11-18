@@ -176,7 +176,7 @@ export default function PortalAliadosPage() {
       if (user) {
         setMecanicoId(user.id);
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     if (typeof window !== 'undefined') {
       // Cargar foto guardada
@@ -215,7 +215,7 @@ export default function PortalAliadosPage() {
           if (parsed.especialidad) setEspecialidadMecanico(parsed.especialidad);
           if (parsed.telefono) setTelefonoMecanico(parsed.telefono);
           if (parsed.zona) setZonaCobertura(parsed.zona);
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const estaRegistrado = typeof document !== 'undefined' && Boolean(
@@ -385,8 +385,8 @@ export default function PortalAliadosPage() {
   const ordenesAsignadas = useMemo(() => {
     return ordenesConDistancia.filter((o) =>
       ((mecanicoId && o.mecanico_id === mecanicoId) ||
-       (codigoAliado && o.mecanico_id === codigoAliado) ||
-      ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)) &&
+        (codigoAliado && o.mecanico_id === codigoAliado) ||
+        ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)) &&
       !['FINALIZADO', 'CANCELADO'].includes(o.estado)
     );
   }, [ordenesConDistancia, mecanicoId, codigoAliado]);
@@ -708,11 +708,10 @@ export default function PortalAliadosPage() {
             <button
               type="button"
               onClick={handleToggleNotificaciones}
-              className={`relative p-2 rounded-lg border transition-all cursor-pointer ${
-                pushActivo
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-2xs'
-                  : 'border-[#CBD5E1] text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`relative p-2 rounded-lg border transition-all cursor-pointer ${pushActivo
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-2xs'
+                : 'border-[#CBD5E1] text-slate-600 hover:bg-slate-50'
+                }`}
               title={
                 pushActivo
                   ? 'Notificaciones Push y Sonido Piano Elegante Activos (Clic para probar)'
@@ -721,9 +720,8 @@ export default function PortalAliadosPage() {
             >
               <Bell className={`w-4 h-4 ${pushActivo ? 'text-emerald-600' : ''}`} />
               <span
-                className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ring-2 ring-white transition-all ${
-                  pushActivo ? 'bg-emerald-500 animate-pulse' : 'bg-[#CCFF00]'
-                }`}
+                className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ring-2 ring-white transition-all ${pushActivo ? 'bg-emerald-500 animate-pulse' : 'bg-[#CCFF00]'
+                  }`}
               ></span>
             </button>
 
@@ -1333,13 +1331,12 @@ export default function PortalAliadosPage() {
                               }
                               handleAceptarServicio(orden);
                             }}
-                            className={`w-full lg:w-48 h-12 text-xs font-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border ${
-                              tieneOrdenActiva
-                                ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300'
-                                : isAccepting
+                            className={`w-full lg:w-48 h-12 text-xs font-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer border ${tieneOrdenActiva
+                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300'
+                              : isAccepting
                                 ? 'bg-slate-200 text-slate-500 cursor-not-allowed border-transparent'
                                 : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border-[#0A1525]/10'
-                            }`}
+                              }`}
                           >
                             {tieneOrdenActiva ? (
                               <>

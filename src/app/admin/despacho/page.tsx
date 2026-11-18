@@ -976,6 +976,25 @@ export default function TableroDespachoPage() {
       // Si no hay órdenes (base de datos sin datos), inicializar estrictamente en vacío para producción
       if (ordenesFinales.length === 0) {
         ordenesFinales = [];
+        setServiciosDia([]);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem('ttm_servicios_dia_finalizados');
+            localStorage.removeItem('ttm_ordenes_flota_recientes');
+          } catch (e) {}
+        }
+      } else {
+        setServiciosDia((prev) => {
+          const validos = prev.filter((s) =>
+            ordenesFinales.some((o) => o.id === s.orden_id && (o.estado === 'FINALIZADO' || o.estado === 'PAGADO'))
+          );
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('ttm_servicios_dia_finalizados', JSON.stringify(validos));
+            } catch (e) {}
+          }
+          return validos;
+        });
       }
 
       if (error) {
@@ -1086,24 +1105,8 @@ export default function TableroDespachoPage() {
     cargarOrdenes();
     cargarCatalogoRepuestos();
 
-    // Cargar servicios finalizados del día desde localStorage o inicializar en vacío
-    if (typeof window !== 'undefined') {
-      try {
-        const rawSrv = localStorage.getItem('ttm_servicios_dia_finalizados');
-        if (rawSrv) {
-          const parsed = JSON.parse(rawSrv);
-          if (Array.isArray(parsed)) {
-            setServiciosDia(parsed);
-          } else {
-            setServiciosDia([]);
-          }
-        } else {
-          setServiciosDia([]);
-        }
-      } catch (e) {
-        setServiciosDia([]);
-      }
-    }
+    // Inicializar servicios finalizados del día estrictamente en vacío
+    setServiciosDia([]);
 
     const supabase = createClient();
     const canal = supabase

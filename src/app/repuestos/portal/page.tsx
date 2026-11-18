@@ -429,7 +429,7 @@ export default function PortalRepuestosPage() {
       {/* ======================================================== */}
       <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          
+
           {/* Identidad del Proveedor */}
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-[#0A1525] border border-slate-700/60 text-[#CCFF00] flex items-center justify-center font-black tracking-wider text-base shadow-sm shrink-0">
@@ -527,7 +527,7 @@ export default function PortalRepuestosPage() {
       {/* ======================================================== */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2">
         <div className="bg-white rounded-2xl border border-[#E2E8F0] p-3 sm:p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          
+
           {/* Input de Búsqueda */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -554,11 +554,10 @@ export default function PortalRepuestosPage() {
             <button
               type="button"
               onClick={() => setMarcaSeleccionada('todas')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                marcaSeleccionada === 'todas'
-                  ? 'bg-[#0A1525] text-white shadow-xs'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-              }`}
+              className={`h-9 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${marcaSeleccionada === 'todas'
+                ? 'bg-[#0A1525] text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
             >
               Todas las marcas
             </button>
@@ -567,11 +566,10 @@ export default function PortalRepuestosPage() {
                 key={m}
                 type="button"
                 onClick={() => setMarcaSeleccionada(m)}
-                className={`h-9 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  marcaSeleccionada === m
-                    ? 'bg-[#1E56B0] text-white shadow-xs'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                }`}
+                className={`h-9 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${marcaSeleccionada === m
+                  ? 'bg-[#1E56B0] text-white shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  }`}
               >
                 {m}
               </button>
@@ -821,7 +819,7 @@ export default function PortalRepuestosPage() {
 
               {/* Formulario Estilo Bento */}
               <form onSubmit={handleGuardarRepuesto} className="space-y-4">
-                
+
                 {/* Bloque Bento 1: Nombre del repuesto (Full Width) */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
@@ -909,7 +907,7 @@ export default function PortalRepuestosPage() {
 
                 {/* Bloque Bento 4: Subida de Foto (Cámara / Dispositivo o URL) */}
                 <div className="space-y-2.5 pt-1">
-                  
+
                   {/* Selector de Modo: Dispositivo/Cámara vs URL */}
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
@@ -921,22 +919,20 @@ export default function PortalRepuestosPage() {
                       <button
                         type="button"
                         onClick={() => setModoFoto('archivo')}
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                          modoFoto === 'archivo'
-                            ? 'bg-white text-[#0A1525] shadow-2xs font-black'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${modoFoto === 'archivo'
+                          ? 'bg-white text-[#0A1525] shadow-2xs font-black'
+                          : 'text-slate-500 hover:text-slate-800'
+                          }`}
                       >
                         Cámara / Dispositivo
                       </button>
                       <button
                         type="button"
                         onClick={() => setModoFoto('url')}
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                          modoFoto === 'url'
-                            ? 'bg-white text-[#0A1525] shadow-2xs font-black'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${modoFoto === 'url'
+                          ? 'bg-white text-[#0A1525] shadow-2xs font-black'
+                          : 'text-slate-500 hover:text-slate-800'
+                          }`}
                       >
                         Pegar URL
                       </button>
@@ -1063,11 +1059,10 @@ export default function PortalRepuestosPage() {
                                   setFormNombre(item.label);
                                 }
                               }}
-                              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
-                                isSelected
-                                  ? 'bg-[#0A1525] text-[#CCFF00] border-[#0A1525] shadow-2xs font-black'
-                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                              }`}
+                              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${isSelected
+                                ? 'bg-[#0A1525] text-[#CCFF00] border-[#0A1525] shadow-2xs font-black'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                                }`}
                             >
                               <span>{item.label}</span>
                             </button>

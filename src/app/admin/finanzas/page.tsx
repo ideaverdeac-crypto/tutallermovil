@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -45,6 +45,7 @@ import {
   Upload,
   Pencil,
   RotateCcw,
+  Inbox,
   X
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
@@ -105,145 +106,202 @@ interface LiquidacionMecanico {
   estado: 'PENDIENTE' | 'PAGADO';
 }
 
-const LIQUIDACIONES_INICIALES: LiquidacionMecanico[] = [
-  {
-    id: 'liq_1',
-    ordenId: '#4492',
-    mecanicoNombre: 'Carlos Mendoza',
-    mecanicoCodigo: '#TTM-0842',
-    mecanicoFoto: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=150&q=80',
-    servicioDescripcion: 'Cambio de Pastillas de Freno & Purga DOT 4',
-    vehiculo: 'Toyota Corolla 2018',
-    cliente: 'Ana Pérez',
-    montoBruto: 65.0,
-    retencionQA: 1.95,
-    montoNeto: 63.05,
-    estado: 'PENDIENTE'
-  },
-  {
-    id: 'liq_2',
-    ordenId: '#4489',
-    mecanicoNombre: 'Alejandro Blanco',
-    mecanicoCodigo: '#TTM-0912',
-    mecanicoFoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-    servicioDescripcion: 'Diagnóstico OBD2 & Sustitución de Batería 12V',
-    vehiculo: 'Ford Explorer 2016',
-    cliente: 'Marcos Rivas',
-    montoBruto: 90.0,
-    retencionQA: 2.70,
-    montoNeto: 87.30,
-    estado: 'PENDIENTE'
-  },
-  {
-    id: 'liq_3',
-    ordenId: '#4478',
-    mecanicoNombre: 'Roberto Páez',
-    mecanicoCodigo: '#TTM-0341',
-    mecanicoFoto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-    servicioDescripcion: 'Afinación Mayor, Bujías Iridio & Filtros',
-    vehiculo: 'Chevrolet Aveo 2015',
-    cliente: 'Elena Morales',
-    montoBruto: 85.0,
-    retencionQA: 2.55,
-    montoNeto: 82.45,
-    estado: 'PENDIENTE'
-  },
-  {
-    id: 'liq_4',
-    ordenId: '#4465',
-    mecanicoNombre: 'Carlos Mendoza',
-    mecanicoCodigo: '#TTM-0842',
-    mecanicoFoto: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=150&q=80',
-    servicioDescripcion: 'Revisión y Ajuste de Correa de Accesorios',
-    vehiculo: 'Mazda 3 2019',
-    cliente: 'Daniela Soto',
-    montoBruto: 52.5,
-    retencionQA: 1.58,
-    montoNeto: 50.92,
-    estado: 'PENDIENTE'
-  }
-];
-
-const DIAS_SEMANA = [
-  { dia: 'Lun', fecha: '11 Nov', monto: 1420, porcentaje: 58 },
-  { dia: 'Mar', fecha: '12 Nov', monto: 1850, porcentaje: 75 },
-  { dia: 'Mié', fecha: '13 Nov', monto: 1200, porcentaje: 49 },
-  { dia: 'Jue', fecha: '14 Nov', monto: 2100, porcentaje: 85 },
-  { dia: 'Vie', fecha: '15 Nov', monto: 2450, porcentaje: 100, pico: true },
-  { dia: 'Sáb', fecha: '16 Nov', monto: 1980, porcentaje: 80 },
-  { dia: 'Dom', fecha: '17 Nov', monto: 1450, porcentaje: 59 }
-];
-
-const BITACORA_AUDITORIA = [
-  {
-    id: 'aud_1',
-    hora: '10:45 AM',
-    fecha: 'Hoy',
-    usuario: 'Ana (Operadora)',
-    accion: 'Asignó mecánico a orden #4492',
-    tipo: 'asignacion',
-    badge: 'Despacho Táctico'
-  },
-  {
-    id: 'aud_2',
-    hora: '10:30 AM',
-    fecha: 'Hoy',
-    usuario: 'Carlos (Operadora)',
-    accion: 'Modificó cotización #4489 (+ Pastillas Bosch)',
-    tipo: 'cotizacion',
-    badge: 'Cotizador Oficial'
-  },
-  {
-    id: 'aud_3',
-    hora: '09:15 AM',
-    fecha: 'Hoy',
-    usuario: 'Luis (Runner)',
-    accion: 'Retiró repuesto con PIN en AutoPartes Chacao',
-    tipo: 'runner',
-    badge: 'Logística Runner'
-  },
-  {
-    id: 'aud_4',
-    hora: '08:50 AM',
-    fecha: 'Hoy',
-    usuario: 'Sistema TTM',
-    accion: 'Conciliación automática lote Cashea (+$1,250.00)',
-    tipo: 'sistema',
-    badge: 'Fintech Cashea'
-  },
-  {
-    id: 'aud_5',
-    hora: '08:12 AM',
-    fecha: 'Hoy',
-    usuario: 'Valeria (Admin)',
-    accion: 'Aprobó liquidación retenida fondo QA #3891',
-    tipo: 'qa',
-    badge: 'Fondo QA 3%'
-  }
-];
+interface DiaGrafico {
+  dia: string;
+  fecha: string;
+  monto: number;
+  porcentaje: number;
+  pico?: boolean;
+}
 
 export default function FinanzasAdminPage() {
-  const [liquidaciones, setLiquidaciones] = useState<LiquidacionMecanico[]>(LIQUIDACIONES_INICIALES);
+  const [ordenes, setOrdenes] = useState<any[]>([]);
+  const [liquidaciones, setLiquidaciones] = useState<LiquidacionMecanico[]>([]);
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
   const [toastNotificacion, setToastNotificacion] = useState<string | null>(null);
-  const [diaHover, setDiaHover] = useState<typeof DIAS_SEMANA[0] | null>(null);
+  const [diaHover, setDiaHover] = useState<DiaGrafico | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState(false);
   const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState(false);
+  const [cargandoDatos, setCargandoDatos] = useState(true);
+  const [fechaAuditoria, setFechaAuditoria] = useState<string>('Auditoría en tiempo real');
+
+  // Gráfico de Barras Dinámico para los Últimos 7 Días
+  const [diasSemana, setDiasSemana] = useState<DiaGrafico[]>([
+    { dia: 'Lun', fecha: 'Día 1', monto: 0, porcentaje: 0 },
+    { dia: 'Mar', fecha: 'Día 2', monto: 0, porcentaje: 0 },
+    { dia: 'Mié', fecha: 'Día 3', monto: 0, porcentaje: 0 },
+    { dia: 'Jue', fecha: 'Día 4', monto: 0, porcentaje: 0 },
+    { dia: 'Vie', fecha: 'Día 5', monto: 0, porcentaje: 0 },
+    { dia: 'Sáb', fecha: 'Día 6', monto: 0, porcentaje: 0 },
+    { dia: 'Dom', fecha: 'Día 7', monto: 0, porcentaje: 0 }
+  ]);
 
   // Estados para Gestión de Credenciales de Operadoras (Solo Dueño)
   const [modalOperadorasOpen, setModalOperadorasOpen] = useState(false);
   const [operadoras, setOperadoras] = useState<CredencialOperadora[]>(OPERADORAS_INICIALES);
 
-  // Estado de Bitácora de Auditoría Conectada a Supabase Realtime
-  const [bitacoraItems, setBitacoraItems] = useState<any[]>(BITACORA_AUDITORIA);
+  // Estado de Bitácora de Auditoría Conectada a Supabase Realtime (Inicia Estrictamente en Vacío)
+  const [bitacoraItems, setBitacoraItems] = useState<any[]>([]);
 
+  // 1. Cargar Órdenes desde Supabase y escuchar cambios en tiempo real
+  const cargarOrdenes = async () => {
+    try {
+      setCargandoDatos(true);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('ordenes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Aviso cargando ordenes en Finanzas:', error.message);
+        setOrdenes([]);
+      } else if (data) {
+        setOrdenes(data);
+      } else {
+        setOrdenes([]);
+      }
+    } catch (err) {
+      console.error('Error cargando ordenes en Finanzas:', err);
+      setOrdenes([]);
+    } finally {
+      setCargandoDatos(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarOrdenes();
+
+    const supabase = createClient();
+    const canalOrdenes = supabase
+      .channel('realtime_finanzas_ordenes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ordenes' },
+        () => {
+          cargarOrdenes();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canalOrdenes);
+    };
+  }, []);
+
+  // 2. Mapear Liquidaciones a partir de órdenes reales de la base de datos
+  useEffect(() => {
+    const ordenesParaLiquidar = ordenes.filter((o) =>
+      ['PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE', 'FINALIZADO'].includes(o.estado)
+    );
+
+    const items: LiquidacionMecanico[] = ordenesParaLiquidar.map((o) => {
+      const montoBruto = Number(o.ganancia_estimada || 0);
+      const retencionQA = Number((montoBruto * 0.03).toFixed(2));
+      const montoNeto = Number((montoBruto - retencionQA).toFixed(2));
+      return {
+        id: o.id,
+        ordenId: `#${o.id.slice(0, 8)}`,
+        mecanicoNombre: o.mecanico_id || 'Especialista Asignado',
+        mecanicoCodigo: '#TTM-ALIADO',
+        mecanicoFoto: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=150&q=80',
+        servicioDescripcion: o.falla_reportada || 'Servicio Técnico TuTallerMóvil',
+        vehiculo: `${o.vehiculo_marca || ''} ${o.vehiculo_modelo || ''}`.trim() || 'Vehículo',
+        cliente: o.cliente_nombre || 'Cliente Particular',
+        montoBruto,
+        retencionQA,
+        montoNeto,
+        estado: o.estado === 'FINALIZADO' ? 'PAGADO' : 'PENDIENTE'
+      };
+    });
+
+    setLiquidaciones(items);
+  }, [ordenes]);
+
+  // 3. Cálculos Dinámicos de KPIs Financieros
+  const totalIngresosBrutos = useMemo(() => {
+    return ordenes.reduce(
+      (acc, o) => acc + Number(o.ganancia_estimada || o.monto_total || 0),
+      0
+    );
+  }, [ordenes]);
+
+  const totalServiciosFacturados = ordenes.length;
+
+  const totalComisionesNetas = useMemo(() => {
+    if (totalIngresosBrutos <= 0) return 0;
+    return Number((totalIngresosBrutos * 0.168).toFixed(2));
+  }, [totalIngresosBrutos]);
+
+  const totalFondoQA = useMemo(() => {
+    if (totalIngresosBrutos <= 0) return 0;
+    return Number((totalIngresosBrutos * 0.03).toFixed(2));
+  }, [totalIngresosBrutos]);
+
+  // 4. Gráfico de Barras Dinámico para los Últimos 7 Días (Calculado en cliente para compatibilidad PPR)
+  useEffect(() => {
+    const nombresDias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const hoy = new Date();
+    setFechaAuditoria(`Auditoría en tiempo real • ${hoy.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}`);
+
+    const ultimos7 = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(hoy.getDate() - (6 - i));
+      const diaSemanaNombre = nombresDias[d.getDay()];
+      const fechaStr = d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
+      const fechaISO = d.toISOString().split('T')[0];
+
+      // Sumar órdenes de este día
+      const ordenesDelDia = ordenes.filter((o) => {
+        if (!o.created_at) return false;
+        return o.created_at.startsWith(fechaISO);
+      });
+
+      const monto = ordenesDelDia.reduce(
+        (acc, o) => acc + Number(o.ganancia_estimada || o.monto_total || 0),
+        0
+      );
+
+      return {
+        dia: diaSemanaNombre,
+        fecha: fechaStr,
+        monto,
+        porcentaje: 0,
+        pico: false
+      };
+    });
+
+    const maxMonto = Math.max(...ultimos7.map((d) => d.monto), 0);
+
+    setDiasSemana(
+      ultimos7.map((d) => ({
+        ...d,
+        porcentaje: maxMonto > 0 ? Math.round((d.monto / maxMonto) * 100) : 0,
+        pico: maxMonto > 0 && d.monto === maxMonto
+      }))
+    );
+  }, [ordenes]);
+
+  const promedioDiario = useMemo(() => {
+    if (totalIngresosBrutos <= 0) return 0;
+    return Number((totalIngresosBrutos / 7).toFixed(2));
+  }, [totalIngresosBrutos]);
+
+  const picoSemanal = useMemo(() => {
+    return Math.max(...diasSemana.map((d) => d.monto), 0);
+  }, [diasSemana]);
+
+  // 5. Cargar Bitácora de Auditoría Real
   useEffect(() => {
     const cargarBitacora = async () => {
       const logs = await obtenerBitacoraOperaciones();
-      if (logs.length > 0) {
+      if (logs && logs.length > 0) {
         const formateados = logs.map((log) => ({
           id: log.id,
-          hora: new Date(log.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+          hora: new Date(log.created_at).toLocaleTimeString('es-VE', {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
           fecha: 'Hoy',
           usuario: log.operadora_nombre || 'Operadora',
           accion: log.orden_id ? `${log.accion} (Orden #${log.orden_id.slice(0, 8)})` : log.accion,
@@ -251,11 +309,12 @@ export default function FinanzasAdminPage() {
           tipo: 'operadora'
         }));
         setBitacoraItems(formateados);
+      } else {
+        setBitacoraItems([]);
       }
     };
     cargarBitacora();
 
-    // Supabase Realtime para Bitácora de Operaciones en Vivo
     const supabase = createClient();
     const canal = supabase
       .channel('realtime_bitacora_admin')
@@ -267,7 +326,10 @@ export default function FinanzasAdminPage() {
             const nuevo = payload.new;
             const itemNuevo = {
               id: nuevo.id,
-              hora: new Date(nuevo.created_at || Date.now()).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+              hora: new Date(nuevo.created_at || Date.now()).toLocaleTimeString('es-VE', {
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
               fecha: 'En vivo',
               usuario: nuevo.operadora_nombre || 'Operadora',
               accion: nuevo.orden_id ? `${nuevo.accion} (Orden #${nuevo.orden_id.slice(0, 8)})` : nuevo.accion,
@@ -285,6 +347,7 @@ export default function FinanzasAdminPage() {
     };
   }, []);
 
+  // 6. Cargar y sincronizar operadoras persistidas
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const estaRegistrado = typeof document !== 'undefined' && Boolean(
@@ -298,7 +361,6 @@ export default function FinanzasAdminPage() {
         setMostrarBotonTutorial(true);
       }
 
-      // Cargar operadoras persistidas
       try {
         const raw = localStorage.getItem('ttm_operadoras_credenciales');
         if (raw) {
@@ -341,7 +403,6 @@ export default function FinanzasAdminPage() {
       );
       setProcesandoId(null);
 
-      // Bitácora inmutable en consola
       console.log('[BITÁCORA FINANCIERA INMUTABLE] Administrador liberó liquidación de especialista.', {
         evento: 'PAGO_MECANICO_LIBERADO',
         liquidacionId: id,
@@ -503,21 +564,21 @@ export default function FinanzasAdminPage() {
 
             <div className="space-y-1">
               <div className="text-3xl font-mono font-black text-[#0A1525] tracking-tight">
-                $12,450.00
+                ${totalIngresosBrutos.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="flex items-center gap-2 pt-0.5">
                 <span className="inline-flex items-center gap-0.5 text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   <TrendingUp className="w-3 h-3 stroke-[3]" />
-                  +15%
+                  {totalIngresosBrutos > 0 ? '+100%' : '0%'}
                 </span>
                 <span className="text-[11px] text-slate-400 font-semibold">
-                  vs. mes anterior
+                  calculado en vivo
                 </span>
               </div>
             </div>
             
             <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 font-medium flex items-center justify-between">
-              <span>84 servicios facturados</span>
+              <span>{totalServiciosFacturados} {totalServiciosFacturados === 1 ? 'servicio registrado' : 'servicios registrados'}</span>
               <span className="font-mono font-bold text-[#1E56B0]">Caracas Hub</span>
             </div>
           </motion.div>
@@ -540,11 +601,11 @@ export default function FinanzasAdminPage() {
 
             <div className="space-y-1">
               <div className="text-3xl font-mono font-black text-[#1E56B0] tracking-tight">
-                $2,100.00
+                ${totalComisionesNetas.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="flex items-center gap-2 pt-0.5">
                 <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                  Margen: 16.8%
+                  Margen: {totalIngresosBrutos > 0 ? '16.8%' : '0.0%'}
                 </span>
                 <span className="text-[11px] text-slate-400 font-semibold">
                   Utilidad TTM
@@ -581,7 +642,7 @@ export default function FinanzasAdminPage() {
 
             <div className="space-y-1">
               <div className="text-3xl font-mono font-black text-white tracking-tight flex items-baseline gap-2">
-                <span>$373.50</span>
+                <span>${totalFondoQA.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 <span className="text-xs font-mono font-bold text-[#CCFF00]">USD</span>
               </div>
               <p className="text-[11px] text-slate-300 font-medium leading-tight">
@@ -616,10 +677,10 @@ export default function FinanzasAdminPage() {
 
             <div className="space-y-1">
               <div className="text-3xl font-mono font-black text-[#0A1525] tracking-tight">
-                $3,200.00
+                $0.00
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                <span>Límite autorizado:</span>
+                <span>Límite disponible:</span>
                 <span className="font-mono font-bold text-slate-700">$4,000.00</span>
               </div>
             </div>
@@ -629,12 +690,12 @@ export default function FinanzasAdminPage() {
               <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
                 <div
                   className="h-full bg-gradient-to-r from-[#1E56B0] to-[#CCFF00] rounded-full transition-all duration-1000"
-                  style={{ width: '80%' }}
+                  style={{ width: '0%' }}
                 />
               </div>
               <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-0.5">
-                <span>80% Utilizado</span>
-                <span className="text-emerald-700">$800 disp.</span>
+                <span>0% Utilizado</span>
+                <span className="text-emerald-700">$4,000.00 disp.</span>
               </div>
             </div>
           </motion.div>
@@ -740,7 +801,7 @@ export default function FinanzasAdminPage() {
                     Promedio Diario
                   </span>
                   <span className="text-sm font-mono font-black text-[#1E56B0]">
-                    $1,778.50
+                    ${promedioDiario.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="bg-[#F8FAFC] px-3.5 py-2 rounded-2xl border border-slate-200">
@@ -748,7 +809,7 @@ export default function FinanzasAdminPage() {
                     Pico Semanal
                   </span>
                   <span className="text-sm font-mono font-black text-emerald-600">
-                    $2,450.00
+                    ${picoSemanal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -757,9 +818,9 @@ export default function FinanzasAdminPage() {
             {/* Gráfico de Barras con Tailwind (Degradado Azul Cobalto a Azul Marino) */}
             <div className="pt-8 pb-4">
               <div className="h-64 sm:h-72 w-full flex items-end justify-between gap-2 sm:gap-4 px-2 sm:px-4">
-                {DIAS_SEMANA.map((d) => (
+                {diasSemana.map((d) => (
                   <div
-                    key={d.dia}
+                    key={`${d.dia}-${d.fecha}`}
                     onMouseEnter={() => setDiaHover(d)}
                     onMouseLeave={() => setDiaHover(null)}
                     className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer"
@@ -767,7 +828,7 @@ export default function FinanzasAdminPage() {
                     {/* Tooltip Dinámico Flotante */}
                     <div className="mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center pointer-events-none">
                       <span className="bg-[#0A1525] text-white text-[11px] font-mono font-black px-2 py-1 rounded-md shadow-md whitespace-nowrap">
-                        ${d.monto.toLocaleString()}
+                        ${d.monto.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </span>
                       <div className="w-1.5 h-1.5 bg-[#0A1525] rotate-45 -mt-1" />
                     </div>
@@ -813,16 +874,16 @@ export default function FinanzasAdminPage() {
                 </div>
                 <div className="flex items-center gap-1.5 font-medium">
                   <span className="w-3 h-3 rounded-md bg-[#1E56B0]" />
-                  <span>Mano de Obra (62%)</span>
+                  <span>Mano de Obra</span>
                 </div>
                 <div className="flex items-center gap-1.5 font-medium">
                   <span className="w-3 h-3 rounded-md bg-[#CCFF00] border border-slate-300" />
-                  <span>Pico / Repuestos (35%)</span>
+                  <span>Pico Facturado</span>
                 </div>
               </div>
 
               <span className="text-[11px] font-mono text-slate-400">
-                Auditoría cerrada al 17 Nov 2026
+                {fechaAuditoria}
               </span>
             </div>
 
@@ -852,44 +913,56 @@ export default function FinanzasAdminPage() {
               </div>
 
               {/* Timeline Vertical */}
-              <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E2E8F0]">
-                {bitacoraItems.slice(0, 10).map((item, idx) => (
-                  <div key={item.id} className="relative group">
-                    
-                    {/* Punto del Timeline */}
-                    <div
-                      className={`absolute -left-[27px] top-1 w-3 h-3 rounded-full border-2 border-white shadow-xs ${
-                        idx === 0
-                          ? 'bg-[#1E56B0] ring-4 ring-blue-100'
-                          : idx === 1
-                          ? 'bg-[#0A1525]'
-                          : 'bg-slate-400'
-                      }`}
-                    />
+              {bitacoraItems.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                    <Clock className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <p className="font-semibold text-slate-700 text-xs">Sin registros de auditoría</p>
+                  <p className="text-[11px] text-slate-400 max-w-[200px]">
+                    Las operaciones realizadas por operadoras y el sistema se registrarán aquí en tiempo real.
+                  </p>
+                </div>
+              ) : (
+                <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E2E8F0]">
+                  {bitacoraItems.slice(0, 10).map((item, idx) => (
+                    <div key={item.id} className="relative group">
+                      
+                      {/* Punto del Timeline */}
+                      <div
+                        className={`absolute -left-[27px] top-1 w-3 h-3 rounded-full border-2 border-white shadow-xs ${
+                          idx === 0
+                            ? 'bg-[#1E56B0] ring-4 ring-blue-100'
+                            : idx === 1
+                            ? 'bg-[#0A1525]'
+                            : 'bg-slate-400'
+                        }`}
+                      />
 
-                    {/* Contenido de la Acción */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[11px] font-mono font-bold text-[#1E56B0]">
-                          {item.hora}
-                        </span>
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                          {item.badge}
-                        </span>
+                      {/* Contenido de la Acción */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-mono font-bold text-[#1E56B0]">
+                            {item.hora}
+                          </span>
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                            {item.badge}
+                          </span>
+                        </div>
+
+                        <p className="text-xs font-black text-[#0A1525]">
+                          {item.usuario}
+                        </p>
+
+                        <p className="text-xs text-slate-600 font-medium leading-snug">
+                          {item.accion}
+                        </p>
                       </div>
 
-                      <p className="text-xs font-black text-[#0A1525]">
-                        {item.usuario}
-                      </p>
-
-                      <p className="text-xs text-slate-600 font-medium leading-snug">
-                        {item.accion}
-                      </p>
                     </div>
-
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Sello de Seguridad */}
@@ -951,100 +1024,114 @@ export default function FinanzasAdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] text-xs">
-                {liquidaciones.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                    
-                    {/* Mecánico */}
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={item.mecanicoFoto}
-                          alt={item.mecanicoNombre}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0"
-                        />
-                        <div>
-                          <p className="font-black text-[#0A1525] text-xs">
-                            {item.mecanicoNombre}
-                          </p>
-                          <span className="font-mono text-[10px] font-bold text-[#1E56B0] block">
-                            {item.mecanicoCodigo}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Servicio y Vehículo */}
-                    <td className="py-4 px-4 max-w-xs">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-black text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
-                            {item.ordenId}
-                          </span>
-                          <span className="font-bold text-[#0A1525] text-xs truncate">
-                            {item.servicioDescripcion}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 font-medium">
-                          {item.vehiculo} • Cliente: {item.cliente}
+                {liquidaciones.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Inbox className="w-10 h-10 text-slate-300" />
+                        <p className="font-bold text-slate-700 text-sm">No hay liquidaciones pendientes</p>
+                        <p className="text-xs text-slate-400 max-w-sm">
+                          Cuando los especialistas finalicen órdenes y pasen validación QA, aparecerán aquí para liberar sus pagos garantizados.
                         </p>
                       </div>
                     </td>
-
-                    {/* Monto Bruto */}
-                    <td className="py-4 px-4 text-right font-mono font-bold text-slate-700">
-                      ${item.montoBruto.toFixed(2)}
-                    </td>
-
-                    {/* Retención QA (3%) */}
-                    <td className="py-4 px-4 text-center">
-                      <span className="inline-flex items-center gap-1 font-mono font-black text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200" title="Retenido al fondo de garantía QA">
-                        <Shield className="w-3 h-3 text-emerald-600" />
-                        -${item.retencionQA.toFixed(2)}
-                      </span>
-                    </td>
-
-                    {/* Monto Neto */}
-                    <td className="py-4 px-4 text-right font-mono font-black text-sm text-[#0A1525]">
-                      ${item.montoNeto.toFixed(2)}
-                    </td>
-
-                    {/* Botón de Acción */}
-                    <td className="py-4 px-6 text-center">
-                      {item.estado === 'PAGADO' ? (
-                        <motion.span
-                          initial={{ scale: 0.85, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#16A34A] text-white text-xs font-black shadow-xs"
-                        >
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          <span>Pagado</span>
-                        </motion.span>
-                      ) : (
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.96 }}
-                          type="button"
-                          disabled={procesandoId === item.id}
-                          onClick={() => handleLiberarPago(item.id, item.mecanicoNombre, item.montoNeto)}
-                          className="px-4 py-2 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black transition-all shadow-xs flex items-center justify-center gap-1.5 mx-auto cursor-pointer disabled:opacity-50"
-                        >
-                          {procesandoId === item.id ? (
-                            <>
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              <span>Liberando...</span>
-                            </>
-                          ) : (
-                            <>
-                              <DollarSign className="w-3.5 h-3.5 text-[#CCFF00]" />
-                              <span>Liberar Pago</span>
-                            </>
-                          )}
-                        </motion.button>
-                      )}
-                    </td>
-
                   </tr>
-                ))}
+                ) : (
+                  liquidaciones.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                      
+                      {/* Mecánico */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={item.mecanicoFoto}
+                            alt={item.mecanicoNombre}
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0"
+                          />
+                          <div>
+                            <p className="font-black text-[#0A1525] text-xs">
+                              {item.mecanicoNombre}
+                            </p>
+                            <span className="font-mono text-[10px] font-bold text-[#1E56B0] block">
+                              {item.mecanicoCodigo}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Servicio y Vehículo */}
+                      <td className="py-4 px-4 max-w-xs">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-black text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                              {item.ordenId}
+                            </span>
+                            <span className="font-bold text-[#0A1525] text-xs truncate">
+                              {item.servicioDescripcion}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-medium">
+                            {item.vehiculo} • Cliente: {item.cliente}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Monto Bruto */}
+                      <td className="py-4 px-4 text-right font-mono font-bold text-slate-700">
+                        ${item.montoBruto.toFixed(2)}
+                      </td>
+
+                      {/* Retención QA (3%) */}
+                      <td className="py-4 px-4 text-center">
+                        <span className="inline-flex items-center gap-1 font-mono font-black text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200" title="Retenido al fondo de garantía QA">
+                          <Shield className="w-3 h-3 text-emerald-600" />
+                          -${item.retencionQA.toFixed(2)}
+                        </span>
+                      </td>
+
+                      {/* Monto Neto */}
+                      <td className="py-4 px-4 text-right font-mono font-black text-sm text-[#0A1525]">
+                        ${item.montoNeto.toFixed(2)}
+                      </td>
+
+                      {/* Botón de Acción */}
+                      <td className="py-4 px-6 text-center">
+                        {item.estado === 'PAGADO' ? (
+                          <motion.span
+                            initial={{ scale: 0.85, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#16A34A] text-white text-xs font-black shadow-xs"
+                          >
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>Pagado</span>
+                          </motion.span>
+                        ) : (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.96 }}
+                            type="button"
+                            disabled={procesandoId === item.id}
+                            onClick={() => handleLiberarPago(item.id, item.mecanicoNombre, item.montoNeto)}
+                            className="px-4 py-2 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black transition-all shadow-xs flex items-center justify-center gap-1.5 mx-auto cursor-pointer disabled:opacity-50"
+                          >
+                            {procesandoId === item.id ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Liberando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <DollarSign className="w-3.5 h-3.5 text-[#CCFF00]" />
+                                <span>Liberar Pago</span>
+                              </>
+                            )}
+                          </motion.button>
+                        )}
+                      </td>
+
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -145,7 +145,7 @@ export default function FlotasDashboardPage() {
   const [fotoZoomUrl, setFotoZoomUrl] = useState<string | null>(null);
 
   // Estados del modal de Jornada Sabatina
-  const [vehiculosParaJornada, setVehiculosParaJornada] = useState<string[]>(['FLEET-01', 'FLEET-04']);
+  const [vehiculosParaJornada, setVehiculosParaJornada] = useState<string[]>([]);
   const [fechaJornada, setFechaJornada] = useState<string>('2026-11-21');
   const [turnoJornada, setTurnoJornada] = useState<'manana' | 'tarde'>('manana');
   const [jornadaConfirmadaToast, setJornadaConfirmadaToast] = useState<string | null>(null);
