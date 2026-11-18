@@ -80,7 +80,7 @@ export default function RegistroHubPage() {
             <span>Volver</span>
           </Link>
           <Link href="/" className="hover:opacity-90 transition-opacity">
-            <img src="/icon.svg" alt="TuTallerMóvil" className="h-8 w-auto object-contain" />
+            <img src="/icon.svg" alt="TuTallerMóvil" className="h-10 w-auto object-contain" />
           </Link>
         </div>
 

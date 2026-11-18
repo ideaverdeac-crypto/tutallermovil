@@ -99,7 +99,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
           {/* Logo TTM flotante arriba a la izquierda */}
           <div className="absolute top-4 left-4 z-20">
             <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-xs border border-[#CBD5E1] flex items-center">
-              <img src="/icon.svg" alt="TuTallerMóvil" className="h-6 w-auto object-contain" />
+              <img src="/icon.svg" alt="TuTallerMóvil" className="h-[30px] w-auto object-contain" />
             </div>
           </div>
 

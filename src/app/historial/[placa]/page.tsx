@@ -125,7 +125,7 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
               <span>Volver al Inicio</span>
             </Link>
             <div className="flex items-center gap-2">
-              <img src="/icon.svg" alt="TuTallerMóvil" className="h-8 w-auto object-contain" />
+              <img src="/icon.svg" alt="TuTallerMóvil" className="h-10 w-auto object-contain" />
               <span className="text-xs font-bold uppercase tracking-wider bg-[#F8FAFC] border border-[#CBD5E1] px-2 py-0.5 rounded text-[#1E56B0]">
                 Consulta
               </span>
@@ -232,7 +232,7 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
             <span>{desdeGaraje ? 'Volver a Mi Garaje' : 'Volver al Inicio'}</span>
           </Link>
           <div className="flex items-center gap-2">
-            <img src="/icon.svg" alt="TuTallerMóvil" className="h-8 w-auto object-contain" />
+            <img src="/icon.svg" alt="TuTallerMóvil" className="h-10 w-auto object-contain" />
             <span className="text-xs font-bold uppercase tracking-wider bg-[#F8FAFC] border border-[#CBD5E1] px-2 py-0.5 rounded text-[#1E56B0]">
               {usuarioAutenticado ? 'Mi Garaje • Pro' : 'Pasaporte Técnico'}
             </span>

@@ -508,7 +508,7 @@ export default function PortalAliadosPage() {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <img src="/icon.svg" alt="TuTallerMóvil" className="h-8 w-auto object-contain" />
+                <img src="/icon.svg" alt="TuTallerMóvil" className="h-10 w-auto object-contain" />
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-[#1E56B0]/10 text-[#1E56B0] px-2 py-0.5 rounded">
                   Portal Aliados
                 </span>

@@ -226,7 +226,7 @@ function LoginClienteContent() {
           </Link>
 
           <div className="flex items-center gap-2.5">
-            <img src="/icon.svg" alt="TuTallerMóvil" className="h-8 w-auto object-contain" />
+            <img src="/icon.svg" alt="TuTallerMóvil" className="h-10 w-auto object-contain" />
             <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
               Portal Clientes
             </span>

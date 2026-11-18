@@ -381,7 +381,7 @@ export default function ClienteDashboardPage() {
               <img
                 src="/icon.svg"
                 alt="TuTallerMóvil"
-                className="h-10 sm:h-11 w-auto object-contain transition-transform group-hover:scale-105"
+                className="h-[50px] sm:h-[55px] w-auto object-contain transition-transform group-hover:scale-105"
               />
               <span className="text-xs font-bold uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg text-[#1E56B0] shadow-2xs">
                 Mi Garaje

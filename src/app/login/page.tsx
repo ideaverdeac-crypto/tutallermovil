@@ -386,7 +386,7 @@ function LoginForm() {
             <img
               src="/icon.svg"
               alt="TuTallerMóvil"
-              className="h-12 w-auto object-contain mx-auto transition-transform group-hover:scale-105"
+              className="h-[60px] w-auto object-contain mx-auto transition-transform group-hover:scale-105"
             />
           </Link>
           <h1 className="text-2xl font-black text-[#0A1525] tracking-tight">

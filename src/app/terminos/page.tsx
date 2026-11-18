@@ -59,7 +59,7 @@ export default function TerminosYCondicionesPage() {
               <img
                 src="/icon.svg"
                 alt="TuTallerMóvil"
-                className="h-9 w-auto object-contain"
+                className="h-[45px] w-auto object-contain"
               />
             </Link>
 

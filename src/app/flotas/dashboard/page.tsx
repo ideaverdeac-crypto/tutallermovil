@@ -868,7 +868,7 @@ export default function FlotasDashboardPage() {
               <img
                 src="/icon.svg"
                 alt="TuTallerMóvil"
-                className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
+                className="h-[45px] w-auto object-contain transition-transform group-hover:scale-105"
               />
               <span className="text-[10px] font-black uppercase tracking-widest bg-[#0A1525] text-[#CCFF00] px-2 py-0.5 rounded-md border border-slate-700">
                 Flotas B2B

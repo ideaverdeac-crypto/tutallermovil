@@ -117,7 +117,7 @@ export default function Home() {
             <img
               src="/icon.svg"
               alt="TuTallerMóvil"
-              className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
+              className="h-[50px] sm:h-[60px] w-auto object-contain transition-transform group-hover:scale-105"
             />
           </Link>
 
@@ -270,7 +270,7 @@ export default function Home() {
                 {/* Encabezado del Carnet */}
                 <div className="flex items-center justify-between border-b border-[#CBD5E1] pb-4 mb-5 pt-1">
                   <div>
-                    <img src="/icon.svg" alt="TuTallerMóvil" className="h-7 w-auto object-contain" />
+                    <img src="/icon.svg" alt="TuTallerMóvil" className="h-[35px] w-auto object-contain" />
                     <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mt-0.5">Credencial Digital</p>
                   </div>
                   <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-bold">
