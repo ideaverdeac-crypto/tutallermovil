@@ -531,9 +531,7 @@ export default function CierreServiciosDia({
 
     const resumenData = [
       ['Total Servicios Finalizados', `${metricas.totalServicios} servicios (${metricas.particulares} part. / ${metricas.flotas} flotas)`],
-      ['Total Facturado (USD)', `$${metricas.totalFacturado} USD`],
-      ['Fondo de Garantía QA Retenido (3%)', `$${metricas.totalQA} USD`],
-      ['Liquidado a Especialistas y Repuesteras', `$${metricas.totalMecanicos} USD`]
+      ['Total Facturado (USD)', `$${metricas.totalFacturado} USD`]
     ];
 
     autoTable(doc, {
@@ -645,7 +643,7 @@ ${linkPasaporte}
       </div>
 
       {/* 2. Tarjetas de Métricas del Día (KPIs de Cierre) */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* KPI 1: Servicios Finalizados */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
@@ -687,48 +685,6 @@ ${linkPasaporte}
           </div>
           <div className="w-12 h-12 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shrink-0">
             <DollarSign className="w-6 h-6 text-[#CCFF00]" />
-          </div>
-        </div>
-
-        {/* KPI 3: Fondo de Garantía QA (3%) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Fondo Garantía QA (3%)
-            </span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-black text-purple-700">
-                ${metricas.totalQA}
-              </span>
-              <span className="text-xs font-bold text-purple-600">USD</span>
-            </div>
-            <span className="text-[10px] text-purple-500 font-semibold mt-1 block">
-              Protección inmutable retenida
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center font-black shrink-0">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* KPI 4: Liquidado a Especialistas */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Liquidado a Especialistas
-            </span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-black text-[#1E56B0]">
-                ${metricas.totalMecanicos}
-              </span>
-              <span className="text-xs font-bold text-blue-600">USD</span>
-            </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">
-              Mano de obra y repuestos netos
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center font-black shrink-0">
-            <Wrench className="w-6 h-6" />
           </div>
         </div>
       </div>
