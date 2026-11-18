@@ -239,6 +239,7 @@ export default function ClienteDashboardPage() {
           if (ordenesData && ordenesData.length > 0) {
             ordenesData.forEach((ord: any) => {
               const placaOrd = (
+                ord.vehiculo_placa ||
                 ord.placa_flota ||
                 ord.vehiculo_modelo?.match(/\[([A-Z0-9-]+)\]/)?.[1] ||
                 `ORD-${ord.id.slice(0, 5).toUpperCase()}`
@@ -486,7 +487,7 @@ export default function ClienteDashboardPage() {
               </div>
               <div className="max-w-md mx-auto space-y-1">
                 <h3 className="text-lg font-black text-[#0A1525]">
-                  Aún no tienes vehículos en tu Garaje
+                  Tu portal está listo. Aquí aparecerán tus vehículos
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
                   Registra tu automóvil para consultar su historial médico en cualquier momento, o pide tu primer servicio a domicilio y se vinculará automáticamente con tu correo <strong>{usuario.email}</strong>.

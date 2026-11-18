@@ -254,16 +254,15 @@ export default function FlotasDashboardPage() {
       const supabase = createClient();
       const { error } = await supabase.from('ordenes').insert([
         {
-          id: nuevaOrden.id,
           cliente_nombre: nuevaOrden.cliente_nombre,
           cliente_telefono: nuevaOrden.cliente_telefono,
           vehiculo_marca: nuevaOrden.vehiculo_marca,
           vehiculo_modelo: nuevaOrden.vehiculo_modelo,
+          vehiculo_placa: vehiculo.placa,
           vehiculo_anio: nuevaOrden.vehiculo_anio,
           falla_reportada: nuevaOrden.falla_reportada,
           sector: nuevaOrden.sector,
-          estado: nuevaOrden.estado,
-          ganancia_estimada: nuevaOrden.ganancia_estimada
+          estado: 'LEAD_NUEVO'
         }
       ]);
       if (error) {
@@ -1071,8 +1070,8 @@ export default function FlotasDashboardPage() {
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400">
                       <Truck className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
-                      <p className="font-bold text-sm text-[#0A1525]">No se encontraron vehículos</p>
-                      <p className="text-xs text-slate-500 mt-1">Prueba con otro término de búsqueda o agrega una nueva unidad.</p>
+                      <p className="font-bold text-sm text-[#0A1525]">Tu portal está listo. Aquí aparecerán los servicios y vehículos</p>
+                      <p className="text-xs text-slate-500 mt-1">Registra la primera unidad de tu empresa para gestionar mantenimientos, mecánicos y garantías.</p>
                       <button
                         type="button"
                         onClick={handleAbrirCrearVehiculo}

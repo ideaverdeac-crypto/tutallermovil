@@ -2254,10 +2254,10 @@ export default function TableroDespachoPage() {
                           </div>
                           <div className="space-y-0.5 text-center">
                             <p className="text-xs font-black text-[#0A1525]">
-                              No hay órdenes por ahora
+                              Esperando órdenes...
                             </p>
                             <p className="text-[11px] text-[#475569] font-medium max-w-[200px]">
-                              {columna.textoVacio || 'Esperando solicitudes del sistema'}
+                              {columna.textoVacio || 'Sin órdenes en esta etapa por ahora'}
                             </p>
                           </div>
                           <span className="text-[10px] text-slate-400 font-mono font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">

@@ -361,10 +361,10 @@ export default function RunnerPortalPage() {
                           </div>
                           <div className="space-y-1.5 max-w-sm mx-auto">
                             <h3 className="text-sm font-black text-[#0A1525]">
-                              ¡Sin entregas pendientes en este momento!
+                              Tu portal está listo. Aquí aparecerán los servicios y entregas
                             </h3>
                             <p className="text-xs text-[#475569] leading-relaxed">
-                              Mantén tu estado en <strong>Disponible</strong>. Cuando la torre de despacho asigne repuestos para una orden en tu zona, la alerta sonará y aparecerá aquí en tiempo real.
+                              Mantén tu estado en <strong>Disponible</strong>. Cuando la central de despacho asigne repuestos para una orden en tu zona, la alerta sonará y aparecerá aquí en tiempo real.
                             </p>
                           </div>
                         </div>

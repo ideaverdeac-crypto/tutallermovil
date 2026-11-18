@@ -1165,16 +1165,16 @@ export default function PortalAliadosPage() {
                   <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
                 </span>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <h3 className="text-base sm:text-lg font-black text-[#0A1525]">
-                  {filtroServicios === 'asignados'
-                    ? 'No tienes servicios asignados actualmente'
-                    : 'No hay solicitudes disponibles sin mecánico en este momento'}
+                  {ordenesFiltradas.length === 0
+                    ? 'Tu portal está listo. Aquí aparecerán los servicios'
+                    : (filtroServicios === 'asignados' ? 'Sin servicios asignados' : 'Sin solicitudes disponibles')}
                 </h3>
                 <p className="text-xs sm:text-sm text-[#475569] font-medium max-w-sm mx-auto">
                   {filtroServicios === 'asignados'
-                    ? 'Cuando aceptes una solicitud de la bolsa o la torre de despacho te asigne un servicio, lo gestionarás desde aquí.'
-                    : 'En esta sección solo se muestran órdenes que no tienen ningún mecánico asignado. Te avisaremos en tiempo real con alerta sonora cuando un cliente solicite asistencia en tu zona.'}
+                    ? 'Cuando aceptes una solicitud de la bolsa o la central te asigne una orden, la gestionarás desde aquí.'
+                    : 'En esta sección se listan las solicitudes en tiempo real en tu zona de Caracas. Mantén tu GPS y sonido activos.'}
                 </p>
               </div>
             </div>

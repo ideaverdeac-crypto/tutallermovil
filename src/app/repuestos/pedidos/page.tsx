@@ -536,7 +536,7 @@ export default function PedidosProveedorPage() {
               <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
             <h3 className="text-base font-black text-[#0A1525] mb-1">
-              ¡Todos los pedidos están al día!
+              Tu portal está listo. Aquí aparecerán los pedidos
             </h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
               No tienes repuestos pendientes por surtir en este momento. Cuando la central de despacho asigne un mensajero a una orden con piezas de tu tienda, aparecerá aquí en tiempo real para despacho inmediato.

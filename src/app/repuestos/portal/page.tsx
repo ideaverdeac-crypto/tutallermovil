@@ -618,7 +618,7 @@ export default function PortalRepuestosPage() {
               className="px-6 py-3 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black transition-all cursor-pointer shadow-sm active:scale-95 inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Publicar mi primer repuesto</span>
+              <span>Publicar el primer repuesto</span>
             </button>
           </div>
         ) : (

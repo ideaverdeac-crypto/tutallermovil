@@ -18,7 +18,8 @@ import {
   Calendar,
   Mail,
   Plus,
-  Check
+  Check,
+  Phone
 } from 'lucide-react';
 
 export interface VehiculoOpcion {
@@ -60,6 +61,7 @@ export function SolicitarMecanicoModal({
   vehiculosRegistrados
 }: SolicitarMecanicoModalProps) {
   const [nombre, setNombre] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
@@ -233,16 +235,18 @@ export function SolicitarMecanicoModal({
 
     const nombreFinal = nombre.trim() || usuarioAutenticado?.nombre?.trim() || '';
     const emailFinal = email.trim() || usuarioAutenticado?.email?.trim() || null;
+    const telefonoFinal = telefono.trim() || usuarioAutenticado?.telefono?.trim() || null;
 
     if (
       !nombreFinal ||
+      !telefonoFinal ||
       !marca.trim() ||
       !modelo.trim() ||
       !anio.trim() ||
       !falla.trim() ||
       !sector.trim()
     ) {
-      setErrorMsg('Por favor completa todos los campos del vehículo y falla para continuar.');
+      setErrorMsg('Por favor completa tu nombre, teléfono, datos del vehículo y falla para continuar.');
       return;
     }
 
@@ -254,31 +258,45 @@ export function SolicitarMecanicoModal({
       const placaLimpia = (placa.trim() || 'AD456EF').toUpperCase();
       const modeloFinal = modelo.includes('[') ? modelo.trim() : `${modelo.trim()} [${placaLimpia}]`;
 
+      // 0. Obtener ID del cliente autenticado si existe sesión
+      let clienteIdActual: string | null = null;
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.id) {
+          clienteIdActual = authData.user.id;
+        }
+      } catch (e) { }
+
+      let vehiculoIdFinal: string | null = (modoVehiculo === 'registrado' && vehiculoSeleccionadoId) ? vehiculoSeleccionadoId : null;
+
       // 1. Si está en modo nuevo y el usuario marcó guardar en Garaje
       if (modoVehiculo === 'nuevo' && guardarEnGaraje) {
+        try {
+          const { data: vData } = await supabase.from('vehiculos').insert([
+            {
+              cliente_id: clienteIdActual,
+              placa: placaLimpia,
+              marca: marca.trim(),
+              modelo: modelo.trim(),
+              anio: anioNum || 2022,
+              cliente_email: emailFinal
+            }
+          ]).select();
+
+          if (vData && vData[0]?.id) {
+            vehiculoIdFinal = vData[0].id;
+          }
+        } catch (e) {
+          console.warn('Aviso guardando vehículo en Supabase vehiculos:', e);
+        }
+
         const nuevoVehiculo: VehiculoOpcion = {
-          id: `veh_${Date.now()}`,
+          id: vehiculoIdFinal || `veh_${Date.now()}`,
           marca: marca.trim(),
           modelo: modelo.trim(),
           anio: anioNum || 2022,
           placa: placaLimpia
         };
-
-        try {
-          await supabase.from('vehiculos').insert([
-            {
-              marca: marca.trim(),
-              modelo: modelo.trim(),
-              anio: anioNum || 2022,
-              placa: placaLimpia,
-              kilometraje: 0,
-              cliente_nombre: nombreFinal,
-              cliente_email: emailFinal
-            }
-          ]);
-        } catch (e) {
-          console.warn('No se pudo guardar vehículo en Supabase vehiculos:', e);
-        }
 
         if (typeof window !== 'undefined') {
           try {
@@ -294,22 +312,20 @@ export function SolicitarMecanicoModal({
         }
       }
 
-      // 2. Insertar orden en Supabase
+      // 2. Insertar orden en la tabla ordenes (Campos oficiales de Supabase)
       const { data, error } = await supabase.from('ordenes').insert([
         {
           cliente_nombre: nombreFinal,
+          cliente_telefono: telefonoFinal,
           cliente_email: emailFinal,
+          vehiculo_id: vehiculoIdFinal,
           vehiculo_marca: marca.trim(),
           vehiculo_modelo: modeloFinal,
           vehiculo_placa: placaLimpia,
-          placa_flota: placaLimpia,
           vehiculo_anio: anioNum,
           falla_reportada: falla.trim(),
           sector: sector.trim(),
-          estado: 'DISPONIBLE',
-          ganancia_estimada: 30.0,
-          latitud: 10.49,
-          longitud: -66.85
+          estado: 'LEAD_NUEVO'
         }
       ]).select();
 
@@ -448,6 +464,24 @@ export function SolicitarMecanicoModal({
                               value={nombre}
                               onChange={(e) => setNombre(e.target.value)}
                               placeholder="Ej. Roberto Sánchez"
+                              className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Campo 1.2: Teléfono de Contacto (WhatsApp) */}
+                        <div>
+                          <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
+                            Teléfono de Contacto (WhatsApp) <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="tel"
+                              required
+                              value={telefono}
+                              onChange={(e) => setTelefono(e.target.value)}
+                              placeholder="Ej. +58 412 1234567"
                               className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
                             />
                           </div>
