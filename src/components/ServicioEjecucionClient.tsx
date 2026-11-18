@@ -234,6 +234,8 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       case 'CANCELADO':
       case 'RECHAZADO':
         return 0; // Estado terminal de cancelación/rechazo
+      case 'COTIZACION_RECHAZADA':
+        return 5; // Salta directo a liquidación del diagnóstico ($15)
       case 'COTIZADO':
       case 'EN_INSPECCION':
         return 2;
@@ -273,6 +275,9 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           if (data.falla_reportada) setFallaReportada(data.falla_reportada);
           if (data.estado) {
             setEstadoOrden(data.estado);
+            if (data.estado === 'COTIZACION_RECHAZADA') {
+              setToastMensaje(['El cliente no aprobó la cotización. Procede a cobrar la tarifa base de diagnóstico ($15) y cerrar el servicio.']);
+            }
             const faseCalculada = calcularFasePorEstado(data.estado);
             setFaseActual(faseCalculada);
           }
@@ -316,6 +321,9 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           const nuevo = payload.new as any;
           if (nuevo && nuevo.estado) {
             setEstadoOrden(nuevo.estado);
+            if (nuevo.estado === 'COTIZACION_RECHAZADA') {
+              setToastMensaje(['El cliente no aprobó la cotización. Procede a cobrar la tarifa base de diagnóstico ($15) y cerrar el servicio.']);
+            }
             const nuevaFase = calcularFasePorEstado(nuevo.estado);
             setFaseActual(nuevaFase);
           }
@@ -545,18 +553,22 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   };
 
   // Validaciones Fase 5
+  const esCotizacionRechazada = estadoOrden === 'COTIZACION_RECHAZADA';
   const kmFinalNum = Number(kmFinal);
   const kmBase = kmInicialNum || KILOMETRAJE_ANTERIOR;
   const kmFinalValido = kmFinal.trim() !== '' && !isNaN(kmFinalNum) && kmFinalNum > kmBase;
   const fotoFinalValida = Boolean(fotoOdometroFinal);
-  const puedePedirLiquidacion = kmFinalValido && fotoFinalValida;
+  const puedePedirLiquidacion = esCotizacionRechazada ? true : (kmFinalValido && fotoFinalValida);
+  const gananciaLiquidacion = esCotizacionRechazada ? 15.0 : cotizacion.gananciaMecanico;
 
   // Solicitar Liquidación Final (Fase 5 -> Éxito)
   const handleSolicitarLiquidacion = async () => {
     if (!puedePedirLiquidacion) {
       const errores: string[] = [];
-      if (!kmFinalValido) errores.push(`El kilometraje final debe ser mayor al inicial (${kmBase.toLocaleString()} km)`);
-      if (!fotoFinalValida) errores.push('Toma la foto del odómetro final tras la prueba de ruta');
+      if (!esCotizacionRechazada) {
+        if (!kmFinalValido) errores.push(`El kilometraje final debe ser mayor al inicial (${kmBase.toLocaleString()} km)`);
+        if (!fotoFinalValida) errores.push('Toma la foto del odómetro final tras la prueba de ruta');
+      }
       setToastMensaje(errores);
       setTimeout(() => setToastMensaje(null), 4000);
       return;
@@ -568,7 +580,8 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       await supabase
         .from('ordenes')
         .update({
-          estado: 'PENDIENTE_PAGO'
+          estado: 'PENDIENTE_PAGO',
+          ganancia_estimada: gananciaLiquidacion
         })
         .eq('id', id);
 
@@ -1383,19 +1396,35 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
               transition={{ duration: 0.3 }}
               className="space-y-4"
             >
+              {/* Banner si el cliente rechazó la cotización */}
+              {esCotizacionRechazada && (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-left space-y-2">
+                  <div className="flex items-center gap-2 text-amber-900 font-black text-xs uppercase tracking-wider">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <span>Cotización Rechazada por Cliente</span>
+                  </div>
+                  <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                    El cliente decidió no realizar la reparación con repuestos. Conforme al protocolo, se exonera la prueba de ruta y se liquida únicamente la <strong>tarifa base de diagnóstico ($15.00 USD)</strong>.
+                  </p>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
                 <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full inline-block">
                   Fase Final • Cierre y Liquidación
                 </span>
                 <h3 className="text-sm font-black text-[#0A1525] pt-1">
-                  Odómetro Final Post-Prueba de Ruta
+                  {esCotizacionRechazada ? 'Cierre de Diagnóstico Inicial' : 'Odómetro Final Post-Prueba de Ruta'}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Registra el kilometraje tras probar el auto (debe ser mayor al inicial de {kmBase.toLocaleString()} km).
+                  {esCotizacionRechazada
+                    ? 'Confirmación y liquidación del honorario de diagnóstico ($15.00 USD).'
+                    : `Registra el kilometraje tras probar el auto (debe ser mayor al inicial de ${kmBase.toLocaleString()} km).`}
                 </p>
               </div>
 
-              {/* Input Odómetro Final */}
+              {/* Input Odómetro Final (solo obligatorio si hubo reparación) */}
+              {!esCotizacionRechazada && (
               <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-4">
                 <div>
                   <label className="text-xs font-black text-[#0A1525] block mb-1">
@@ -1472,6 +1501,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Botón Gigante en Verde Lima: Solicitar Liquidación */}
               <button
@@ -1489,7 +1519,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 ) : (
                   <>
                     <ShieldCheck className="w-5 h-5 text-[#0A1525]" />
-                    <span>Solicitar Liquidación (${cotizacion.gananciaMecanico.toFixed(2)} USD)</span>
+                    <span>Solicitar Liquidación (${gananciaLiquidacion.toFixed(2)} USD)</span>
                   </>
                 )}
               </button>
@@ -1530,7 +1560,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                   Monto a Transferir
                 </span>
                 <span className="text-3xl font-black text-[#1E56B0] font-mono">
-                  ${cotizacion.gananciaMecanico.toFixed(2)} <span className="text-xs font-sans text-slate-500 font-bold">USD</span>
+                  ${gananciaLiquidacion.toFixed(2)} <span className="text-xs font-sans text-slate-500 font-bold">USD</span>
                 </span>
                 <span className="text-[11px] text-emerald-700 font-bold block pt-1">
                   ✓ Verificación fotográfica del odómetro aprobada

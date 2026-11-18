@@ -47,6 +47,7 @@ export function SolicitarMecanicoModal({
   const [email, setEmail] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
+  const [placa, setPlaca] = useState('');
   const [anio, setAnio] = useState('');
   const [falla, setFalla] = useState('');
   const [sector, setSector] = useState('');
@@ -57,11 +58,9 @@ export function SolicitarMecanicoModal({
     if (open) {
       if (initialVehiculo?.marca) setMarca(initialVehiculo.marca);
       if (initialVehiculo?.modelo) {
-        const modConPlaca = initialVehiculo.placa
-          ? `${initialVehiculo.modelo} [${initialVehiculo.placa}]`
-          : initialVehiculo.modelo;
-        setModelo(modConPlaca);
+        setModelo(initialVehiculo.modelo);
       }
+      if (initialVehiculo?.placa) setPlaca(initialVehiculo.placa);
       if (initialVehiculo?.anio) setAnio(String(initialVehiculo.anio));
       if (initialVehiculo?.falla) setFalla(initialVehiculo.falla);
 
@@ -91,13 +90,17 @@ export function SolicitarMecanicoModal({
     try {
       const supabase = createClient();
       const anioNum = parseInt(anio.trim(), 10) || null;
+      const placaLimpia = (placa.trim() || 'AD456EF').toUpperCase();
+      const modeloFinal = modelo.includes('[') ? modelo.trim() : `${modelo.trim()} [${placaLimpia}]`;
 
       const { data, error } = await supabase.from('ordenes').insert([
         {
           cliente_nombre: nombre.trim(),
           cliente_email: email.trim() || null,
           vehiculo_marca: marca.trim(),
-          vehiculo_modelo: modelo.trim(),
+          vehiculo_modelo: modeloFinal,
+          vehiculo_placa: placaLimpia,
+          placa_flota: placaLimpia,
           vehiculo_anio: anioNum,
           falla_reportada: falla.trim(),
           sector: sector.trim(),
@@ -285,21 +288,38 @@ export function SolicitarMecanicoModal({
                       </div>
                     </div>
 
-                    {/* Fila 3: Modelo (Ancho completo) */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                        Modelo
-                      </label>
-                      <div className="relative">
-                        <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          required
-                          value={modelo}
-                          onChange={(e) => setModelo(e.target.value)}
-                          placeholder="Ej. Corolla / Yaris / Fiesta"
-                          className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
-                        />
+                    {/* Fila 3: Modelo y Placa (grid-cols-2) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
+                          Modelo <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            value={modelo}
+                            onChange={(e) => setModelo(e.target.value)}
+                            placeholder="Ej. Corolla / Yaris"
+                            className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
+                          Placa / Matrícula
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={placa}
+                            onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+                            placeholder="Ej. AD456EF"
+                            className="w-full h-11 px-3 text-sm font-mono font-bold uppercase bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all"
+                          />
+                        </div>
                       </div>
                     </div>
 

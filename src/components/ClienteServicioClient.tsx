@@ -1000,9 +1000,28 @@ export function ClienteServicioClient({ id }: { id: string }) {
     }
   };
 
-  const handleRechazarPresupuesto = () => {
+  const handleRechazarPresupuesto = async () => {
     setPresupuestoRechazado(true);
     setModalAprobarPresupuesto(false);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('ordenes')
+        .update({
+          estado: 'COTIZACION_RECHAZADA',
+          falla_reportada: `${orden.falla_reportada || 'Servicio'} [CLIENTE RECHAZÓ COTIZACIÓN - Cobrar solo diagnóstico $15]`
+        })
+        .eq('id', id);
+
+      setOrden((prev) => ({
+        ...prev,
+        estado: 'COTIZACION_RECHAZADA',
+        falla_reportada: `${prev.falla_reportada || 'Servicio'} [CLIENTE RECHAZÓ COTIZACIÓN - Cobrar solo diagnóstico $15]`
+      }));
+    } catch (err) {
+      console.error('Error notificando rechazo a Supabase:', err);
+    }
   };
 
   // Subir Comprobante al bucket 'evidencias'

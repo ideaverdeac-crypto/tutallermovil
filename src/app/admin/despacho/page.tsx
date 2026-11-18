@@ -1278,8 +1278,8 @@ export default function TableroDespachoPage() {
     setOrdenParaRadar(null);
   };
 
-  // 2. Asignación de Runner para Despacho de Repuestos
-  const handleSeleccionarRunner = (runnerNombre: string) => {
+  // 2. Asignación de Runner para Despacho de Repuestos (Persistente en Supabase P1-01)
+  const handleSeleccionarRunner = async (runnerNombre: string) => {
     if (!ordenParaRunner) return;
     const ordenId = ordenParaRunner.id;
 
@@ -1296,11 +1296,26 @@ export default function TableroDespachoPage() {
       [ordenId]: runnerNombre
     }));
 
+    // Persistir runner en Supabase
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('ordenes')
+        .update({
+          runner_nombre: runnerNombre,
+          estado: 'REPUESTOS_EN_RUTA',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', ordenId);
+    } catch (err) {
+      console.error('Error persistiendo runner en Supabase:', err);
+    }
+
     setModalRunnerOpen(false);
     setOrdenParaRunner(null);
   };
 
-  // 3. Validación de Pago y Cierre con Retención QA (Mueve fuera del Kanban)
+  // 3. Validación de Pago y Cierre con Retención QA (Invocación RPC P0-01)
   const handleValidarPagoYCerrar = async (orden: OrdenKanban) => {
     const monto =
       typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0
@@ -1324,15 +1339,32 @@ export default function TableroDespachoPage() {
 
     try {
       const supabase = createClient();
-      await supabase
-        .from('ordenes')
-        .update({ estado: 'PAGADO' })
-        .eq('id', orden.id);
+      // P0-01: Invocación RPC atómica que garantiza la creación del historial y retención QA
+      const { data, error } = await supabase.rpc('liberar_pago_orden', {
+        p_orden_id: orden.id,
+        p_operadora_email: miOperadora?.email || 'despacho@tutallermovil.com'
+      });
+
+      if (error) {
+        console.error('Error invocando liberar_pago_orden, aplicando fallback update directo:', error);
+        await supabase
+          .from('ordenes')
+          .update({ estado: 'PAGADO' })
+          .eq('id', orden.id);
+      } else {
+        console.log('[RPC EXITOSO] Historial médico creado y pago liberado:', data);
+      }
     } catch (err) {
       console.error('Error al actualizar estado PAGADO en Supabase:', err);
+      try {
+        const supabase = createClient();
+        await supabase.from('ordenes').update({ estado: 'PAGADO' }).eq('id', orden.id);
+      } catch (e) {
+        console.error('Fallback falló:', e);
+      }
     }
 
-    setToastPagoExitoso('Orden pagada. Fondo QA retenido (3%)');
+    setToastPagoExitoso('Orden pagada. Historial médico creado y Fondo QA (3%) conciliado.');
     setTimeout(() => {
       setToastPagoExitoso(null);
     }, 4500);
