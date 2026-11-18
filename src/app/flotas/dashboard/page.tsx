@@ -97,180 +97,6 @@ const EMPRESA_DEFAULT: EmpresaFlota = {
   sector: 'Distribución & Transporte de Carga Nacional'
 };
 
-// 12 Unidades iniciales de la flota
-const VEHICULOS_FLOTA_INICIAL: VehiculoFlota[] = [
-  {
-    id: 'FLEET-01',
-    placa: 'A12BC3D',
-    marca: 'Iveco',
-    modelo: 'Daily 70C16 Chasis Cabina',
-    anio: 2021,
-    tipo: 'Carga Pesada',
-    conductor: 'Pedro Morales',
-    conductorTelefono: '+58 412 889 1122',
-    ultimoServicioFecha: '12 Oct 2026',
-    ultimoServicioTipo: 'Cambio de Aceite Sintético 15W-40 y Filtros',
-    kilometrajeActual: 146800,
-    kilometrajeUltimoServicio: 141200,
-    estado: 'VENCIDO',
-    fotoUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=500&q=80',
-    notas: 'Unidad principal de distribución interurbana Caracas-Valencia.',
-    serviciosHistorial: [
-      {
-        fecha: '12 Oct 2026',
-        tipo: 'Mantenimiento Preventivo 140K',
-        kilometraje: 141200,
-        mecanico: 'Carlos Mendoza (#TTM-0842)',
-        costo: 180.0,
-        repuestos: 'Aceite 15W-40 Mobil Delvac, Filtro Aceite Mann, Filtro Combustible'
-      },
-      {
-        fecha: '15 Jul 2026',
-        tipo: 'Revisión y Cambio de Frenos',
-        kilometraje: 135000,
-        mecanico: 'Roberto Silva (#TTM-0512)',
-        costo: 145.0,
-        repuestos: 'Pastillas delanteras cerámicas Fras-le, Líquido DOT 4'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-02',
-    placa: 'A34DE5F',
-    marca: 'Chevrolet',
-    modelo: 'NPR 75L Turbo Diésel',
-    anio: 2022,
-    tipo: 'Carga Pesada',
-    conductor: 'Roberto Gómez',
-    conductorTelefono: '+58 414 772 3344',
-    ultimoServicioFecha: '28 Sep 2026',
-    ultimoServicioTipo: 'Inspección OBD2 y Calibración Inyectores',
-    kilometrajeActual: 98400,
-    kilometrajeUltimoServicio: 93800,
-    estado: 'PROXIMO',
-    fotoUrl: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=500&q=80',
-    notas: 'Ruta centro del país. Requiere revisión de inyección programada.',
-    serviciosHistorial: [
-      {
-        fecha: '28 Sep 2026',
-        tipo: 'Mantenimiento Intermedio 90K',
-        kilometraje: 93800,
-        mecanico: 'Carlos Mendoza (#TTM-0842)',
-        costo: 165.0,
-        repuestos: 'Aceite 15W-40 Castrol CRB, Filtro de Aire y Combustible'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-03',
-    placa: 'A56GH7J',
-    marca: 'Toyota',
-    modelo: 'Hilux 2.7 4x4 Doble Cabina',
-    anio: 2023,
-    tipo: 'Pick-Up',
-    conductor: 'Andrés Eloy Blanco',
-    conductorTelefono: '+58 416 554 9988',
-    ultimoServicioFecha: '05 Nov 2026',
-    ultimoServicioTipo: 'Cambio de Aceite 5W-30 Sintético y Rotación',
-    kilometrajeActual: 51200,
-    kilometrajeUltimoServicio: 49800,
-    estado: 'AL_DIA',
-    fotoUrl: 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=500&q=80',
-    notas: 'Vehículo de supervisión de operaciones y supervisores de campo.',
-    serviciosHistorial: [
-      {
-        fecha: '05 Nov 2026',
-        tipo: 'Servicio 50.000 KM Garantía',
-        kilometraje: 49800,
-        mecanico: 'Luis Carrillo (#TTM-0901)',
-        costo: 110.0,
-        repuestos: 'Aceite 5W-30 Motul Full Sintético, Filtro Aceite Genuino Toyota'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-04',
-    placa: 'A78KL9M',
-    marca: 'Ford',
-    modelo: 'F-350 Tritón V8 5.4L',
-    anio: 2019,
-    tipo: 'Carga Pesada',
-    conductor: 'José Vicente Rangel',
-    conductorTelefono: '+58 412 331 4455',
-    ultimoServicioFecha: '10 Ago 2026',
-    ultimoServicioTipo: 'Cambio de Aceite 20W-50 y Servicio de Bujías',
-    kilometrajeActual: 215400,
-    kilometrajeUltimoServicio: 209800,
-    estado: 'VENCIDO',
-    fotoUrl: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=500&q=80',
-    notas: 'Carga pesada materiales. Vencido por kilometraje excedido (+5,600 km).',
-    serviciosHistorial: [
-      {
-        fecha: '10 Ago 2026',
-        tipo: 'Mantenimiento Mayor Motor V8',
-        kilometraje: 209800,
-        mecanico: 'Manuel Arrieta (#TTM-0419)',
-        costo: 220.0,
-        repuestos: 'Aceite 20W-50 Mineral Motorcraft, Juego Bujías Platino, Filtro de Aire'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-05',
-    placa: 'A90NP1Q',
-    marca: 'Renault',
-    modelo: 'Kangoo Maxi 1.6 16V',
-    anio: 2022,
-    tipo: 'Utilitario',
-    conductor: 'Mariana Duque',
-    conductorTelefono: '+58 424 112 8899',
-    ultimoServicioFecha: '01 Nov 2026',
-    ultimoServicioTipo: 'Cambio de Aceite 10W-40 y Filtro Antipolen',
-    kilometrajeActual: 62400,
-    kilometrajeUltimoServicio: 61100,
-    estado: 'AL_DIA',
-    fotoUrl: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=500&q=80',
-    notas: 'Despacho exprés urbano y paquetería ligera en Caracas metropolitana.',
-    serviciosHistorial: [
-      {
-        fecha: '01 Nov 2026',
-        tipo: 'Mantenimiento Preventivo 60K',
-        kilometraje: 61100,
-        mecanico: 'Luis Carrillo (#TTM-0901)',
-        costo: 85.0,
-        repuestos: 'Aceite 10W-40 Elf Evolution, Filtro de Aceite Renault Original'
-      }
-    ]
-  },
-  {
-    id: 'FLEET-06',
-    placa: 'A23RS4T',
-    marca: 'Mitsubishi',
-    modelo: 'Canter FE 639 Chasis Largo',
-    anio: 2020,
-    tipo: 'Carga Pesada',
-    conductor: 'Héctor Lavoe C.',
-    conductorTelefono: '+58 414 990 7766',
-    ultimoServicioFecha: '19 Oct 2026',
-    ultimoServicioTipo: 'Engrase de Chasis y Cambio de Aceite Diferencial',
-    kilometrajeActual: 178900,
-    kilometrajeUltimoServicio: 177400,
-    estado: 'AL_DIA',
-    fotoUrl: 'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=500&q=80',
-    notas: 'Caja térmica refrigerada para traslados de productos lácteos.',
-    serviciosHistorial: [
-      {
-        fecha: '19 Oct 2026',
-        tipo: 'Servicio Tren Motriz y Diferencial',
-        kilometraje: 177400,
-        mecanico: 'Carlos Mendoza (#TTM-0842)',
-        costo: 135.0,
-        repuestos: 'Aceite 80W-90 GL-5 Valvoline, Grasa Litio Chasis EP-2'
-      }
-    ]
-  }
-];
-
 export default function FlotasDashboardPage() {
   // Estado de la Empresa
   const [empresa, setEmpresa] = useState<EmpresaFlota>(EMPRESA_DEFAULT);
@@ -278,7 +104,7 @@ export default function FlotasDashboardPage() {
   const [formEmpresa, setFormEmpresa] = useState<EmpresaFlota>(EMPRESA_DEFAULT);
 
   // Estado de Vehículos
-  const [vehiculos, setVehiculos] = useState<VehiculoFlota[]>(VEHICULOS_FLOTA_INICIAL);
+  const [vehiculos, setVehiculos] = useState<VehiculoFlota[]>([]);
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | 'AL_DIA' | 'PROXIMO' | 'VENCIDO'>('TODOS');
   const [busqueda, setBusqueda] = useState<string>('');
 
@@ -1250,10 +1076,10 @@ export default function FlotasDashboardPage() {
                       <button
                         type="button"
                         onClick={handleAbrirCrearVehiculo}
-                        className="mt-3 px-4 py-2 rounded-xl bg-[#1E56B0] text-white text-xs font-bold inline-flex items-center gap-1.5"
+                        className="mt-3 px-5 py-2.5 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-bold inline-flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
                       >
-                        <Plus className="w-3.5 h-3.5 text-[#CCFF00]" />
-                        <span>Agregar Vehículo Ahora</span>
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>{vehiculos.length === 0 ? 'Registrar Primer Vehículo de Flota' : 'Agregar Vehículo Ahora'}</span>
                       </button>
                     </td>
                   </tr>

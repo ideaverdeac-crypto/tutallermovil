@@ -429,42 +429,6 @@ export function ClienteServicioClient({ id }: { id: string }) {
         }
       }
 
-      // Si no hay registros aún, proveer hitos certificados de demostración para completar la experiencia visual
-      if (servicios.length === 0) {
-        servicios = [
-          {
-            id: 'hist-01',
-            fecha: '2026-11-17',
-            kilometraje: 85400,
-            tipo_servicio: 'Reemplazo de Pastillas de Freno Cerámicas & Purga DOT 4',
-            costo: 75.0,
-            detalles: 'Instalación de pastillas cerámicas Bosch Blue Edition y rectificación micrométrica de discos con torque certificado.',
-            foto_repuesto_nuevo_url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80',
-            foto_url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80'
-          },
-          {
-            id: 'hist-02',
-            fecha: '2026-08-10',
-            kilometraje: 80120,
-            tipo_servicio: 'Mantenimiento Mayor Preventivo 80.000 KM & Escaneo OBD-II',
-            costo: 185.0,
-            detalles: 'Sustitución de aceite 5W-30 Full Sintético, filtro de aceite OEM, bujías Iridium y reseteo de testigo de servicio.',
-            foto_repuesto_nuevo_url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=80',
-            foto_url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=80'
-          },
-          {
-            id: 'hist-03',
-            fecha: '2026-02-14',
-            kilometraje: 74900,
-            tipo_servicio: 'Diagnóstico de Alternador & Reemplazo de Batería 800A',
-            costo: 120.0,
-            detalles: 'Prueba de caída de tensión, balance de carga y montaje de acumulador libre de mantenimiento con terminales sellados.',
-            foto_repuesto_nuevo_url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
-            foto_url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80'
-          }
-        ];
-      }
-
       setListaHistorial(servicios);
     } catch (err) {
       console.error('Error cargando historial y suscripción:', err);
@@ -2339,59 +2303,71 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     </span>
                   </div>
 
-                  <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    {listaHistorial.map((hito, idx) => (
-                      <div key={hito.id || idx} className="relative group">
-                        {/* Nodo de la línea de tiempo */}
-                        <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-[#0A1525] border-2 border-white shadow-xs flex items-center justify-center">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
-                        </div>
-
-                        {/* Tarjeta del Hito */}
-                        <div className="bg-[#F8FAFC] hover:bg-slate-100/80 transition-colors border border-slate-200 rounded-2xl p-4 space-y-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-[#1E56B0]" />
-                              {hito.fecha || 'Reciente'}
-                            </span>
-                            <span className="text-xs font-black text-[#16A34A] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
-                              <DollarSign className="w-3 h-3 stroke-[2.5]" />
-                              {Number(hito.costo || 0).toFixed(2)} USD
-                            </span>
-                          </div>
-
-                          <h4 className="text-xs font-black text-[#0A1525] leading-snug">
-                            {hito.tipo_servicio}
-                          </h4>
-
-                          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
-                            <span className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
-                              <Gauge className="w-3 h-3 text-slate-500" />
-                              Odómetro: {Number(hito.kilometraje || 0).toLocaleString('es-VE')} KM
-                            </span>
-                          </div>
-
-                          {hito.detalles && (
-                            <p className="text-[11px] text-slate-500 leading-relaxed">
-                              {hito.detalles}
-                            </p>
-                          )}
-
-                          {/* Botón Ver Foto de Evidencia */}
-                          {(hito.foto_repuesto_nuevo_url || hito.foto_url) && (
-                            <button
-                              type="button"
-                              onClick={() => setModalFotoZoom(hito.foto_repuesto_nuevo_url || hito.foto_url)}
-                              className="mt-1 h-8 px-3 rounded-xl bg-white hover:bg-[#0A1525] hover:text-white border border-slate-200 text-[#0A1525] text-[10px] font-black flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
-                            >
-                              <Camera className="w-3.5 h-3.5 text-[#1E56B0]" />
-                              <span>Ver Foto de Evidencia</span>
-                            </button>
-                          )}
-                        </div>
+                  {listaHistorial.length === 0 ? (
+                    <div className="text-center py-8 px-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl space-y-1.5">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mx-auto shadow-2xs">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-xs font-black text-[#0A1525]">Este es el primer servicio de tu vehículo</p>
+                      <p className="text-[11px] text-[#475569] max-w-xs mx-auto">
+                        Al completar la reparación, los hitos certificados y el diagnóstico de 25 puntos quedarán registrados aquí automáticamente.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                      {listaHistorial.map((hito, idx) => (
+                        <div key={hito.id || idx} className="relative group">
+                          {/* Nodo de la línea de tiempo */}
+                          <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-[#0A1525] border-2 border-white shadow-xs flex items-center justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
+                          </div>
+
+                          {/* Tarjeta del Hito */}
+                          <div className="bg-[#F8FAFC] hover:bg-slate-100/80 transition-colors border border-slate-200 rounded-2xl p-4 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-[#1E56B0]" />
+                                {hito.fecha || 'Reciente'}
+                              </span>
+                              <span className="text-xs font-black text-[#16A34A] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                                <DollarSign className="w-3 h-3 stroke-[2.5]" />
+                                {Number(hito.costo || 0).toFixed(2)} USD
+                              </span>
+                            </div>
+
+                            <h4 className="text-xs font-black text-[#0A1525] leading-snug">
+                              {hito.tipo_servicio}
+                            </h4>
+
+                            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+                              <span className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                                <Gauge className="w-3 h-3 text-slate-500" />
+                                Odómetro: {Number(hito.kilometraje || 0).toLocaleString('es-VE')} KM
+                              </span>
+                            </div>
+
+                            {hito.detalles && (
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
+                                {hito.detalles}
+                              </p>
+                            )}
+
+                            {/* Botón Ver Foto de Evidencia */}
+                            {(hito.foto_repuesto_nuevo_url || hito.foto_url) && (
+                              <button
+                                type="button"
+                                onClick={() => setModalFotoZoom(hito.foto_repuesto_nuevo_url || hito.foto_url)}
+                                className="mt-1 h-8 px-3 rounded-xl bg-white hover:bg-[#0A1525] hover:text-white border border-slate-200 text-[#0A1525] text-[10px] font-black flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                              >
+                                <Camera className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                <span>Ver Foto de Evidencia</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

@@ -26,60 +26,6 @@ interface PageProps {
   searchParams?: Promise<{ garaje?: string }>;
 }
 
-const DEMO_SERVICIOS = [
-  {
-    id: 'mock-1',
-    fecha: '2026-11-17',
-    kilometraje: 85400,
-    tipo_servicio: 'Reemplazo de Pastillas de Freno y Rectificación Certificada',
-    costo: 75.00,
-    detalles: 'Pastillas Cerámicas Akebono, rectificación de discos y purga con fluido DOT-4',
-    checklist_json: {
-      total_puntos: 25,
-      puntos_ok: 22,
-      puntos_cambio: 3,
-      frenos: 'requiere_cambio',
-      aceite: 'ok',
-      suspension: 'ok',
-      electrico: 'ok'
-    }
-  },
-  {
-    id: 'mock-2',
-    fecha: '2026-08-14',
-    kilometraje: 80000,
-    tipo_servicio: 'Mantenimiento Mayor de 80.000 KM & Diagnóstico Computarizado',
-    costo: 185.00,
-    detalles: 'Kit de Tiempo, Aceite 5W-30 Sintético, Filtros y Bujías Iridium',
-    checklist_json: {
-      total_puntos: 25,
-      puntos_ok: 25,
-      puntos_cambio: 0,
-      frenos: 'ok',
-      aceite: 'ok',
-      suspension: 'ok',
-      electrico: 'ok'
-    }
-  },
-  {
-    id: 'mock-3',
-    fecha: '2026-04-22',
-    kilometraje: 76500,
-    tipo_servicio: 'Diagnóstico Escáner OBD-II y Calibración de Sensores ABS',
-    costo: 45.00,
-    detalles: 'Calibración cuerpo de aceleración y sensor ABS delantero',
-    checklist_json: {
-      total_puntos: 25,
-      puntos_ok: 24,
-      puntos_cambio: 1,
-      frenos: 'ok',
-      aceite: 'ok',
-      suspension: 'ok',
-      electrico: 'requiere_cambio'
-    }
-  }
-];
-
 export const instant = false;
 
 export default async function HistorialPlacaPage({ params, searchParams }: PageProps) {
@@ -98,16 +44,16 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
     .ilike('placa', placa)
     .maybeSingle();
 
-  // Fallback para placas demo o si proviene de Mi Garaje
+  // Si proviene de Mi Garaje pero aún se está sincronizando en base de datos
   let vehiculo = vehiculoData;
-  if (!vehiculo && (placa === 'AB123CD' || placa === 'AE456FG' || desdeGaraje)) {
+  if (!vehiculo && desdeGaraje) {
     vehiculo = {
       id: `veh-${placa.toLowerCase()}`,
       placa: placa,
-      marca: placa === 'AE456FG' ? 'Jeep' : 'Toyota',
-      modelo: placa === 'AE456FG' ? 'Grand Cherokee Limited' : 'Corolla GLi',
-      anio: placa === 'AE456FG' ? 2019 : 2018,
-      color: placa === 'AE456FG' ? 'Negro Brillante' : 'Plata Metalizado'
+      marca: 'Vehículo',
+      modelo: 'Registrado',
+      anio: new Date().getFullYear(),
+      color: 'Estándar'
     };
   }
 
@@ -182,12 +128,8 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
     if (srvByPlaca && srvByPlaca.length > 0) servicios = srvByPlaca;
   }
 
-  // Solo la placa oficial de demostración pública (AB123CD) mantiene servicios demo en caso de estar vacía
-  // Todos los demás vehículos registrados por clientes inician estrictamente en cero (historial vacío)
-  const esPlacaDemo = placa.toUpperCase() === 'AB123CD';
-  const listaServicios = servicios.length > 0
-    ? servicios
-    : (esPlacaDemo ? DEMO_SERVICIOS : []);
+  // Lista real de servicios registrados en Supabase
+  const listaServicios = servicios;
 
   // 5. Verificar suscripción o si el usuario está autenticado / proviene de Mi Garaje (Salto de Paywall)
   const { data: authData } = await supabase.auth.getUser();

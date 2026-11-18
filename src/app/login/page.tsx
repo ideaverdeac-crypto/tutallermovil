@@ -247,12 +247,9 @@ function LoginForm() {
         }
 
         if (authError && !authData?.user) {
-          // Si falló auth pero es cuenta demo local permitida
-          if (!secret || secret.length < 4) {
-            setErrorMensaje(authError.message || 'Credenciales inválidas.');
-            setCargando(false);
-            return;
-          }
+          setErrorMensaje('Credenciales inválidas. Verifica tu correo y contraseña.');
+          setCargando(false);
+          return;
         }
       } 
       // ========================================================
@@ -544,38 +541,6 @@ function LoginForm() {
                   </>
                 )}
               </motion.button>
-
-              {/* Atajos Rápidos de Prueba para Staff */}
-              <div className="pt-3 border-t border-slate-100 space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block text-center">
-                  Accesos Rápidos (Demostración)
-                </span>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStaffEmail('admin@tutallermovil.com');
-                      setStaffPassword('admin123');
-                    }}
-                    className="p-2 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-slate-100 text-left transition-colors cursor-pointer"
-                  >
-                    <span className="font-bold text-[#0A1525] block">Dueño / Finanzas</span>
-                    <span className="text-[10px] text-slate-400 truncate block">admin@tutallermovil.com</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStaffEmail('operadora@tutallermovil.com');
-                      setStaffPassword('operadora123');
-                    }}
-                    className="p-2 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-slate-100 text-left transition-colors cursor-pointer"
-                  >
-                    <span className="font-bold text-[#0A1525] block">Operadora Despacho</span>
-                    <span className="text-[10px] text-slate-400 truncate block">operadora@tutallermovil.com</span>
-                  </button>
-                </div>
-              </div>
             </motion.form>
           ) : (
             /* ========================================================= */
@@ -619,7 +584,7 @@ function LoginForm() {
                     <span>Contraseña o PIN</span>
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">
-                    PIN demo: 1234
+                    PIN o Contraseña
                   </span>
                 </label>
                 <input
@@ -627,7 +592,7 @@ function LoginForm() {
                   required
                   value={aliadoPin}
                   onChange={(e) => setAliadoPin(e.target.value)}
-                  placeholder="•••••••• o PIN (1234)"
+                  placeholder="•••••••• o PIN de 4 dígitos"
                   className="w-full h-12 px-3.5 text-xs font-semibold bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[#1E56B0] focus:bg-white rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-400"
                 />
               </div>

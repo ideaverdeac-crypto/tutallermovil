@@ -73,25 +73,6 @@ function LoginClienteContent() {
       });
 
       if (error) {
-        // Soporte para cuenta demo local si Supabase Auth no tiene habilitado email confirmation o offline
-        if (email.toLowerCase().includes('demo') || email.toLowerCase().includes('maria') || email.toLowerCase().includes('cliente')) {
-          const perfilDemo = {
-            id: 'cli-demo-maria',
-            nombre: 'María Rodríguez',
-            email: email.trim(),
-            telefono: '+58 412 123 4567',
-            rol: 'CLIENTE'
-          };
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('ttm_cliente_sesion', JSON.stringify(perfilDemo));
-          }
-          setExitoMsg('¡Bienvenida de vuelta! Accediendo a Mi Garaje...');
-          setTimeout(() => {
-            router.push(redirectParam || '/cliente/dashboard');
-          }, 600);
-          return;
-        }
-
         setErrorMsg(error.message === 'Invalid login credentials'
           ? 'Correo o contraseña incorrectos. Verifica tus datos o crea una cuenta nueva.'
           : error.message);
@@ -201,14 +182,6 @@ function LoginClienteContent() {
     } finally {
       setCargando(false);
     }
-  };
-
-  // Demo Rápido
-  const llenarDemo = () => {
-    setEmail('maria.rodriguez@tutallermovil.com');
-    setPassword('Demo123456');
-    setNombre('María Rodríguez');
-    setTelefono('+58 412 123 4567');
   };
 
   return (
@@ -488,20 +461,6 @@ function LoginClienteContent() {
                 )}
               </button>
             </form>
-
-            {/* Botón de Relleno Demo para pruebas inmediatas */}
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-slate-400 text-[11px]">¿Quieres probar rápido?</span>
-              <button
-                type="button"
-                onClick={llenarDemo}
-                className="text-[11px] font-bold text-[#1E56B0] hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>Usar Cuenta Demo</span>
-              </button>
-            </div>
-
           </div>
 
           {/* Enlace para Staff y Aliados */}

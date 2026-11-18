@@ -592,17 +592,17 @@ export default function PortalRepuestosPage() {
             ))}
           </div>
         ) : repuestosFiltrados.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-dashed border-[#CBD5E1] p-12 text-center max-w-lg mx-auto space-y-4 my-8">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center mx-auto">
-              <Package className="w-7 h-7" />
+          <div className="bg-white rounded-3xl border-2 border-dashed border-[#CBD5E1] p-12 text-center max-w-lg mx-auto space-y-4 my-8 shadow-xs">
+            <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center mx-auto shadow-2xs">
+              <Package className="w-8 h-8 stroke-[1.5] text-slate-400" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <h3 className="text-base font-black text-[#0A1525]">
                 {busqueda
                   ? 'No se encontraron repuestos con ese criterio'
                   : 'Aún no hay repuestos publicados'}
               </h3>
-              <p className="text-xs text-[#475569]">
+              <p className="text-xs text-[#475569] max-w-sm mx-auto">
                 {busqueda
                   ? 'Intenta con otro término o limpia los filtros para ver todo el catálogo.'
                   : 'Publica el primer artículo de tu inventario para los mecánicos y runners de TuTallerMóvil.'}
@@ -613,11 +613,12 @@ export default function PortalRepuestosPage() {
               onClick={() => {
                 setBusqueda('');
                 setMarcaSeleccionada('todas');
-                if (!busqueda) setModalAbierto(true);
+                setModalAbierto(true);
               }}
-              className="px-5 py-2.5 rounded-xl bg-[#0A1525] text-white text-xs font-bold hover:bg-[#1E56B0] transition-colors cursor-pointer"
+              className="px-6 py-3 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black transition-all cursor-pointer shadow-sm active:scale-95 inline-flex items-center gap-2"
             >
-              {busqueda ? 'Limpiar Búsqueda' : '+ Publicar Repuesto Ahora'}
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Publicar mi primer repuesto</span>
             </button>
           </div>
         ) : (

@@ -593,21 +593,6 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
     }
   };
 
-  // Helpers para pruebas rápidas / demos
-  const simularPasoAprobacionDemo = async () => {
-    const supabase = createClient();
-    await supabase.from('ordenes').update({ estado: 'REPUESTOS_EN_RUTA' }).eq('id', id);
-    setEstadoOrden('REPUESTOS_EN_RUTA');
-    setFaseActual(3);
-  };
-
-  const simularEntregaRunnerDemo = async () => {
-    const supabase = createClient();
-    await supabase.from('ordenes').update({ estado: 'EN_EJECUCION' }).eq('id', id);
-    setEstadoOrden('EN_EJECUCION');
-    setFaseActual(4);
-  };
-
   // Identificador de servicio cancelado o rechazado
   const esCanceladoORechazado = estadoOrden === 'CANCELADO' || estadoOrden === 'RECHAZADO' || faseActual === 0;
 
@@ -1094,21 +1079,6 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                     <span>Escuchando respuesta en tiempo real...</span>
                   </div>
                 </div>
-
-                {/* Botón Simulador de Prueba Demo (Oculto en Producción) */}
-                {process.env.NODE_ENV !== 'production' && (
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={simularPasoAprobacionDemo}
-                      className="w-full h-11 rounded-xl bg-slate-100 hover:bg-[#CCFF00] hover:text-[#0A1525] text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200 active:scale-95"
-                      title="Avanzar simulando que el cliente aprobó en despacho"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      <span>⚡ Simular Aprobación & Runner (Demo)</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </motion.div>
           )}
@@ -1176,18 +1146,6 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-800 text-left font-medium">
                   🔒 <strong>Aún bloqueado para montar:</strong> Espera la entrega física del repuesto para iniciar la instalación.
                 </div>
-
-                {/* Botón Simulador de Entrega (Oculto en Producción) */}
-                {process.env.NODE_ENV !== 'production' && (
-                  <button
-                    type="button"
-                    onClick={simularEntregaRunnerDemo}
-                    className="w-full h-11 rounded-xl bg-slate-100 hover:bg-[#CCFF00] hover:text-[#0A1525] text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200 active:scale-95"
-                  >
-                    <PackageCheck className="w-4 h-4 text-emerald-600" />
-                    <span>⚡ Simular Entrega del Runner en Sitio (Demo)</span>
-                  </button>
-                )}
               </div>
             </motion.div>
           )}

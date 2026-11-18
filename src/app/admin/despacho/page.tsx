@@ -969,83 +969,9 @@ export default function TableroDespachoPage() {
         } catch (e) { }
       }
 
-      // Si no hay órdenes (base de datos sin datos), proveer órdenes iniciales incluyendo una Flota Corporativa
+      // Si no hay órdenes (base de datos sin datos), inicializar estrictamente en vacío para producción
       if (ordenesFinales.length === 0) {
-        ordenesFinales = [
-          {
-            id: 'ord-flota-demo-01',
-            cliente_nombre: 'Logística El Este C.A. (Flota)',
-            cliente_telefono: '+58 412 889 0011',
-            vehiculo_marca: 'Iveco',
-            vehiculo_modelo: 'Daily 70C15 Furgón [A89DF5G]',
-            vehiculo_anio: 2022,
-            falla_reportada: '[FLOTA J-12345678-9] Mantenimiento Preventivo 120K: Cambio de aceite 15W-40, filtro y revisión de frenos de aire.',
-            sector: 'Los Ruices - Galpón 4',
-            estado: 'LEAD_NUEVO',
-            ganancia_estimada: 120.0,
-            es_flota: true,
-            empresa_flota: 'Logística El Este C.A.',
-            placa_flota: 'A89DF5G',
-            created_at: '2026-11-17T11:42:00.000Z'
-          },
-          {
-            id: 'ord-particular-demo-02',
-            cliente_nombre: 'Carlos Silva',
-            cliente_telefono: '+58 414 231 4194',
-            vehiculo_marca: 'Toyota',
-            vehiculo_modelo: 'Corolla GLi 2018',
-            vehiculo_anio: 2018,
-            falla_reportada: 'Chillido agudo al frenar en frío y pedal de freno ligeramente bajo.',
-            sector: 'Altamira Sur',
-            estado: 'EN_INSPECCION',
-            ganancia_estimada: 45.0,
-            es_flota: false,
-            created_at: '2026-11-17T11:15:00.000Z',
-            diagnostico_json: {
-              frenos: 'requiere_cambio',
-              aceite: 'ok',
-              suspension: 'ok',
-              fluidos: 'requiere_cambio',
-              electrico: 'ok',
-              total_puntos: 25,
-              puntos_ok: 22,
-              puntos_cambio: 3,
-              piezas_requeridas: 'Pastillas de freno delanteras cerámicas Bosch, 2 Discos delanteros ventilados, 1 Botella Líquido DOT 4 Motul',
-              fecha: '2026-11-17T11:25:00.000Z',
-              mecanico: {
-                nombre: 'Carlos Mendoza',
-                codigo: '#TTM-0842'
-              },
-              items: {
-                aceite_motor: 'ok',
-                liquido_frenos: 'requiere_cambio',
-                refrigerante: 'ok',
-                direccion_hidraulica: 'ok',
-                limpiaparabrisas: 'ok',
-                aceite_transmision: 'ok',
-                fugas_motor: 'ok',
-                pastillas_delanteras: 'requiere_cambio',
-                pastillas_traseras: 'ok',
-                discos_freno: 'requiere_cambio',
-                lineas_mangueras: 'ok',
-                freno_mano: 'ok',
-                calipers_mordazas: 'ok',
-                amortiguadores: 'ok',
-                munones_rotulas: 'ok',
-                terminales_direccion: 'ok',
-                bujes_mesetas: 'ok',
-                barra_estabilizadora: 'ok',
-                rodamientos_rueda: 'ok',
-                luces_principales: 'ok',
-                luces_stop: 'ok',
-                bornes_bateria: 'ok',
-                estado_bateria: 'ok',
-                alternador_carga: 'ok',
-                correa_accesorios: 'ok'
-              }
-            }
-          }
-        ];
+        ordenesFinales = [];
       }
 
       if (error) {
@@ -1073,39 +999,7 @@ export default function TableroDespachoPage() {
       if (data && data.length > 0) {
         setCatalogoRepuestos(data as RepuestoCatalogo[]);
       } else {
-        // Fallback de catálogo en caso de tabla sin datos iniciales
-        setCatalogoRepuestos([
-          {
-            id: '5f07a2d9-270e-4745-bc57-7b85cd82f80e',
-            proveedor_nombre: 'AutoPartes Chacao',
-            nombre_repuesto: 'Pastillas de Freno Delanteras',
-            marca: 'Bosch',
-            precio_usd: 35.0,
-            foto_url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=300&q=80',
-            compatibilidad: 'Toyota Corolla 2014-2020, Chevrolet Aveo 2012-2018',
-            stock: 15
-          },
-          {
-            id: '72dd0245-2853-462e-8f74-bb66cf135fed',
-            proveedor_nombre: 'Repuestos El Hatillo',
-            nombre_repuesto: 'Filtro de Aceite Sintético',
-            marca: 'Mann-Filter',
-            precio_usd: 12.5,
-            foto_url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=300&q=80',
-            compatibilidad: 'Ford Explorer 2011-2019, Toyota Corolla 2010-2022',
-            stock: 20
-          },
-          {
-            id: '5bcb7def-faf0-4391-9b4d-89b0abbd4721',
-            proveedor_nombre: 'Mayorista Las Mercedes',
-            nombre_repuesto: 'Batería 12V 650A',
-            marca: 'Optima',
-            precio_usd: 110.0,
-            foto_url: 'https://images.unsplash.com/photo-1620910930886-6b2b9e214686?auto=format&fit=crop&w=300&q=80',
-            compatibilidad: 'Chevrolet Aveo, Ford Explorer',
-            stock: 8
-          }
-        ]);
+        setCatalogoRepuestos([]);
       }
     } catch (err) {
       console.warn('Aviso cargando catálogo de repuestos:', err);
@@ -1188,24 +1082,22 @@ export default function TableroDespachoPage() {
     cargarOrdenes();
     cargarCatalogoRepuestos();
 
-    // Cargar servicios finalizados del día desde localStorage o inicializar con demo
+    // Cargar servicios finalizados del día desde localStorage o inicializar en vacío
     if (typeof window !== 'undefined') {
       try {
         const rawSrv = localStorage.getItem('ttm_servicios_dia_finalizados');
         if (rawSrv) {
           const parsed = JSON.parse(rawSrv);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setServiciosDia(parsed);
           } else {
-            setServiciosDia(SERVICIOS_DIA_INICIALES);
-            localStorage.setItem('ttm_servicios_dia_finalizados', JSON.stringify(SERVICIOS_DIA_INICIALES));
+            setServiciosDia([]);
           }
         } else {
-          setServiciosDia(SERVICIOS_DIA_INICIALES);
-          localStorage.setItem('ttm_servicios_dia_finalizados', JSON.stringify(SERVICIOS_DIA_INICIALES));
+          setServiciosDia([]);
         }
       } catch (e) {
-        setServiciosDia(SERVICIOS_DIA_INICIALES);
+        setServiciosDia([]);
       }
     }
 
@@ -2281,9 +2173,32 @@ export default function TableroDespachoPage() {
             operadoraActual={miOperadora}
           />
         ) : (
-          /* 1. Estructura del Tablero: Contenedor con scroll horizontal suave, snap-x y soporte Drag & Drop */
-          <div className="flex-1 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-            <div className="flex gap-6 snap-x snap-mandatory items-start min-w-max pb-2">
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Banner de Bienvenida Admin / Primer inicio de sesión sin órdenes */}
+            {ordenes.length === 0 && (
+              <div className="mb-4 p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-[#CCFF00]/20 border border-emerald-500/30 flex items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+                    <Sparkles className="w-5 h-5 text-[#0A1525]" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-[#0A1525]">
+                      ¡Sistema listo! Esperando el primer cliente de la historia
+                    </h3>
+                    <p className="text-xs text-[#475569] font-medium mt-0.5">
+                      Todas las conexiones de Supabase Realtime y el tablero de despacho están al 100%. Las solicitudes de clientes, aliados y repuestos entrarán directamente aquí.
+                    </p>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex text-xs font-black text-emerald-800 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full whitespace-nowrap">
+                  ● 100% En Vivo
+                </span>
+              </div>
+            )}
+
+            {/* 1. Estructura del Tablero: Contenedor con scroll horizontal suave, snap-x y soporte Drag & Drop */}
+            <div className="flex-1 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+              <div className="flex gap-6 snap-x snap-mandatory items-start min-w-max pb-2">
 
               {COLUMNAS.map((columna) => {
                 const ordenesDeColumna = ordenes.filter((o) =>
@@ -2339,12 +2254,10 @@ export default function TableroDespachoPage() {
                           </div>
                           <div className="space-y-0.5 text-center">
                             <p className="text-xs font-black text-[#0A1525]">
-                              {columna.id === 'LEAD_NUEVO'
-                                ? 'Esperando nuevos leads...'
-                                : 'Todo al día'}
+                              No hay órdenes por ahora
                             </p>
                             <p className="text-[11px] text-[#475569] font-medium max-w-[200px]">
-                              {columna.textoVacio || 'Sin órdenes en esta etapa por ahora'}
+                              {columna.textoVacio || 'Esperando solicitudes del sistema'}
                             </p>
                           </div>
                           <span className="text-[10px] text-slate-400 font-mono font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
@@ -2805,6 +2718,7 @@ export default function TableroDespachoPage() {
               })}
 
             </div>
+          </div>
           </div>
         )}
 

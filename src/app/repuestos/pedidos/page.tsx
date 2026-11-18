@@ -64,76 +64,6 @@ interface PedidoProveedor {
   monto_total_repuestos?: number;
 }
 
-// Datos de respaldo para demostración inmediata si la base no tiene órdenes activas en REPUESTOS_EN_RUTA
-const PEDIDOS_DEMO_INICIALES: PedidoProveedor[] = [
-  {
-    id: 'ord_b2b_demo_1',
-    cliente_nombre: 'Ana Pérez',
-    vehiculo_marca: 'Toyota',
-    vehiculo_modelo: 'Toyota Corolla 2018',
-    falla_reportada: 'Chirrido agudo al frenar y pérdida leve de presión',
-    sector: 'Chacao — Calle El Retiro, Qta. Milagrosa',
-    estado: 'REPUESTOS_EN_RUTA',
-    created_at: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-    runner_nombre: 'Luis Pérez',
-    runner_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-    runner_vehiculo: 'Moto Yamaha FZ • Negro',
-    runner_placa: 'AB123CD',
-    runner_telefono: '+58 412-1234567',
-    runner_pin: '1234',
-    tiempo_estimado: 'Llegada en 4-6 min',
-    distancia_estimada: '1.4 km de distancia',
-    repuestos: [
-      {
-        nombre_repuesto: 'Pastillas de Freno Delanteras',
-        marca: 'Bosch',
-        cantidad: 1,
-        precio_unitario_usd: 35.0,
-        subtotal_usd: 35.0,
-        foto_url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=200&q=80'
-      },
-      {
-        nombre_repuesto: 'Líquido de Frenos DOT 4 (500ml)',
-        marca: 'Motul',
-        cantidad: 1,
-        precio_unitario_usd: 12.0,
-        subtotal_usd: 12.0,
-        foto_url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=200&q=80'
-      }
-    ],
-    monto_total_repuestos: 47.0
-  },
-  {
-    id: 'ord_b2b_demo_2',
-    cliente_nombre: 'Marcos Rivas',
-    vehiculo_marca: 'Ford',
-    vehiculo_modelo: 'Ford Explorer 2016',
-    falla_reportada: 'Batería descargada, sin arranque matutino',
-    sector: 'Chacao — Av. Francisco de Miranda, Edf. Altamira',
-    estado: 'REPUESTOS_EN_RUTA',
-    created_at: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    runner_nombre: 'Pedro González',
-    runner_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-    runner_vehiculo: 'Moto Empire Keeway Horse • Rojo',
-    runner_placa: 'AC982XY',
-    runner_telefono: '+58 414-9876543',
-    runner_pin: '1234',
-    tiempo_estimado: 'En la entrada del edificio',
-    distancia_estimada: '0.2 km de distancia',
-    repuestos: [
-      {
-        nombre_repuesto: 'Batería Automotriz 12V 800A',
-        marca: 'Duncan Titanium',
-        cantidad: 1,
-        precio_unitario_usd: 110.0,
-        subtotal_usd: 110.0,
-        foto_url: 'https://images.unsplash.com/photo-1620910930886-6b2b9e214686?auto=format&fit=crop&w=200&q=80'
-      }
-    ],
-    monto_total_repuestos: 110.0
-  }
-];
-
 export default function PedidosProveedorPage() {
   const [pedidos, setPedidos] = useState<PedidoProveedor[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
@@ -242,12 +172,11 @@ export default function PedidosProveedorPage() {
 
         setPedidos(transformados);
       } else {
-        // Fallback demostrativo con datos activos
-        setPedidos(PEDIDOS_DEMO_INICIALES);
+        setPedidos([]);
       }
     } catch (err) {
       console.error('[B2B] Error cargando pedidos:', err);
-      setPedidos(PEDIDOS_DEMO_INICIALES);
+      setPedidos([]);
     } finally {
       setCargando(false);
       setRefrescando(false);
@@ -587,16 +516,6 @@ export default function PedidosProveedorPage() {
               Prepara los repuestos solicitados y valida el retiro del mensajero mediante su código PIN.
             </p>
           </div>
-
-          {pedidos.length === 0 && (
-            <button
-              type="button"
-              onClick={() => setPedidos(PEDIDOS_DEMO_INICIALES)}
-              className="text-xs font-bold text-[#1E56B0] hover:underline cursor-pointer"
-            >
-              + Cargar pedidos de demostración
-            </button>
-          )}
         </div>
 
         {/* Estado de Carga */}
@@ -619,16 +538,9 @@ export default function PedidosProveedorPage() {
             <h3 className="text-base font-black text-[#0A1525] mb-1">
               ¡Todos los pedidos están al día!
             </h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto mb-5">
-              No tienes repuestos pendientes por surtir en este momento. Cuando la central de despacho asigne un mensajero a una orden, aparecerá aquí automáticamente.
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              No tienes repuestos pendientes por surtir en este momento. Cuando la central de despacho asigne un mensajero a una orden con piezas de tu tienda, aparecerá aquí en tiempo real para despacho inmediato.
             </p>
-            <button
-              type="button"
-              onClick={() => setPedidos(PEDIDOS_DEMO_INICIALES)}
-              className="h-10 px-5 rounded-xl bg-[#0A1525] text-white hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer shadow-xs"
-            >
-              Simular Pedido de Prueba
-            </button>
           </motion.div>
         ) : (
           /* Grid de Tarjetas de Pedido */

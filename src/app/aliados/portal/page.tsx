@@ -101,9 +101,9 @@ export default function PortalAliadosPage() {
   // Por requerimiento: por defecto solo mostrar solicitudes disponibles no asignadas
   const [filtroServicios, setFiltroServicios] = useState<'disponibles' | 'asignados'>('disponibles');
   const [toastAceptado, setToastAceptado] = useState<string | null>(null);
-  const [creandoOrdenPrueba, setCreandoOrdenPrueba] = useState<boolean>(false);
   const [modalBloqueoOrden, setModalBloqueoOrden] = useState<boolean>(false);
   const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
+  const [mecanicoId, setMecanicoId] = useState<string>('');
 
   // Estados de Perfil de Aliado
   const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-5385');
@@ -163,14 +163,20 @@ export default function PortalAliadosPage() {
     }
   };
 
-  const MECANICO_ID_ACTUAL = '123e4567-e89b-12d3-a456-426614174000';
-
   // 1. Geolocalización del mecánico
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gpsActivo, setGpsActivo] = useState<boolean>(false);
 
   // Obtener geolocalización y cargar perfil al montar el componente
   useEffect(() => {
+    // Obtener sesión real del usuario autenticado
+    const supabaseClient = createClient();
+    supabaseClient.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setMecanicoId(user.id);
+      }
+    }).catch(() => {});
+
     if (typeof window !== 'undefined') {
       // Cargar foto guardada
       const fotoGuardada = localStorage.getItem('ttm_aliado_foto');
@@ -377,11 +383,12 @@ export default function PortalAliadosPage() {
   // Clasificación de órdenes
   const ordenesAsignadas = useMemo(() => {
     return ordenesConDistancia.filter((o) =>
-      (o.mecanico_id === MECANICO_ID_ACTUAL ||
+      ((mecanicoId && o.mecanico_id === mecanicoId) ||
+       (codigoAliado && o.mecanico_id === codigoAliado) ||
       ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)) &&
       !['FINALIZADO', 'CANCELADO'].includes(o.estado)
     );
-  }, [ordenesConDistancia]);
+  }, [ordenesConDistancia, mecanicoId, codigoAliado]);
 
   // REGLA DE NEGOCIO P0: El mecánico solo puede tomar UNA orden por vez hasta terminarla
   const ordenActivaEnCurso = useMemo(() => {
@@ -595,56 +602,6 @@ export default function PortalAliadosPage() {
     }
   };
 
-  // Crear orden de prueba en vivo en Supabase con 1 clic
-  const handleCrearOrdenPrueba = async () => {
-    setCreandoOrdenPrueba(true);
-    try {
-      const supabase = createClient();
-      const fallas = [
-        'Testigo de batería encendido y pérdida de arranque en frío',
-        'Ruido al girar el volante en bajas velocidades y freno esponjoso',
-        'Frenos chirriando al frenar en pendiente y pedal bajo',
-        'Cambio preventivo de pastillas y fluido de freno DOT 4'
-      ];
-      const sectores = [
-        'Chacao — Av. Francisco de Miranda',
-        'Altamira — 4ta Transversal',
-        'Las Mercedes — Calle París',
-        'Bello Monte — Av. Principal'
-      ];
-      const indexAleatorio = Math.floor(Math.random() * fallas.length);
-
-      const { data, error } = await supabase
-        .from('ordenes')
-        .insert([
-          {
-            cliente_nombre: 'Cliente TTM Móvil',
-            vehiculo_marca: 'Toyota',
-            vehiculo_modelo: 'Toyota Corolla 2020',
-            vehiculo_anio: 2020,
-            falla_reportada: fallas[indexAleatorio],
-            sector: sectores[indexAleatorio],
-            estado: 'DISPONIBLE',
-            ganancia_estimada: 35.0,
-            latitud: 10.496 + (Math.random() - 0.5) * 0.02,
-            longitud: -66.848 + (Math.random() - 0.5) * 0.02
-          }
-        ])
-        .select();
-
-      if (!error && data) {
-        setToastAceptado('¡Nueva orden pedida generada en Supabase!');
-        await cargarOrdenes(true);
-        setFiltroServicios('disponibles');
-        setTimeout(() => setToastAceptado(null), 4000);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCreandoOrdenPrueba(false);
-    }
-  };
-
   // 4 y 5. Acción de Aceptar con Supabase RPC y manejo de Race Conditions
   const handleAceptarServicio = async (orden: OrdenSupabase) => {
     // REGLA P0: El mecánico solo puede tomar UNA orden por vez hasta terminarla
@@ -658,9 +615,11 @@ export default function PortalAliadosPage() {
 
     try {
       const supabase = createClient();
+      const idMecanicoAsignar = mecanicoId || codigoAliado || 'mecanico_autenticado';
+
       const { data, error } = await supabase.rpc('aceptar_servicio_disponible', {
         p_orden_id: orden.id,
-        p_mecanico_id: MECANICO_ID_ACTUAL
+        p_mecanico_id: idMecanicoAsignar
       });
 
       if (data === true) {
@@ -670,7 +629,7 @@ export default function PortalAliadosPage() {
         setOrdenes((prev) =>
           prev.map((o) =>
             o.id === orden.id
-              ? { ...o, estado: 'ASIGNADO', mecanico_id: MECANICO_ID_ACTUAL }
+              ? { ...o, estado: 'ASIGNADO', mecanico_id: idMecanicoAsignar }
               : o
           )
         );
@@ -681,7 +640,7 @@ export default function PortalAliadosPage() {
           .from('ordenes')
           .update({
             estado: 'ASIGNADO',
-            mecanico_id: MECANICO_ID_ACTUAL
+            mecanico_id: idMecanicoAsignar
           })
           .eq('id', orden.id);
 
@@ -1128,21 +1087,6 @@ export default function PortalAliadosPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={creandoOrdenPrueba}
-                onClick={handleCrearOrdenPrueba}
-                className="h-8 px-3 rounded-lg bg-white border border-[#CBD5E1] hover:border-[#1E56B0] hover:text-[#1E56B0] text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                title="Crear una orden de prueba en tiempo real en Supabase"
-              >
-                {creandoOrdenPrueba ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1E56B0]" />
-                ) : (
-                  <Plus className="w-3.5 h-3.5 text-[#1E56B0]" />
-                )}
-                <span>+ Orden de Prueba</span>
-              </button>
-
               <span className="text-xs text-slate-500 hidden sm:flex items-center gap-1.5 font-medium bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 Supabase Realtime
@@ -1229,20 +1173,9 @@ export default function PortalAliadosPage() {
                 </h3>
                 <p className="text-xs sm:text-sm text-[#475569] font-medium max-w-sm mx-auto">
                   {filtroServicios === 'asignados'
-                    ? 'Ve a la pestaña "Solicitudes Disponibles" para aceptar servicios o genera una orden de prueba.'
-                    : 'En esta sección solo se muestran órdenes que no tienen ningún mecánico asignado y que están en fase inicial. Te avisaremos en tiempo real cuando un cliente solicite asistencia en tu zona.'}
+                    ? 'Cuando aceptes una solicitud de la bolsa o la torre de despacho te asigne un servicio, lo gestionarás desde aquí.'
+                    : 'En esta sección solo se muestran órdenes que no tienen ningún mecánico asignado. Te avisaremos en tiempo real con alerta sonora cuando un cliente solicite asistencia en tu zona.'}
                 </p>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleCrearOrdenPrueba}
-                  className="h-9 px-4 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4 stroke-[3]" />
-                  <span>Crear Orden de Prueba en Vivo</span>
-                </button>
               </div>
             </div>
           ) : (
@@ -1257,7 +1190,8 @@ export default function PortalAliadosPage() {
                   .join(' ') || orden.vehiculo_modelo || 'Vehículo';
 
                 const estaAsignado =
-                  orden.mecanico_id === MECANICO_ID_ACTUAL ||
+                  (mecanicoId && orden.mecanico_id === mecanicoId) ||
+                  (codigoAliado && orden.mecanico_id === codigoAliado) ||
                   ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO'].includes(orden.estado);
 
                 return (

@@ -101,7 +101,7 @@ export function SolicitarMecanicoModal({
               if (p.nombre) userNombre = p.nombre;
               if (p.email) userEmail = p.email;
               if (p.telefono) userTel = p.telefono;
-            } catch (e) {}
+            } catch (e) { }
           }
         }
       }
@@ -118,7 +118,7 @@ export function SolicitarMecanicoModal({
               userEmail.split('@')[0];
             userTel = user.user_metadata?.telefono || userTel;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (userNombre || userEmail) {
@@ -147,7 +147,7 @@ export function SolicitarMecanicoModal({
             if (Array.isArray(parsed) && parsed.length > 0) {
               vehiculosDisponibles = parsed;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
       }
 
@@ -286,7 +286,7 @@ export function SolicitarMecanicoModal({
             const listaActual = stored ? JSON.parse(stored) : [];
             const nueva = [...listaActual.filter((x: any) => x.placa !== placaLimpia), nuevoVehiculo];
             localStorage.setItem('ttm_garaje_vehiculos', JSON.stringify(nueva));
-          } catch (e) {}
+          } catch (e) { }
         }
 
         if (onVehiculoCreado) {
@@ -496,11 +496,10 @@ export function SolicitarMecanicoModal({
                           <button
                             type="button"
                             onClick={handleCambiarARegistrado}
-                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              modoVehiculo === 'registrado'
-                                ? 'bg-white text-[#0A1525] shadow-xs ring-1 ring-slate-200'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
+                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${modoVehiculo === 'registrado'
+                              ? 'bg-white text-[#0A1525] shadow-xs ring-1 ring-slate-200'
+                              : 'text-slate-600 hover:text-slate-900'
+                              }`}
                           >
                             <Car className={`w-3.5 h-3.5 ${modoVehiculo === 'registrado' ? 'text-[#1E56B0]' : 'text-slate-400'}`} />
                             <span>Mis Registrados ({listaVehiculos.length})</span>
@@ -509,11 +508,10 @@ export function SolicitarMecanicoModal({
                           <button
                             type="button"
                             onClick={handleCambiarANuevo}
-                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              modoVehiculo === 'nuevo'
-                                ? 'bg-white text-[#0A1525] shadow-xs ring-1 ring-slate-200'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
+                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${modoVehiculo === 'nuevo'
+                              ? 'bg-white text-[#0A1525] shadow-xs ring-1 ring-slate-200'
+                              : 'text-slate-600 hover:text-slate-900'
+                              }`}
                           >
                             <Plus className={`w-3.5 h-3.5 ${modoVehiculo === 'nuevo' ? 'text-emerald-600' : 'text-slate-400'}`} />
                             <span>+ Agregar Nuevo</span>
@@ -533,17 +531,15 @@ export function SolicitarMecanicoModal({
                                 <div
                                   key={v.id || v.placa}
                                   onClick={() => handleSeleccionarVehiculo(v)}
-                                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
-                                    isSelected
-                                      ? 'border-[#1E56B0] bg-blue-50/70 shadow-xs ring-1 ring-blue-200'
-                                      : 'border-slate-200 hover:border-slate-300 bg-[#F8FAFC]'
-                                  }`}
+                                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2.5 ${isSelected
+                                    ? 'border-[#1E56B0] bg-blue-50/70 shadow-xs ring-1 ring-blue-200'
+                                    : 'border-slate-200 hover:border-slate-300 bg-[#F8FAFC]'
+                                    }`}
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <div
-                                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                        isSelected ? 'bg-[#0A1525] text-[#CCFF00]' : 'bg-slate-200 text-slate-600'
-                                      }`}
+                                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#0A1525] text-[#CCFF00]' : 'bg-slate-200 text-slate-600'
+                                        }`}
                                     >
                                       <Car className="w-4 h-4" />
                                     </div>
@@ -746,11 +742,10 @@ export function SolicitarMecanicoModal({
                       disabled={submitting}
                       whileHover={{ scale: submitting ? 1 : 1.01 }}
                       whileTap={{ scale: submitting ? 1 : 0.98 }}
-                      className={`w-full h-12 text-sm sm:text-base font-extrabold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 ${
-                        submitting
-                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                          : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
-                      }`}
+                      className={`w-full h-12 text-sm sm:text-base font-extrabold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 ${submitting
+                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                        : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
+                        }`}
                     >
                       {submitting ? (
                         <>

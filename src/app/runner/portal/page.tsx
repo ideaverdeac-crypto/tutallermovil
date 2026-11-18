@@ -96,30 +96,11 @@ export default function RunnerPortalPage() {
         }));
         setOrdenes(enriquecidas);
       } else {
-        // Mock fallback activo para demostración inmediata
-        setOrdenes([
-          {
-            id: 'ord_runner_demo_1',
-            cliente_nombre: 'Ana Pérez',
-            vehiculo_modelo: 'Toyota Corolla 2018',
-            falla_reportada: 'Frenos chirriando al frenar',
-            sector: 'Chacao — Calle El Retiro, Qta. Milagrosa',
-            estado: 'REPUESTOS_EN_RUTA',
-            mayorista_nombre: 'AutoPartes Chacao',
-            mayorista_direccion: 'Av. Francisco de Miranda, Edf. Chacao Center',
-            repuestos_lista: [
-              'Pastillas de Freno Delanteras (Bosch)',
-              'Líquido de Frenos DOT 4'
-            ],
-            mecanico_nombre: 'Carlos Mendoza #TTM-0842',
-            mecanico_telefono: '+584121234567',
-            distancia_km: '2.8 km',
-            tiempo_estimado: '12 min'
-          }
-        ]);
+        setOrdenes([]);
       }
     } catch (err) {
       console.error('Error cargando órdenes runner:', err);
+      setOrdenes([]);
     } finally {
       setCargando(false);
     }
@@ -216,44 +197,6 @@ export default function RunnerPortalPage() {
 } catch (err) {
   console.error('Error al marcar entrega como completada:', err);
 }
-  };
-
-  // Simular orden en REPUESTOS_EN_RUTA en Supabase para pruebas en vivo
-  const moverOrdenASupabaseRepuestos = async () => {
-    try {
-      const supabase = createClient();
-      // Tomar una orden disponible y moverla a REPUESTOS_EN_RUTA
-      const { data } = await supabase
-        .from('ordenes')
-        .select('id')
-        .limit(1);
-
-      if (data && data.length > 0) {
-        await supabase
-          .from('ordenes')
-          .update({ estado: 'REPUESTOS_EN_RUTA' })
-          .eq('id', data[0].id);
-        await cargarOrdenesRunner();
-      } else {
-        const nueva: OrdenRunner = {
-          id: `ord_runner_${Date.now()}`,
-          cliente_nombre: 'Carlos Ramos',
-          vehiculo_modelo: 'Ford Explorer 2016',
-          falla_reportada: 'Batería descargada',
-          sector: 'Las Mercedes — Calle París',
-          estado: 'REPUESTOS_EN_RUTA',
-          mayorista_nombre: 'AutoPartes Chacao',
-          mayorista_direccion: 'Av. Francisco de Miranda, Edf. Chacao Center',
-          mecanico_nombre: 'Carlos Mendoza #TTM-0842',
-          mecanico_telefono: '+584121234567',
-          distancia_km: '3.1 km',
-          tiempo_estimado: '14 min'
-        };
-        setOrdenes((prev) => [nueva, ...prev]);
-      }
-    } catch (e) {
-      console.error('Error al simular orden:', e);
-    }
   };
 
   return (
@@ -412,27 +355,20 @@ export default function RunnerPortalPage() {
 
                       {/* Estado Vacío */}
                       {ordenes.length === 0 ? (
-                        <div className="bg-white rounded-3xl border border-dashed border-[#CBD5E1] p-8 text-center space-y-4">
-                          <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                            <Bike className="w-6 h-6" />
+                        <div className="bg-white rounded-3xl border border-dashed border-[#CBD5E1] p-10 text-center space-y-4">
+                          <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto shadow-2xs">
+                            <Bike className="w-7 h-7 stroke-[1.5]" />
                           </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-black text-[#0A1525]">
-                ¡Sin entregas pendientes!
-              </h3>
-              <p className="text-xs text-[#475569]">
-                Mantén el switch activo. Las órdenes aparecerán automáticamente por Realtime.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={moverOrdenASupabaseRepuestos}
-              className="h-11 px-4 rounded-xl bg-[#0A1525] text-white text-xs font-black hover:bg-[#1E56B0] transition-colors cursor-pointer shadow-xs active:scale-95"
-            >
-              + Simular Despacho Inmediato
-            </button>
-          </div>
-                          ) : (
+                          <div className="space-y-1.5 max-w-sm mx-auto">
+                            <h3 className="text-sm font-black text-[#0A1525]">
+                              ¡Sin entregas pendientes en este momento!
+                            </h3>
+                            <p className="text-xs text-[#475569] leading-relaxed">
+                              Mantén tu estado en <strong>Disponible</strong>. Cuando la torre de despacho asigne repuestos para una orden en tu zona, la alerta sonará y aparecerá aquí en tiempo real.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
                           <div className="space-y-5">
                             <AnimatePresence>
                               {ordenes.map((orden) => {
