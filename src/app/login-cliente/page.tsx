@@ -311,7 +311,7 @@ function LoginClienteContent() {
             {/* 1. Botón de Google OAuth */}
             <div>
               <GoogleAuthButton
-                redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/auth/callback${redirectParam ? `?next=${encodeURIComponent(redirectParam)}` : ''}` : undefined}
+                nextPath={redirectParam || undefined}
                 texto="Continuar con Google"
                 onError={(msg) => setErrorMsg(msg)}
               />

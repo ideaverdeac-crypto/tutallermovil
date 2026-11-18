@@ -3,8 +3,28 @@
 import React, { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
+export function getAuthRedirectUrl(nextParam?: string | null): string {
+  let origin = '';
+  if (typeof window !== 'undefined' && window.location.origin) {
+    origin = window.location.origin;
+  } else if (process.env.NEXT_PUBLIC_SITE_URL) {
+    origin = process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+  } else if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    origin = `https://${process.env.NEXT_PUBLIC_VERCEL_URL.replace(/\/$/, '')}`;
+  } else {
+    origin = 'https://tutallermovil.vercel.app';
+  }
+
+  const url = new URL('/auth/callback', origin);
+  if (nextParam) {
+    url.searchParams.set('next', nextParam);
+  }
+  return url.toString();
+}
+
 interface GoogleAuthButtonProps {
   redirectTo?: string;
+  nextPath?: string;
   texto?: string;
   className?: string;
   onError?: (msg: string) => void;
@@ -35,6 +55,7 @@ export function GoogleIcon({ className = 'w-5 h-5' }: { className?: string }) {
 
 export default function GoogleAuthButton({
   redirectTo,
+  nextPath,
   texto = 'Continuar con Google',
   className = '',
   onError
@@ -45,12 +66,18 @@ export default function GoogleAuthButton({
     setCargando(true);
     try {
       const supabase = createClient();
-      const targetUrl = redirectTo || (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback');
+      const targetUrl = redirectTo || getAuthRedirectUrl(nextPath);
+
+      console.log('[GOOGLE OAUTH] Iniciando flujo OAuth con redirectTo:', targetUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: targetUrl
+          redirectTo: targetUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
 

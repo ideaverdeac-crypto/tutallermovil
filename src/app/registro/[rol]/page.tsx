@@ -303,7 +303,7 @@ function RegistroRolContent() {
               {/* Botón de Google OAuth para Aliados */}
               <div className="pt-1">
                 <GoogleAuthButton
-                  redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(config.portalRuta)}` : undefined}
+                  nextPath={config.portalRuta}
                   texto="Continuar con Google"
                   onError={(msg) => setErrorMsg(msg)}
                 />
