@@ -59,7 +59,7 @@ const ROLES_REGISTRO = [
 export default function RegistroHubPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] antialiased selection:bg-[#CCFF00] selection:text-[#0A1525] flex flex-col justify-between relative">
-      
+
       {/* Fondo técnico de cuadrícula */}
       <div
         className="fixed inset-0 pointer-events-none opacity-40 z-0"
@@ -100,7 +100,7 @@ export default function RegistroHubPage() {
 
       {/* Contenido Central */}
       <main className="relative z-10 w-full max-w-5xl mx-auto px-4 py-8 sm:py-12 flex-1 flex flex-col justify-center">
-        
+
         {/* Encabezado Principal */}
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#1E56B0]/10 text-[#1E56B0] text-xs font-black">

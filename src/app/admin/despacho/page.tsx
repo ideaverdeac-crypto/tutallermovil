@@ -66,6 +66,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import FloatingSupportButton from '@/components/ui/floating-support-button';
 import CredencialesOperadorasModal from '@/components/CredencialesOperadorasModal';
 import ModalCrearServicioManual from '@/components/ModalCrearServicioManual';
+import CierreServiciosDia, { ServicioFinalizadoDia, SERVICIOS_DIA_INICIALES } from '@/components/CierreServiciosDia';
 import { generarLinkWhatsApp } from '@/lib/utils';
 import { enviarEmailRecibo } from '@/lib/email';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
@@ -396,16 +397,15 @@ function CronometroSLA({ createdAt }: { createdAt?: string }) {
   const colorTexto = esVencido
     ? 'text-[#DC2626]'
     : esAlerta
-    ? 'text-[#F59E0B]'
-    : 'text-[#16A34A]';
+      ? 'text-[#F59E0B]'
+      : 'text-[#16A34A]';
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={`inline-flex items-center gap-1 font-mono text-[11px] font-black ${colorTexto} ${
-            esVencido ? 'animate-pulse' : ''
-          } cursor-help`}
+          className={`inline-flex items-center gap-1 font-mono text-[11px] font-black ${colorTexto} ${esVencido ? 'animate-pulse' : ''
+            } cursor-help`}
         >
           <Clock className="w-3 h-3 stroke-[2.5]" />
           <span>{tiempoFormateado}</span>
@@ -452,9 +452,8 @@ function MecanicoAvatarSquircle({
   return (
     <div
       onClick={onClick}
-      className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-700/60 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 ${
-        onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
-      } ${className}`}
+      className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-700/60 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 ${onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
+        } ${className}`}
     >
       <span className="drop-shadow-xs">{initials}</span>
 
@@ -515,6 +514,10 @@ export default function TableroDespachoPage() {
   const [ordenes, setOrdenes] = useState<OrdenKanban[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
   const [actualizandoId, setActualizandoId] = useState<string | null>(null);
+
+  // Vista Activa: Tablero Activo (Kanban) vs Servicios del Día (Cierre & Expedientes)
+  const [vistaActiva, setVistaActiva] = useState<'kanban' | 'servicios_dia'>('kanban');
+  const [serviciosDia, setServiciosDia] = useState<ServicioFinalizadoDia[]>([]);
 
   // Estados de Drag and Drop
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
@@ -616,11 +619,11 @@ export default function TableroDespachoPage() {
         event: 'bloqueo_tarjeta',
         payload: { ordenId, bloqueado_por: miOperadora.nombre }
       });
-    } catch (e) {}
+    } catch (e) { }
     try {
       const supabase = createClient();
       await supabase.from('ordenes').update({ bloqueado_por: miOperadora.nombre }).eq('id', ordenId);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const desbloquearTarjeta = async (ordenId: string) => {
@@ -633,11 +636,11 @@ export default function TableroDespachoPage() {
         event: 'bloqueo_tarjeta',
         payload: { ordenId, bloqueado_por: null }
       });
-    } catch (e) {}
+    } catch (e) { }
     try {
       const supabase = createClient();
       await supabase.from('ordenes').update({ bloqueado_por: null }).eq('id', ordenId);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleAbrirEvidencia = (orden: OrdenKanban) => {
@@ -657,6 +660,113 @@ export default function TableroDespachoPage() {
       desbloquearTarjeta(ordenParaComprobante.id);
     }
     setModalComprobanteOpen(false);
+  };
+
+  const registrarServicioFinalizadoEnCierre = (orden: OrdenKanban) => {
+    const totalFacturado = Number(orden.monto_aprobado_cliente || orden.ganancia_estimada || 75.0);
+    const retencionQA = +(totalFacturado * 0.03).toFixed(2);
+    const netoMecanico = +(totalFacturado - retencionQA).toFixed(2);
+    const placaVehiculo =
+      orden.placa_flota ||
+      (orden.vehiculo_modelo.match(/\[([A-Z0-9-]+)\]/)?.[1]) ||
+      orden.vehiculo_placa ||
+      'AB123CD';
+    const mecAsignado =
+      MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+    const runnerNombre = runnersAsignados[orden.id] || null;
+
+    const ahora = new Date();
+    const horaStr = ahora.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+
+    const nuevoServicio: ServicioFinalizadoDia = {
+      id: `srv_${Date.now()}`,
+      orden_id: orden.id,
+      codigo_servicio: `#TTM-SRV-${orden.id.slice(0, 6).toUpperCase()}`,
+      fecha_cierre: `Hoy, ${horaStr}`,
+      hora_cierre: horaStr,
+      duracion_total_minutos: 65,
+      es_flota: Boolean(orden.es_flota || orden.empresa_flota),
+      empresa_flota: orden.empresa_flota || undefined,
+      cliente: {
+        nombre: orden.cliente_nombre || 'Cliente TuTallerMóvil',
+        telefono: orden.cliente_telefono || '+58 414 231 4194',
+        email: orden.cliente_email || undefined
+      },
+      vehiculo: {
+        marca: orden.vehiculo_marca || 'Vehículo',
+        modelo: orden.vehiculo_modelo,
+        anio: orden.vehiculo_anio || 2020,
+        placa: placaVehiculo,
+        kilometraje_inicial: (orden.kilometraje_actual || 85400) - 8,
+        kilometraje_final: orden.kilometraje_actual || 85400
+      },
+      mecanico: {
+        id: mecAsignado.id,
+        nombre: mecAsignado.nombre,
+        credencial: mecAsignado.credencial,
+        especialidad: mecAsignado.especialidad,
+        unidad: mecAsignado.unidad,
+        foto: mecAsignado.foto
+      },
+      operadora: {
+        nombre: miOperadora.nombre,
+        email: miOperadora.email,
+        metodo_pago: 'Pago Móvil Banesco',
+        referencia_pago: `PM-${Math.floor(100000 + Math.random() * 900000)}`,
+        monto_validado_usd: totalFacturado,
+        comprobante_url:
+          orden.comprobante_url ||
+          'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=600&q=80'
+      },
+      runner: runnerNombre
+        ? {
+            nombre: runnerNombre,
+            unidad: 'Moto Bera SBR Negra (Placa AB987CD)',
+            pin_validacion: String(Math.floor(1000 + Math.random() * 9000)),
+            repuestera: 'AutoPartes Chacao'
+          }
+        : null,
+      cotizacion: {
+        mano_de_obra_usd: +(totalFacturado * 0.4).toFixed(2),
+        repuestos: [
+          {
+            nombre: 'Repuestos e Insumos Certificados TTM',
+            marca: 'OEM Original',
+            cantidad: 1,
+            precio_usd: +(totalFacturado * 0.6).toFixed(2),
+            tienda: 'AutoPartes Chacao'
+          }
+        ],
+        subtotal_repuestos_usd: +(totalFacturado * 0.6).toFixed(2),
+        total_facturado_usd: totalFacturado,
+        retencion_qa_3pct_usd: retencionQA,
+        pago_neto_mecanico_usd: netoMecanico
+      },
+      diagnostico_y_trabajo: {
+        falla_reportada: orden.falla_reportada || 'Mantenimiento Preventivo Certificado',
+        trabajo_realizado: orden.falla_reportada || 'Servicio Mecánico Realizado y Conciliado',
+        checklist_json: orden.diagnostico_json || null,
+        foto_odometro_url:
+          orden.foto_odometro_url ||
+          'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=400&q=80',
+        foto_repuesto_viejo_url:
+          orden.foto_repuesto_viejo_url ||
+          'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=400&q=80',
+        foto_repuesto_nuevo_url:
+          orden.foto_repuesto_nuevo_url ||
+          'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80'
+      }
+    };
+
+    setServiciosDia((prev) => {
+      const actualizados = [nuevoServicio, ...prev.filter((s) => s.orden_id !== orden.id)];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('ttm_servicios_dia_finalizados', JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+      return actualizados;
+    });
   };
 
   const handleAprobarPagoYTerminar = async (orden: OrdenKanban) => {
@@ -719,13 +829,16 @@ export default function TableroDespachoPage() {
             const listaH = rawH ? JSON.parse(rawH) : [];
             listaH.unshift({ id: `srv_${Date.now()}`, ...nuevoHistorial });
             localStorage.setItem('ttm_historial_servicios_recientes', JSON.stringify(listaH));
-          } catch (eH) {}
+          } catch (eH) { }
         }
       } catch (errHist) {
         console.warn('Excepción guardando historial_servicios:', errHist);
       }
 
       await moverOrden(orden.id, 'PAGADO');
+
+      // Guardar en el expediente oficial de Cierre de Servicios del Día
+      registrarServicioFinalizadoEnCierre(orden);
 
       // Simulación de envío automático de correo con el recibo del servicio
       enviarEmailRecibo({
@@ -836,7 +949,7 @@ export default function TableroDespachoPage() {
               });
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Si no hay órdenes (base de datos sin datos), proveer órdenes iniciales incluyendo una Flota Corporativa
@@ -999,7 +1112,7 @@ export default function TableroDespachoPage() {
             const found = ops.find((o: any) => o.email.toLowerCase() === email);
             if (found) nombre = found.nombre;
           }
-        } catch (e) {}
+        } catch (e) { }
 
         const parts = nombre.split(' ');
         const iniciales = (parts[0]?.charAt(0) || 'O') + (parts[1]?.charAt(0) || '');
@@ -1045,12 +1158,33 @@ export default function TableroDespachoPage() {
           ) {
             setEsDuenio(true);
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
 
     cargarOrdenes();
     cargarCatalogoRepuestos();
+
+    // Cargar servicios finalizados del día desde localStorage o inicializar con demo
+    if (typeof window !== 'undefined') {
+      try {
+        const rawSrv = localStorage.getItem('ttm_servicios_dia_finalizados');
+        if (rawSrv) {
+          const parsed = JSON.parse(rawSrv);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setServiciosDia(parsed);
+          } else {
+            setServiciosDia(SERVICIOS_DIA_INICIALES);
+            localStorage.setItem('ttm_servicios_dia_finalizados', JSON.stringify(SERVICIOS_DIA_INICIALES));
+          }
+        } else {
+          setServiciosDia(SERVICIOS_DIA_INICIALES);
+          localStorage.setItem('ttm_servicios_dia_finalizados', JSON.stringify(SERVICIOS_DIA_INICIALES));
+        }
+      } catch (e) {
+        setServiciosDia(SERVICIOS_DIA_INICIALES);
+      }
+    }
 
     const supabase = createClient();
     const canal = supabase
@@ -1175,11 +1309,11 @@ export default function TableroDespachoPage() {
         prev.map((ord) =>
           ord.id === ordenId
             ? {
-                ...ord,
-                estado: nuevoEstado,
-                bloqueado_por: null,
-                ...(mecanicoId ? { mecanico_id: mecanicoId } : {})
-              }
+              ...ord,
+              estado: nuevoEstado,
+              bloqueado_por: null,
+              ...(mecanicoId ? { mecanico_id: mecanicoId } : {})
+            }
             : ord
         )
       );
@@ -1191,7 +1325,7 @@ export default function TableroDespachoPage() {
           event: 'bloqueo_tarjeta',
           payload: { ordenId, bloqueado_por: null }
         });
-      } catch (e) {}
+      } catch (e) { }
 
       // 3. Update condicional en Supabase
       const updatePayload: Record<string, any> = {
@@ -1388,6 +1522,9 @@ export default function TableroDespachoPage() {
     // Optimistic update: remover del Kanban (estado PAGADO)
     setOrdenes((prev) => prev.filter((o) => o.id !== orden.id));
 
+    // Guardar en el expediente oficial de Cierre de Servicios del Día
+    registrarServicioFinalizadoEnCierre(orden);
+
     try {
       const supabase = createClient();
       // P0-01: Invocación RPC atómica que garantiza la creación del historial y retención QA
@@ -1484,8 +1621,8 @@ export default function TableroDespachoPage() {
   const totalCotizacion = exoneraDiagnostico
     ? subtotalServicio
     : subtotalServicio > 0
-    ? subtotalServicio + 15
-    : 0;
+      ? subtotalServicio + 15
+      : 0;
 
   // Filtrado de repuestos para el Command/Combobox
   const repuestosFiltradosCatalogo = catalogoRepuestos.filter((r) => {
@@ -1683,8 +1820,7 @@ export default function TableroDespachoPage() {
       ).toUpperCase();
       doc.text(`Placa: ${placaVehiculo}`, colRight, startY + 11);
       doc.text(
-        `Falla: ${orden.falla_reportada.slice(0, 38)}${
-          orden.falla_reportada.length > 38 ? '...' : ''
+        `Falla: ${orden.falla_reportada.slice(0, 38)}${orden.falla_reportada.length > 38 ? '...' : ''
         }`,
         colRight,
         startY + 16
@@ -1705,15 +1841,15 @@ export default function TableroDespachoPage() {
       const tableRows =
         repuestosSeleccionados.length > 0
           ? repuestosSeleccionados.map((rep) => [
-              rep.cantidad.toString(),
-              rep.nombre_repuesto,
-              rep.marca || 'Original/Homologado',
-              `$${rep.precio_usd.toFixed(2)}`,
-              `$${(rep.precio_usd * rep.cantidad).toFixed(2)}`
-            ])
+            rep.cantidad.toString(),
+            rep.nombre_repuesto,
+            rep.marca || 'Original/Homologado',
+            `$${rep.precio_usd.toFixed(2)}`,
+            `$${(rep.precio_usd * rep.cantidad).toFixed(2)}`
+          ])
           : [
-              ['1', 'Inspección y Diagnóstico Técnico In Situ', 'TuTallerMóvil', `$${numManoObra.toFixed(2)}`, `$${numManoObra.toFixed(2)}`]
-            ];
+            ['1', 'Inspección y Diagnóstico Técnico In Situ', 'TuTallerMóvil', `$${numManoObra.toFixed(2)}`, `$${numManoObra.toFixed(2)}`]
+          ];
 
       autoTable(doc, {
         startY: startY + 30,
@@ -1834,14 +1970,14 @@ export default function TableroDespachoPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col font-sans selection:bg-[#CCFF00] selection:text-[#0A1525] relative">
-      
+
       {/* Patrón sutil de puntos técnicos de fondo (Spatial UI 2027) */}
       <div className="absolute inset-0 bg-[radial-gradient(#CBD5E1_1px,transparent_1px)] [background-size:22px_22px] opacity-50 pointer-events-none" />
 
       {/* 1. Header de Comando y Control */}
       <header className="bg-white/90 backdrop-blur-md border-b border-[#E2E8F0] sticky top-0 z-30 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          
+
           {/* Logo y Breadcrumb */}
           <div className="flex items-center gap-3">
             <Link
@@ -1942,9 +2078,8 @@ export default function TableroDespachoPage() {
               {operadorasConectadas.map((op, idx) => (
                 <div
                   key={op.email || idx}
-                  className={`relative w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-black shadow-xs ${
-                    op.avatarColor || 'bg-blue-600'
-                  }`}
+                  className={`relative w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-black shadow-xs ${op.avatarColor || 'bg-blue-600'
+                    }`}
                   title={`${op.nombre} (${op.email}) • En línea`}
                 >
                   <span>{op.iniciales || 'OP'}</span>
@@ -1978,11 +2113,10 @@ export default function TableroDespachoPage() {
             <button
               type="button"
               onClick={handleToggleNotificaciones}
-              className={`relative p-2 rounded-xl border transition-all cursor-pointer shadow-2xs ${
-                pushActivo
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                  : 'border-[#E2E8F0] bg-white text-[#475569] hover:text-[#0A1525] hover:bg-slate-50'
-              }`}
+              className={`relative p-2 rounded-xl border transition-all cursor-pointer shadow-2xs ${pushActivo
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                : 'border-[#E2E8F0] bg-white text-[#475569] hover:text-[#0A1525] hover:bg-slate-50'
+                }`}
               title={
                 pushActivo
                   ? 'Notificaciones Push y Sonido Especial de Operadora Activos (Clic para probar)'
@@ -1991,9 +2125,8 @@ export default function TableroDespachoPage() {
             >
               <Bell className={`w-4 h-4 ${pushActivo ? 'text-emerald-600' : ''}`} />
               <span
-                className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ring-2 ring-white transition-all ${
-                  pushActivo ? 'bg-emerald-500 animate-pulse' : 'bg-[#CCFF00]'
-                }`}
+                className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ring-2 ring-white transition-all ${pushActivo ? 'bg-emerald-500 animate-pulse' : 'bg-[#CCFF00]'
+                  }`}
               />
             </button>
 
@@ -2046,31 +2179,77 @@ export default function TableroDespachoPage() {
 
       {/* Main Container */}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col relative z-10">
-        
-        {/* Título de Sección y Contadores */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-2xl font-black text-[#0A1525] tracking-tight flex items-center gap-2">
-              <Kanban className="w-6 h-6 text-[#1E56B0]" />
-              Tablero Operativo de Despacho
-            </h1>
-            <p className="text-xs text-[#475569] font-medium flex items-center gap-1.5 pt-0.5">
-              <span>Arrastra y suelta (Drag &amp; Drop) cualquier tarjeta entre columnas para actualizar su fase operativa.</span>
-            </p>
+
+        {/* Selector de Vistas Operativas: Tablero Kanban Activo vs Cierre de Servicios del Día */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 backdrop-blur-sm rounded-2xl w-fit border border-slate-300/60 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setVistaActiva('kanban')}
+              className={`h-11 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 cursor-pointer ${
+                vistaActiva === 'kanban'
+                  ? 'bg-[#0A1525] text-white shadow-sm'
+                  : 'text-slate-700 hover:text-[#0A1525] hover:bg-white/50'
+              }`}
+            >
+              <Kanban className="w-4 h-4 text-[#CCFF00]" />
+              <span>Tablero Activo (Flujo en Vivo)</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-black ${
+                  vistaActiva === 'kanban'
+                    ? 'bg-white/20 text-[#CCFF00]'
+                    : 'bg-slate-300/80 text-slate-800'
+                }`}
+              >
+                {ordenes.filter((o) => o.estado !== 'PAGADO').length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setVistaActiva('servicios_dia')}
+              className={`h-11 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 cursor-pointer ${
+                vistaActiva === 'servicios_dia'
+                  ? 'bg-[#0A1525] text-white shadow-sm'
+                  : 'text-slate-700 hover:text-[#0A1525] hover:bg-white/50'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Servicios del Día (Cierre &amp; Expedientes)</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-black ${
+                  vistaActiva === 'servicios_dia'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-emerald-100 text-emerald-900'
+                }`}
+              >
+                {serviciosDia.length}
+              </span>
+            </button>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#475569]">
-            <span>En gestión activa:</span>
-            <span className="bg-[#1E56B0] text-white px-2.5 py-0.5 rounded-full font-mono font-black text-xs shadow-2xs">
-              {ordenes.length} órdenes
-            </span>
-          </div>
+          {vistaActiva === 'kanban' && (
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#475569]">
+              <span>En gestión activa:</span>
+              <span className="bg-[#1E56B0] text-white px-2.5 py-0.5 rounded-full font-mono font-black text-xs shadow-2xs">
+                {ordenes.filter((o) => o.estado !== 'PAGADO').length} órdenes
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* 1. Estructura del Tablero: Contenedor con scroll horizontal suave, snap-x y soporte Drag & Drop */}
-        <div className="flex-1 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-          <div className="flex gap-6 snap-x snap-mandatory items-start min-w-max pb-2">
-            
+        {/* Vista Condicional: Servicios Finalizados del Día o Tablero Kanban */}
+        {vistaActiva === 'servicios_dia' ? (
+          <CierreServiciosDia
+            servicios={serviciosDia}
+            onVolverAlKanban={() => setVistaActiva('kanban')}
+            operadoraActual={miOperadora}
+          />
+        ) : (
+          /* 1. Estructura del Tablero: Contenedor con scroll horizontal suave, snap-x y soporte Drag & Drop */
+          <div className="flex-1 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+            <div className="flex gap-6 snap-x snap-mandatory items-start min-w-max pb-2">
+
             {COLUMNAS.map((columna) => {
               const ordenesDeColumna = ordenes.filter((o) =>
                 columna.estadosValidos.includes(o.estado)
@@ -2083,11 +2262,10 @@ export default function TableroDespachoPage() {
                   onDragOver={(e) => handleDragOverColumn(e, columna.id)}
                   onDragLeave={handleDragLeaveColumn}
                   onDrop={(e) => handleDropOnColumn(e, columna.id)}
-                  className={`min-w-[320px] w-[320px] shrink-0 snap-center rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)] transition-all duration-200 ${
-                    isDragOver
-                      ? `${columna.colorDragOver} border-2 border-dashed`
-                      : 'bg-slate-50/80 border border-[#E2E8F0]'
-                  }`}
+                  className={`min-w-[320px] w-[320px] shrink-0 snap-center rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)] transition-all duration-200 ${isDragOver
+                    ? `${columna.colorDragOver} border-2 border-dashed`
+                    : 'bg-slate-50/80 border border-[#E2E8F0]'
+                    }`}
                 >
                   {/* Cabecera Sticky Glassmorphism */}
                   <div className="sticky top-0 z-10 backdrop-blur-md bg-white/85 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
@@ -2166,15 +2344,14 @@ export default function TableroDespachoPage() {
                             onDragEnd={handleDragEnd}
                             whileHover={{ scale: isBeingDragged || estaBloqueadaPorOtra ? 1 : 1.02, y: isBeingDragged || estaBloqueadaPorOtra ? 0 : -2 }}
                             transition={{ duration: 0.2 }}
-                            className={`rounded-2xl p-3.5 transition-all relative flex flex-col justify-between gap-2.5 select-none group ${
-                              estaBloqueadaPorOtra
-                                ? 'border-rose-200 bg-rose-50/20 cursor-not-allowed opacity-90'
-                                : isBeingDragged
+                            className={`rounded-2xl p-3.5 transition-all relative flex flex-col justify-between gap-2.5 select-none group ${estaBloqueadaPorOtra
+                              ? 'border-rose-200 bg-rose-50/20 cursor-not-allowed opacity-90'
+                              : isBeingDragged
                                 ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
                                 : esFlota
-                                ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg cursor-grab active:cursor-grabbing'
-                                : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing'
-                            }`}
+                                  ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg cursor-grab active:cursor-grabbing'
+                                  : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing'
+                              }`}
                           >
                             {/* 0. Banner Distintivo Flota Corporativa B2B (Resalta la tarjeta de color diferente) */}
                             {esFlota && (
@@ -2205,11 +2382,10 @@ export default function TableroDespachoPage() {
                             {/* Banner de Bloqueo de Tarjeta (Card Locking) */}
                             {orden.bloqueado_por && (
                               <div
-                                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all ${
-                                  estaBloqueadaPorOtra
-                                    ? 'bg-rose-100/90 text-rose-800 border border-rose-300 shadow-2xs'
-                                    : 'bg-amber-100/90 text-amber-800 border border-amber-300 shadow-2xs'
-                                }`}
+                                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all ${estaBloqueadaPorOtra
+                                  ? 'bg-rose-100/90 text-rose-800 border border-rose-300 shadow-2xs'
+                                  : 'bg-amber-100/90 text-amber-800 border border-amber-300 shadow-2xs'
+                                  }`}
                               >
                                 <Lock className="w-3.5 h-3.5 shrink-0" />
                                 <span className="truncate">
@@ -2598,6 +2774,7 @@ export default function TableroDespachoPage() {
 
           </div>
         </div>
+      )}
 
       </main>
 
@@ -2692,10 +2869,10 @@ export default function TableroDespachoPage() {
 
               {/* Contenido Principal en Dos Columnas (Scrollable) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto pr-1 py-1 flex-1">
-                
+
                 {/* Columna Izquierda: Mano de Obra, Buscador Command y Carrito (7 cols) */}
                 <div className="lg:col-span-7 space-y-4">
-                  
+
                   {/* Mano de Obra */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#0A1525] mb-1.5">
@@ -3027,11 +3204,9 @@ export default function TableroDespachoPage() {
                     const listaRepuestos = repuestosSeleccionados
                       .map((r) => `${r.nombre_repuesto} ($${r.precio_usd.toFixed(2)})`)
                       .join(', ');
-                    const text = `Presupuesto TuTallerMóvil: Subtotal $${subtotalServicio.toFixed(2)} | ${
-                      exoneraDiagnostico ? 'Diagnóstico GRATIS' : 'Diagnóstico $15.00'
-                    } | Total Final: $${totalCotizacion.toFixed(2)} USD. ${
-                      listaRepuestos ? `Repuestos: ${listaRepuestos}. ` : ''
-                    }${notasCotizacion ? `(${notasCotizacion})` : ''}`;
+                    const text = `Presupuesto TuTallerMóvil: Subtotal $${subtotalServicio.toFixed(2)} | ${exoneraDiagnostico ? 'Diagnóstico GRATIS' : 'Diagnóstico $15.00'
+                      } | Total Final: $${totalCotizacion.toFixed(2)} USD. ${listaRepuestos ? `Repuestos: ${listaRepuestos}. ` : ''
+                      }${notasCotizacion ? `(${notasCotizacion})` : ''}`;
                     navigator.clipboard.writeText(text);
                     alert('¡Presupuesto copiado al portapapeles!');
                   }}
@@ -3419,11 +3594,10 @@ export default function TableroDespachoPage() {
                 {MECANICOS_RADAR.map((mec) => (
                   <div
                     key={mec.id}
-                    className={`p-4 rounded-2xl border transition-all space-y-3.5 ${
-                      mec.disponible
-                        ? 'bg-white border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm'
-                        : 'bg-slate-50/70 border-slate-200 opacity-60'
-                    }`}
+                    className={`p-4 rounded-2xl border transition-all space-y-3.5 ${mec.disponible
+                      ? 'bg-white border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm'
+                      : 'bg-slate-50/70 border-slate-200 opacity-60'
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -3453,11 +3627,10 @@ export default function TableroDespachoPage() {
 
                       {/* Badge: Verde lima si Disponible, gris si Ocupado */}
                       <span
-                        className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 border ${
-                          mec.disponible
-                            ? 'bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/10'
-                            : 'bg-slate-200 text-slate-500 border-slate-300'
-                        }`}
+                        className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 border ${mec.disponible
+                          ? 'bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/10'
+                          : 'bg-slate-200 text-slate-500 border-slate-300'
+                          }`}
                       >
                         {mec.disponible ? '● Disponible' : 'Ocupado'}
                       </span>
@@ -3666,11 +3839,10 @@ export default function TableroDespachoPage() {
                 <button
                   type="button"
                   onClick={() => setTabEvidenciaModal('odometro')}
-                  className={`py-2 px-1 text-[11px] font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    tabEvidenciaModal === 'odometro'
-                      ? 'bg-white text-[#0A1525] shadow-xs'
-                      : 'text-slate-500 hover:text-[#0A1525]'
-                  }`}
+                  className={`py-2 px-1 text-[11px] font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${tabEvidenciaModal === 'odometro'
+                    ? 'bg-white text-[#0A1525] shadow-xs'
+                    : 'text-slate-500 hover:text-[#0A1525]'
+                    }`}
                 >
                   <Gauge className="w-3.5 h-3.5 text-[#1E56B0]" />
                   <span className="truncate">1. Odómetro</span>
@@ -3682,11 +3854,10 @@ export default function TableroDespachoPage() {
                 <button
                   type="button"
                   onClick={() => setTabEvidenciaModal('repuesto_viejo')}
-                  className={`py-2 px-1 text-[11px] font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    tabEvidenciaModal === 'repuesto_viejo'
-                      ? 'bg-white text-[#0A1525] shadow-xs'
-                      : 'text-slate-500 hover:text-[#0A1525]'
-                  }`}
+                  className={`py-2 px-1 text-[11px] font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${tabEvidenciaModal === 'repuesto_viejo'
+                    ? 'bg-white text-[#0A1525] shadow-xs'
+                    : 'text-slate-500 hover:text-[#0A1525]'
+                    }`}
                 >
                   <Layers className="w-3.5 h-3.5 text-amber-600" />
                   <span className="truncate">2. Rep. Viejo</span>
@@ -3698,11 +3869,10 @@ export default function TableroDespachoPage() {
                 <button
                   type="button"
                   onClick={() => setTabEvidenciaModal('repuesto_nuevo')}
-                  className={`py-2 px-1 text-[11px] font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    tabEvidenciaModal === 'repuesto_nuevo'
-                      ? 'bg-white text-[#0A1525] shadow-xs'
-                      : 'text-slate-500 hover:text-[#0A1525]'
-                  }`}
+                  className={`py-2 px-1 text-[11px] font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${tabEvidenciaModal === 'repuesto_nuevo'
+                    ? 'bg-white text-[#0A1525] shadow-xs'
+                    : 'text-slate-500 hover:text-[#0A1525]'
+                    }`}
                 >
                   <PackageCheck className="w-3.5 h-3.5 text-emerald-600" />
                   <span className="truncate">3. Rep. Nuevo</span>
@@ -3718,22 +3888,22 @@ export default function TableroDespachoPage() {
                   tabEvidenciaModal === 'odometro'
                     ? ordenParaEvidencia?.foto_odometro_url
                     : tabEvidenciaModal === 'repuesto_viejo'
-                    ? ordenParaEvidencia?.foto_repuesto_viejo_url || (ordenParaEvidencia?.estado === 'EN_EJECUCION' || ordenParaEvidencia?.estado === 'PENDIENTE_PAGO' ? 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=80' : null)
-                    : ordenParaEvidencia?.foto_repuesto_nuevo_url || (ordenParaEvidencia?.estado === 'EN_EJECUCION' || ordenParaEvidencia?.estado === 'PENDIENTE_PAGO' ? 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80' : null);
+                      ? ordenParaEvidencia?.foto_repuesto_viejo_url || (ordenParaEvidencia?.estado === 'EN_EJECUCION' || ordenParaEvidencia?.estado === 'PENDIENTE_PAGO' ? 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=80' : null)
+                      : ordenParaEvidencia?.foto_repuesto_nuevo_url || (ordenParaEvidencia?.estado === 'EN_EJECUCION' || ordenParaEvidencia?.estado === 'PENDIENTE_PAGO' ? 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80' : null);
 
                 const tituloActual =
                   tabEvidenciaModal === 'odometro'
                     ? 'Foto de Kilometraje (Odómetro Inicial)'
                     : tabEvidenciaModal === 'repuesto_viejo'
-                    ? 'Foto de Pieza Defectuosa Extraída (Repuesto Viejo)'
-                    : 'Foto de Pieza Nueva Instalada (Repuesto Nuevo)';
+                      ? 'Foto de Pieza Defectuosa Extraída (Repuesto Viejo)'
+                      : 'Foto de Pieza Nueva Instalada (Repuesto Nuevo)';
 
                 const descPendiente =
                   tabEvidenciaModal === 'odometro'
                     ? 'El mecánico debe fotografiar el odómetro para validar el kilometraje real en sitio.'
                     : tabEvidenciaModal === 'repuesto_viejo'
-                    ? 'El mecánico debe fotografiar la pieza defectuosa extraída para control de calidad.'
-                    : 'El mecánico debe fotografiar el repuesto nuevo instalado para respaldar la garantía oficial.';
+                      ? 'El mecánico debe fotografiar la pieza defectuosa extraída para control de calidad.'
+                      : 'El mecánico debe fotografiar el repuesto nuevo instalado para respaldar la garantía oficial.';
 
                 return fotoActual ? (
                   <div className="space-y-3">
@@ -3942,7 +4112,7 @@ export default function TableroDespachoPage() {
         {modalDiagnosticoOpen && ordenParaDiagnostico && (() => {
           const diag = ordenParaDiagnostico.diagnostico_json || {};
           const itemsResp = diag.items || {};
-          
+
           // Calcular items con cambio o falla
           const itemsCambioCount = Object.entries(itemsResp).filter(
             ([_, val]) => val === 'requiere_cambio' || val === 'CAMBIO' || val === 'falla'
@@ -4004,9 +4174,8 @@ export default function TableroDespachoPage() {
                       {itemsOkCount} OK
                     </span>
                   </div>
-                  <div className={`p-3 rounded-2xl border ${
-                    itemsCambioCount > 0 ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-200' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div className={`p-3 rounded-2xl border ${itemsCambioCount > 0 ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-200' : 'bg-slate-50 border-slate-200'
+                    }`}>
                     <span className={`text-[10px] font-bold uppercase block ${itemsCambioCount > 0 ? 'text-rose-700' : 'text-slate-400'}`}>
                       Requieren Cambio
                     </span>
@@ -4037,8 +4206,8 @@ export default function TableroDespachoPage() {
                         (it.id === 'pastillas_delanteras' || it.id === 'discos_freno' || it.id === 'liquido_frenos') && diag.frenos === 'requiere_cambio'
                           ? 'requiere_cambio'
                           : it.id === 'aceite_motor' && diag.aceite === 'requiere_cambio'
-                          ? 'requiere_cambio'
-                          : 'ok'
+                            ? 'requiere_cambio'
+                            : 'ok'
                       );
                       const esFalla = val === 'requiere_cambio' || val === 'CAMBIO' || val === 'falla';
                       return { ...it, val, esFalla };
@@ -4049,11 +4218,10 @@ export default function TableroDespachoPage() {
                     return (
                       <div
                         key={cat.id}
-                        className={`rounded-2xl border transition-all ${
-                          tieneFallas
-                            ? 'border-rose-200 bg-rose-50/20'
-                            : 'border-slate-200 bg-white'
-                        }`}
+                        className={`rounded-2xl border transition-all ${tieneFallas
+                          ? 'border-rose-200 bg-rose-50/20'
+                          : 'border-slate-200 bg-white'
+                          }`}
                       >
                         <div className="p-3 bg-slate-50 border-b border-slate-200/80 rounded-t-2xl flex items-center justify-between">
                           <span className="text-xs font-black text-[#0A1525]">
@@ -4070,9 +4238,8 @@ export default function TableroDespachoPage() {
                           {itemsDeCat.map((item) => (
                             <div
                               key={item.id}
-                              className={`pt-2 first:pt-0 flex items-center justify-between gap-3 p-1.5 rounded-xl transition-colors ${
-                                item.esFalla ? 'bg-rose-50/80 border border-rose-200' : ''
-                              }`}
+                              className={`pt-2 first:pt-0 flex items-center justify-between gap-3 p-1.5 rounded-xl transition-colors ${item.esFalla ? 'bg-rose-50/80 border border-rose-200' : ''
+                                }`}
                             >
                               <div className="min-w-0 flex-1">
                                 <p className={`text-xs font-black truncate ${item.esFalla ? 'text-rose-950' : 'text-[#0A1525]'}`}>
