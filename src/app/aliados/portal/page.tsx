@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -44,7 +44,11 @@ import {
   Lock,
   ShieldAlert,
   AlertTriangle,
-  X
+  X,
+  Camera,
+  Edit3,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
@@ -95,13 +99,38 @@ export default function PortalAliadosPage() {
   const [aceptandoId, setAceptandoId] = useState<string | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
   const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
-  const [filtroServicios, setFiltroServicios] = useState<'todos' | 'asignados' | 'disponibles'>('todos');
+  // Por requerimiento: por defecto solo mostrar solicitudes disponibles no asignadas
+  const [filtroServicios, setFiltroServicios] = useState<'disponibles' | 'asignados'>('disponibles');
   const [toastAceptado, setToastAceptado] = useState<string | null>(null);
   const [creandoOrdenPrueba, setCreandoOrdenPrueba] = useState<boolean>(false);
   const [modalBloqueoOrden, setModalBloqueoOrden] = useState<boolean>(false);
   const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
-  const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-0842');
-  const [nombreMecanico, setNombreMecanico] = useState<string>('Carlos Mendoza');
+
+  // Estados de Perfil de Aliado
+  const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-5385');
+  const [nombreMecanico, setNombreMecanico] = useState<string>('jose antonio');
+  const [fotoPerfil, setFotoPerfil] = useState<string>('https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80');
+  const [especialidadMecanico, setEspecialidadMecanico] = useState<string>('Mecánica General & Inyección');
+  const [telefonoMecanico, setTelefonoMecanico] = useState<string>('+58 412 123 4567');
+  const [zonaCobertura, setZonaCobertura] = useState<string>('Gran Caracas');
+
+  // Modales de Edición de Perfil y Cámara
+  const [modalEditarPerfilOpen, setModalEditarPerfilOpen] = useState<boolean>(false);
+  const [modalCamaraWebOpen, setModalCamaraWebOpen] = useState<boolean>(false);
+  const [camaraIniciada, setCamaraIniciada] = useState<boolean>(false);
+
+  // Estados de Formulario de Perfil
+  const [formNombre, setFormNombre] = useState<string>('jose antonio');
+  const [formEspecialidad, setFormEspecialidad] = useState<string>('Mecánica General & Inyección');
+  const [formTelefono, setFormTelefono] = useState<string>('+58 412 123 4567');
+  const [formZona, setFormZona] = useState<string>('Gran Caracas');
+  const [formFotoPreview, setFormFotoPreview] = useState<string>('');
+
+  // Refs de archivos y cámara
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamCamaraRef = useRef<MediaStream | null>(null);
 
   // Notificaciones Push y Alertas Sonoras (Piano Elegante)
   const [pushActivo, setPushActivo] = useState<boolean>(false);
@@ -141,9 +170,28 @@ export default function PortalAliadosPage() {
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gpsActivo, setGpsActivo] = useState<boolean>(false);
 
-  // Obtener geolocalización al montar el componente
+  // Obtener geolocalización y cargar perfil al montar el componente
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Cargar foto guardada
+      const fotoGuardada = localStorage.getItem('ttm_aliado_foto');
+      if (fotoGuardada) {
+        setFotoPerfil(fotoGuardada);
+      }
+
+      // Cargar campos guardados
+      const nombreGuardado = localStorage.getItem('ttm_aliado_nombre');
+      if (nombreGuardado) setNombreMecanico(nombreGuardado);
+
+      const espGuardada = localStorage.getItem('ttm_aliado_especialidad');
+      if (espGuardada) setEspecialidadMecanico(espGuardada);
+
+      const telGuardado = localStorage.getItem('ttm_aliado_telefono');
+      if (telGuardado) setTelefonoMecanico(telGuardado);
+
+      const zonaGuardada = localStorage.getItem('ttm_aliado_zona');
+      if (zonaGuardada) setZonaCobertura(zonaGuardada);
+
       const matchCode = document.cookie.match(/(^| )ttm_user_code=([^;]+)/);
       if (matchCode && matchCode[2]) {
         const val = decodeURIComponent(matchCode[2]);
@@ -157,6 +205,10 @@ export default function PortalAliadosPage() {
           const parsed = JSON.parse(rawSesion);
           if (parsed.codigo_aliado) setCodigoAliado(parsed.codigo_aliado);
           if (parsed.nombre) setNombreMecanico(parsed.nombre);
+          if (parsed.foto) setFotoPerfil(parsed.foto);
+          if (parsed.especialidad) setEspecialidadMecanico(parsed.especialidad);
+          if (parsed.telefono) setTelefonoMecanico(parsed.telefono);
+          if (parsed.zona) setZonaCobertura(parsed.zona);
         } catch (e) {}
       }
 
@@ -341,18 +393,178 @@ export default function PortalAliadosPage() {
 
   const tieneOrdenActiva = Boolean(ordenActivaEnCurso);
 
+  // Estados que indican que la orden ya avanzó en el pipeline
+  const ESTADOS_AVANZADOS = useMemo(() => [
+    'ASIGNADO',
+    'EN_INSPECCION',
+    'COTIZACION_PENDIENTE',
+    'REPUESTOS_EN_RUTA',
+    'EN_EJECUCION',
+    'PENDIENTE_PAGO',
+    'PAGO_REPORTADO',
+    'PAGADO',
+    'LIQUIDACION_PENDIENTE',
+    'FINALIZADO',
+    'CANCELADO'
+  ], []);
+
+  // Estados iniciales libres que pueden ser tomados
+  const ESTADOS_INICIALES = useMemo(() => [
+    'DISPONIBLE',
+    'LEAD_NUEVO',
+    'DIAGNOSTICO_AGENDADO'
+  ], []);
+
+  // REGLA SOLICITADA: En este apartado solo tienen que salir las órdenes sin mecánico asignado y no avanzadas
   const ordenesDisponibles = useMemo(() => {
-    return ordenesConDistancia.filter((o) =>
-      ['DISPONIBLE', 'LEAD_NUEVO', 'DIAGNOSTICO_AGENDADO'].includes(o.estado) ||
-      (!o.mecanico_id && !['FINALIZADO', 'CANCELADO'].includes(o.estado))
-    );
-  }, [ordenesConDistancia]);
+    return ordenesConDistancia.filter((o) => {
+      const sinMecanico = !o.mecanico_id || String(o.mecanico_id).trim() === '';
+      const noAvanzada = !ESTADOS_AVANZADOS.includes(o.estado);
+      const esEstadoInicial = ESTADOS_INICIALES.includes(o.estado) || !o.estado;
+      return sinMecanico && noAvanzada && esEstadoInicial;
+    });
+  }, [ordenesConDistancia, ESTADOS_AVANZADOS, ESTADOS_INICIALES]);
 
   const ordenesFiltradas = useMemo(() => {
     if (filtroServicios === 'asignados') return ordenesAsignadas;
-    if (filtroServicios === 'disponibles') return ordenesDisponibles;
-    return ordenesConDistancia;
-  }, [filtroServicios, ordenesAsignadas, ordenesDisponibles, ordenesConDistancia]);
+    return ordenesDisponibles;
+  }, [filtroServicios, ordenesAsignadas, ordenesDisponibles]);
+
+  // Abrir modal de edición con los datos actuales
+  const handleAbrirEditarPerfil = () => {
+    setFormNombre(nombreMecanico);
+    setFormEspecialidad(especialidadMecanico);
+    setFormTelefono(telefonoMecanico);
+    setFormZona(zonaCobertura);
+    setFormFotoPreview(fotoPerfil);
+    setModalEditarPerfilOpen(true);
+  };
+
+  // Guardar cambios del perfil
+  const handleGuardarPerfil = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const nuevoNombre = formNombre.trim() || nombreMecanico;
+    const nuevaEsp = formEspecialidad.trim() || especialidadMecanico;
+    const nuevoTel = formTelefono.trim() || telefonoMecanico;
+    const nuevaZona = formZona.trim() || zonaCobertura;
+    const nuevaFoto = formFotoPreview || fotoPerfil;
+
+    setNombreMecanico(nuevoNombre);
+    setEspecialidadMecanico(nuevaEsp);
+    setTelefonoMecanico(nuevoTel);
+    setZonaCobertura(nuevaZona);
+    setFotoPerfil(nuevaFoto);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ttm_aliado_nombre', nuevoNombre);
+      localStorage.setItem('ttm_aliado_especialidad', nuevaEsp);
+      localStorage.setItem('ttm_aliado_telefono', nuevoTel);
+      localStorage.setItem('ttm_aliado_zona', nuevaZona);
+      localStorage.setItem('ttm_aliado_foto', nuevaFoto);
+
+      const sesionActual = {
+        codigo_aliado: codigoAliado,
+        nombre: nuevoNombre,
+        especialidad: nuevaEsp,
+        telefono: nuevoTel,
+        zona: nuevaZona,
+        foto: nuevaFoto
+      };
+      localStorage.setItem('ttm_aliado_sesion', JSON.stringify(sesionActual));
+      document.cookie = `ttm_user_name=${encodeURIComponent(nuevoNombre)}; path=/; max-age=31536000`;
+    }
+
+    setModalEditarPerfilOpen(false);
+    setToastAceptado('✓ Perfil y credenciales actualizados exitosamente');
+    setTimeout(() => setToastAceptado(null), 4000);
+  };
+
+  // Cargar archivo desde el dispositivo (Galería / Archivos)
+  const handleFotoArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setFormFotoPreview(result);
+        setFotoPerfil(result);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ttm_aliado_foto', result);
+        }
+        setToastAceptado('✓ Foto de perfil cargada desde el dispositivo');
+        setTimeout(() => setToastAceptado(null), 3500);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Iniciar cámara en vivo (webcam o cámara de dispositivo)
+  const handleIniciarCamaraWeb = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+          audio: false
+        });
+        streamCamaraRef.current = stream;
+        setModalCamaraWebOpen(true);
+        setCamaraIniciada(true);
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play().catch(console.error);
+          }
+        }, 100);
+      } else {
+        cameraInputRef.current?.click();
+      }
+    } catch (err: any) {
+      console.warn('Cámara no accesible vía getUserMedia, usando fallback nativo:', err);
+      cameraInputRef.current?.click();
+    }
+  };
+
+  // Tomar fotografía desde el feed de video
+  const handleCapturarFotoWeb = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 640;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+    setFormFotoPreview(dataUrl);
+    setFotoPerfil(dataUrl);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ttm_aliado_foto', dataUrl);
+    }
+
+    handleCerrarCamaraWeb();
+    setToastAceptado('✓ Fotografía capturada con éxito');
+    setTimeout(() => setToastAceptado(null), 3500);
+  };
+
+  // Cerrar cámara y detener streams
+  const handleCerrarCamaraWeb = () => {
+    if (streamCamaraRef.current) {
+      streamCamaraRef.current.getTracks().forEach((track) => track.stop());
+      streamCamaraRef.current = null;
+    }
+    setCamaraIniciada(false);
+    setModalCamaraWebOpen(false);
+  };
 
   // Acción para Finalizar y Completar un Servicio (Liberando el cupo del mecánico)
   const handleFinalizarServicio = async (ordenId: string) => {
@@ -584,14 +796,35 @@ export default function PortalAliadosPage() {
 
             {/* Avatar y Datos Personales */}
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="relative">
-                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#0A1525] border-2 border-[#CBD5E1] p-1 overflow-hidden flex items-center justify-center text-white shadow-md">
+              <div className="relative group">
+                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#0A1525] border-2 border-[#CBD5E1] p-1 overflow-hidden flex items-center justify-center text-white shadow-md relative">
                   <img
-                    src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80"
-                    alt="Carlos Mendoza - Especialista TuTallerMóvil"
+                    src={fotoPerfil}
+                    alt={`${nombreMecanico} - Especialista TuTallerMóvil`}
                     className="w-full h-full rounded-xl object-cover object-center"
                   />
+                  {/* Overlay hover para cambiar foto */}
+                  <button
+                    type="button"
+                    onClick={handleAbrirEditarPerfil}
+                    className="absolute inset-0 bg-black/40 backdrop-blur-2xs opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer"
+                    title="Cambiar Foto"
+                  >
+                    <Camera className="w-5 h-5 text-[#CCFF00] mb-0.5" />
+                    <span>Cambiar</span>
+                  </button>
                 </div>
+
+                {/* Botón rápido de cámara en la esquina inferior del avatar */}
+                <button
+                  type="button"
+                  onClick={handleAbrirEditarPerfil}
+                  className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-[#0A1525] text-white hover:bg-[#1E56B0] border-2 border-white flex items-center justify-center shadow-md transition-all cursor-pointer active:scale-95"
+                  title="Cambiar foto de perfil"
+                >
+                  <Camera className="w-3.5 h-3.5 text-[#CCFF00]" />
+                </button>
+
                 {/* Indicador de estado en el avatar */}
                 <span
                   className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${estado === 'DISPONIBLE'
@@ -615,6 +848,17 @@ export default function PortalAliadosPage() {
                   <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Verificado
                   </span>
+
+                  {/* Botón Editar Perfil */}
+                  <button
+                    type="button"
+                    onClick={handleAbrirEditarPerfil}
+                    className="h-7 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Editar perfil y foto"
+                  >
+                    <Edit3 className="w-3 h-3 text-[#1E56B0]" />
+                    <span>Editar Perfil</span>
+                  </button>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-slate-500 font-medium">
@@ -622,7 +866,9 @@ export default function PortalAliadosPage() {
                     {codigoAliado}
                   </span>
                   <span>•</span>
-                  <span>Mecánica General &amp; Inyección</span>
+                  <span>{especialidadMecanico}</span>
+                  <span>•</span>
+                  <span>{telefonoMecanico}</span>
                 </div>
 
                 {/* Calificación 4.9 estrellas */}
@@ -646,7 +892,7 @@ export default function PortalAliadosPage() {
                 Zona de Cobertura
               </span>
               <span className="font-bold text-[#0A1525] flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-[#1E56B0]" /> Gran Caracas
+                <MapPin className="w-3.5 h-3.5 text-[#1E56B0]" /> {zonaCobertura}
               </span>
               <span className={`text-[10px] font-semibold flex items-center gap-1 ${gpsActivo ? 'text-emerald-700' : 'text-slate-400'}`}>
                 <LocateFixed className="w-3 h-3" />
@@ -873,11 +1119,11 @@ export default function PortalAliadosPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#0A1525]">
-                Bolsa de Servicios y Órdenes
+                Bolsa de Servicios Disponibles
               </h2>
               {!cargando && (
                 <span className="bg-[#CCFF00] text-[#0A1525] font-extrabold text-xs px-2.5 py-0.5 rounded-full">
-                  {ordenesFiltradas.length} {filtroServicios === 'asignados' ? 'en curso' : 'activas'}
+                  {ordenesFiltradas.length} {filtroServicios === 'asignados' ? 'en curso' : 'disponibles'}
                 </span>
               )}
             </div>
@@ -905,20 +1151,21 @@ export default function PortalAliadosPage() {
             </div>
           </div>
 
-          {/* Filtros de Pestañas: Todas, Mis Asignados, Disponibles */}
+          {/* Filtros de Pestañas: Solicitudes Disponibles (Default) y Mis Servicios Asignados */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <button
               type="button"
-              onClick={() => setFiltroServicios('todos')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'todos'
-                ? 'bg-[#0A1525] text-white shadow-xs'
+              onClick={() => setFiltroServicios('disponibles')}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'disponibles'
+                ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs'
                 : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
                 }`}
             >
-              <span>Todas las Órdenes</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'todos' ? 'bg-white/20 text-[#CCFF00]' : 'bg-slate-100 text-slate-600'
+              <Sparkles className="w-3.5 h-3.5 text-[#CCFF00]" />
+              <span>Solicitudes Disponibles (Sin Asignar)</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'disponibles' ? 'bg-[#CCFF00] text-[#0A1525]' : 'bg-emerald-50 text-emerald-700'
                 }`}>
-                {ordenesConDistancia.length}
+                {ordenesDisponibles.length}
               </span>
             </button>
 
@@ -935,22 +1182,6 @@ export default function PortalAliadosPage() {
               <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'asignados' ? 'bg-white/20 text-[#CCFF00]' : 'bg-blue-50 text-[#1E56B0]'
                 }`}>
                 {ordenesAsignadas.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setFiltroServicios('disponibles')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'disponibles'
-                ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs'
-                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
-                }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Solicitudes Disponibles</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'disponibles' ? 'bg-[#CCFF00] text-[#0A1525]' : 'bg-emerald-50 text-emerald-700'
-                }`}>
-                {ordenesDisponibles.length}
               </span>
             </button>
           </div>
@@ -995,14 +1226,12 @@ export default function PortalAliadosPage() {
                 <h3 className="text-base sm:text-lg font-black text-[#0A1525]">
                   {filtroServicios === 'asignados'
                     ? 'No tienes servicios asignados actualmente'
-                    : filtroServicios === 'disponibles'
-                      ? 'No hay solicitudes disponibles en este momento'
-                      : 'No hay órdenes registradas'}
+                    : 'No hay solicitudes disponibles sin mecánico en este momento'}
                 </h3>
                 <p className="text-xs sm:text-sm text-[#475569] font-medium max-w-sm mx-auto">
                   {filtroServicios === 'asignados'
                     ? 'Ve a la pestaña "Solicitudes Disponibles" para aceptar servicios o genera una orden de prueba.'
-                    : 'Mantente conectado, te avisaremos en tiempo real cuando un cliente solicite asistencia en tu zona.'}
+                    : 'En esta sección solo se muestran órdenes que no tienen ningún mecánico asignado y que están en fase inicial. Te avisaremos en tiempo real cuando un cliente solicite asistencia en tu zona.'}
                 </p>
               </div>
 
@@ -1015,15 +1244,6 @@ export default function PortalAliadosPage() {
                   <Plus className="w-4 h-4 stroke-[3]" />
                   <span>Crear Orden de Prueba en Vivo</span>
                 </button>
-                {filtroServicios !== 'todos' && (
-                  <button
-                    type="button"
-                    onClick={() => setFiltroServicios('todos')}
-                    className="h-9 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                  >
-                    Ver todas las órdenes ({ordenesConDistancia.length})
-                  </button>
-                )}
               </div>
             </div>
           ) : (
@@ -1248,7 +1468,10 @@ export default function PortalAliadosPage() {
 
           <button
             type="button"
-            onClick={() => setActiveTab('perfil')}
+            onClick={() => {
+              setActiveTab('perfil');
+              handleAbrirEditarPerfil();
+            }}
             className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'perfil' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
               }`}
           >
@@ -1258,6 +1481,23 @@ export default function PortalAliadosPage() {
 
         </div>
       </nav>
+
+      {/* Inputs Ocultos de Archivo y Cámara Nativa */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        onChange={handleFotoArchivo}
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={cameraInputRef}
+        accept="image/*"
+        capture="user"
+        onChange={handleFotoArchivo}
+        className="hidden"
+      />
 
       {/* Onboarding Modal de Bienvenida para Mecánicos */}
       <OnboardingModal
@@ -1324,6 +1564,247 @@ export default function PortalAliadosPage() {
               ✕
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL DIALOG: EDITAR PERFIL & FOTO                      */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalEditarPerfilOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/75 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 15 }}
+              className="w-full max-w-md bg-white rounded-3xl p-6 space-y-5 border border-[#CBD5E1] shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setModalEditarPerfilOpen(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#1E56B0] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                  Credencial de Especialista Aliado
+                </span>
+                <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
+                  Editar Perfil &amp; Fotografía
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Actualiza tus datos públicos y tu foto de perfil visible en los despachos y ante los clientes.
+                </p>
+              </div>
+
+              {/* Sección Foto de Perfil */}
+              <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative shrink-0">
+                  <div className="w-20 h-20 rounded-2xl bg-[#0A1525] border-2 border-[#CBD5E1] p-1 overflow-hidden shadow-md">
+                    <img
+                      src={formFotoPreview || fotoPerfil}
+                      alt="Vista previa foto perfil"
+                      className="w-full h-full rounded-xl object-cover object-center"
+                    />
+                  </div>
+                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#CCFF00] border-2 border-white flex items-center justify-center shadow-xs">
+                    <Check className="w-3 h-3 text-[#0A1525] stroke-[3]" />
+                  </span>
+                </div>
+
+                <div className="flex-1 w-full space-y-2">
+                  <span className="text-[11px] font-extrabold uppercase text-slate-500 block">
+                    Foto de Perfil
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Botón Tomar Fotografía */}
+                    <button
+                      type="button"
+                      onClick={handleIniciarCamaraWeb}
+                      className="h-10 px-2 bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer active:scale-95"
+                      title="Tomar fotografía con la cámara de tu teléfono o webcam"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-[#CCFF00]" />
+                      <span>Tomar Foto</span>
+                    </button>
+
+                    {/* Botón Subir Archivo */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="h-10 px-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer active:scale-95"
+                      title="Subir desde galería o archivos del dispositivo"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#1E56B0]" />
+                      <span>Subir Foto</span>
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    Formatos JPG, PNG, WebP permitidos.
+                  </p>
+                </div>
+              </div>
+
+              {/* Formulario de Datos */}
+              <form onSubmit={handleGuardarPerfil} className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nombre Completo
+                  </label>
+                  <input
+                    type="text"
+                    value={formNombre}
+                    onChange={(e) => setFormNombre(e.target.value)}
+                    required
+                    placeholder="Ej. jose antonio"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-[#0A1525] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1E56B0]/20 focus:border-[#1E56B0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Especialidad Mecánica
+                  </label>
+                  <input
+                    type="text"
+                    value={formEspecialidad}
+                    onChange={(e) => setFormEspecialidad(e.target.value)}
+                    required
+                    placeholder="Ej. Mecánica General & Inyección"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-[#0A1525] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1E56B0]/20 focus:border-[#1E56B0]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Teléfono Móvil
+                    </label>
+                    <input
+                      type="text"
+                      value={formTelefono}
+                      onChange={(e) => setFormTelefono(e.target.value)}
+                      placeholder="+58 412 123 4567"
+                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-[#0A1525] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1E56B0]/20 focus:border-[#1E56B0]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Zona de Cobertura
+                    </label>
+                    <input
+                      type="text"
+                      value={formZona}
+                      onChange={(e) => setFormZona(e.target.value)}
+                      placeholder="Gran Caracas"
+                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-[#0A1525] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1E56B0]/20 focus:border-[#1E56B0]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalEditarPerfilOpen(false)}
+                    className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-[#CCFF00] font-black text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
+                  >
+                    <Check className="w-4 h-4 text-[#CCFF00] stroke-[3]" />
+                    <span>Guardar Cambios</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL DIALOG: TOMAR FOTO CON CÁMARA (WEBCAM / LIVE)     */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalCamaraWebOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/85 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 15 }}
+              className="w-full max-w-md bg-white rounded-3xl p-5 space-y-4 border border-[#CBD5E1] shadow-2xl relative"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#CCFF00] flex items-center justify-center text-[#0A1525]">
+                    <Camera className="w-4 h-4 text-[#0A1525]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-[#0A1525]">
+                      Capturar Foto de Perfil
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Ubica tu rostro en el centro del encuadre
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCerrarCamaraWeb}
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Viewport de Cámara en Vivo con Guía Facial */}
+              <div className="relative rounded-2xl overflow-hidden bg-black aspect-square max-h-72 w-full flex items-center justify-center border-2 border-slate-700 shadow-inner">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+
+                {/* Retículo / Guía de encuadre */}
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="w-48 h-48 rounded-full border-2 border-dashed border-[#CCFF00]/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)] flex items-center justify-center">
+                    <span className="text-[10px] text-white/90 bg-black/50 px-2 py-0.5 rounded-full font-bold">
+                      Alinea tu rostro
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de Captura */}
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleCerrarCamaraWeb}
+                  className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCapturarFotoWeb}
+                  className="flex-1 h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-[#CCFF00] font-black text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
+                >
+                  <Camera className="w-4 h-4 text-[#CCFF00]" />
+                  <span>Capturar Fotografía</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
