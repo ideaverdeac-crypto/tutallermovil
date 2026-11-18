@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -391,6 +392,18 @@ export function SolicitarMecanicoModal({
                         </>
                       )}
                     </motion.button>
+
+                    <p className="text-[11px] text-center text-slate-500 pt-1">
+                      Al solicitar el servicio declaras aceptar los{' '}
+                      <Link
+                        href="/terminos"
+                        target="_blank"
+                        className="text-[#1E56B0] underline font-semibold hover:text-[#0A1525]"
+                      >
+                        Términos y Política de Privacidad
+                      </Link>{' '}
+                      de TuTallerMóvil.
+                    </p>
                   </form>
                 </motion.div>
               </Dialog.Content>

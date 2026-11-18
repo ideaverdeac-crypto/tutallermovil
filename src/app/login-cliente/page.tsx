@@ -51,6 +51,7 @@ function LoginClienteContent() {
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   // Estados
   const [cargando, setCargando] = useState(false);
@@ -142,6 +143,13 @@ function LoginClienteContent() {
     e.preventDefault();
     setErrorMsg(null);
     setExitoMsg(null);
+
+    // Validación estricta obligatoria de Términos y Condiciones
+    if (!aceptaTerminos) {
+      setErrorMsg('Debes aceptar los Términos y Condiciones Generales y la Política de Privacidad de TuTallerMóvil para registrarte.');
+      return;
+    }
+
     setCargando(true);
 
     if (!nombre.trim() || !email.trim() || !password.trim()) {
@@ -423,11 +431,55 @@ function LoginClienteContent() {
                 </div>
               </div>
 
+              {/* Aceptación Obligatoria de Términos y Condiciones para Registro */}
+              {tabActiva === 'registrarse' && (
+                <div className="pt-1">
+                  <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/70 transition-all cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={aceptaTerminos}
+                      onChange={(e) => setAceptaTerminos(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#1E56B0] focus:ring-[#1E56B0] cursor-pointer shrink-0"
+                    />
+                    <span className="text-[11px] text-slate-600 leading-tight">
+                      He leído, comprendo y acepto sin reservas los{' '}
+                      <Link
+                        href="/terminos"
+                        target="_blank"
+                        className="text-[#1E56B0] font-bold underline hover:text-[#0A1525]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Términos y Condiciones Generales de Uso
+                      </Link>{' '}
+                      y la{' '}
+                      <Link
+                        href="/terminos#seccion-1"
+                        target="_blank"
+                        className="text-[#1E56B0] font-bold underline hover:text-[#0A1525]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Política Integral de Privacidad
+                      </Link>{' '}
+                      de TuTallerMóvil. <span className="text-rose-500 font-bold">*</span>
+                    </span>
+                  </label>
+                  {!aceptaTerminos && (
+                    <p className="mt-1 text-[10px] text-amber-700 font-medium pl-1 flex items-center gap-1">
+                      <span>⚠️ Es obligatorio aceptar la normativa legal para poder registrarse.</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Botón Principal */}
               <button
                 type="submit"
-                disabled={cargando}
-                className="w-full mt-2 py-3.5 rounded-2xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black tracking-wide flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:shadow-lg disabled:opacity-60"
+                disabled={cargando || (tabActiva === 'registrarse' && !aceptaTerminos)}
+                className={`w-full mt-2 py-3.5 rounded-2xl text-xs font-black tracking-wide flex items-center justify-center gap-2 transition-all shadow-md ${
+                  tabActiva === 'registrarse' && !aceptaTerminos
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                    : 'bg-[#0A1525] hover:bg-[#1E56B0] text-white cursor-pointer hover:shadow-lg'
+                } disabled:opacity-60`}
               >
                 {cargando ? (
                   <span>Procesando...</span>
@@ -438,7 +490,7 @@ function LoginClienteContent() {
                   </>
                 ) : (
                   <>
-                    <span>Crear Cuenta & Abrir Garaje</span>
+                    <span>Crear Cuenta &amp; Abrir Garaje</span>
                     <Sparkles className="w-4 h-4 text-[#CCFF00]" />
                   </>
                 )}

@@ -193,6 +193,7 @@ function RegistroRolContent() {
   // Estados de Operación
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   // Pantalla de Éxito
   const [registroExitoso, setRegistroExitoso] = useState(false);
@@ -284,6 +285,12 @@ function RegistroRolContent() {
   const handleSubmitFinal = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+
+    // Validación obligatoria de Términos, Condiciones y Privacidad
+    if (!aceptaTerminos) {
+      setErrorMsg('Debes aceptar los Términos y Condiciones Generales de Uso y la Política Integral de Privacidad de Datos para registrarte en TuTallerMóvil.');
+      return;
+    }
 
     // Validaciones específicas
     if (config.rol === 'MECANICO') {
@@ -1119,6 +1126,53 @@ function RegistroRolContent() {
                   </div>
                 )}
 
+                {/* Aceptación Legal Obligatoria de Términos y Normativa Operativa */}
+                <div className="pt-2">
+                  <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100/70 transition-all cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={aceptaTerminos}
+                      onChange={(e) => setAceptaTerminos(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#1E56B0] focus:ring-[#1E56B0] cursor-pointer shrink-0"
+                    />
+                    <span className="text-xs text-slate-600 leading-snug">
+                      Declaro bajo juramento que he leído, comprendo y acepto sin reservas los{' '}
+                      <Link
+                        href="/terminos"
+                        target="_blank"
+                        className="text-[#1E56B0] font-bold underline hover:text-[#0A1525]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Términos y Condiciones Generales de Uso
+                      </Link>
+                      , la{' '}
+                      <Link
+                        href="/terminos#seccion-3"
+                        target="_blank"
+                        className="text-[#1E56B0] font-bold underline hover:text-[#0A1525]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Normativa Operativa de mi Rol
+                      </Link>{' '}
+                      y la{' '}
+                      <Link
+                        href="/terminos#seccion-1"
+                        target="_blank"
+                        className="text-[#1E56B0] font-bold underline hover:text-[#0A1525]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Política Integral de Privacidad
+                      </Link>{' '}
+                      de TuTallerMóvil en Caracas, Venezuela. <span className="text-rose-500 font-bold">*</span>
+                    </span>
+                  </label>
+                  {!aceptaTerminos && (
+                    <p className="mt-1.5 text-[11px] text-amber-700 font-medium pl-1 flex items-center gap-1.5">
+                      <span>⚠️ Es obligatorio aceptar la normativa de la plataforma para recibir el Código de Aliado y acceder a servicios.</span>
+                    </p>
+                  )}
+                </div>
+
                 {/* Botones de Navegación del Paso 2 */}
                 <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-3">
                   <button
@@ -1135,8 +1189,12 @@ function RegistroRolContent() {
 
                   <button
                     type="submit"
-                    disabled={cargando}
-                    className="h-12 px-8 rounded-2xl bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                    disabled={cargando || !aceptaTerminos}
+                    className={`h-12 px-8 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all ${
+                      !aceptaTerminos
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                        : 'bg-[#0A1525] hover:bg-[#1E56B0] text-white hover:shadow-lg cursor-pointer'
+                    } disabled:opacity-50`}
                   >
                     {cargando ? (
                       <>

@@ -530,8 +530,14 @@ export default function Home() {
       {/* 5. Footer */}
       <footer className="bg-white border-t border-[#CBD5E1] py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2025 TuTallerMóvil (TTM). Todos los derechos reservados.</p>
-          <p className="text-slate-400">Caracas, Venezuela • Servicio mecánico a domicilio</p>
+          <p>© 2026 TuTallerMóvil (TTM). Titular: José Ángel Acosta Llovera. Todos los derechos reservados.</p>
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            <Link href="/terminos" className="text-[#1E56B0] hover:underline">
+              Términos, Condiciones y Privacidad
+            </Link>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-400">Caracas, Venezuela</span>
+          </div>
         </div>
       </footer>
 
