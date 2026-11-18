@@ -50,25 +50,6 @@ export interface SolicitarMecanicoModalProps {
   vehiculosRegistrados?: VehiculoOpcion[];
 }
 
-const DEFAULT_VEHICULOS_CLIENTE: VehiculoOpcion[] = [
-  {
-    id: 'veh-01',
-    marca: 'Toyota',
-    modelo: 'Corolla GLi 1.8L',
-    anio: 2018,
-    placa: 'AB123CD',
-    color: 'Plata Metalizado'
-  },
-  {
-    id: 'veh-02',
-    marca: 'Jeep',
-    modelo: 'Grand Cherokee Limited 4x4',
-    anio: 2019,
-    placa: 'AE456FG',
-    color: 'Negro Brillante'
-  }
-];
-
 export function SolicitarMecanicoModal({
   open,
   onOpenChange,
@@ -89,15 +70,72 @@ export function SolicitarMecanicoModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Detección de usuario logueado / autenticado
+  const [usuarioAutenticado, setUsuarioAutenticado] = useState<{
+    nombre: string;
+    email: string;
+    telefono?: string;
+  } | null>(null);
+
   // Selector entre vehículo registrado o agregar uno nuevo
   const [listaVehiculos, setListaVehiculos] = useState<VehiculoOpcion[]>([]);
-  const [modoVehiculo, setModoVehiculo] = useState<'registrado' | 'nuevo'>('registrado');
+  const [modoVehiculo, setModoVehiculo] = useState<'registrado' | 'nuevo'>('nuevo');
   const [vehiculoSeleccionadoId, setVehiculoSeleccionadoId] = useState<string>('');
   const [guardarEnGaraje, setGuardarEnGaraje] = useState<boolean>(true);
 
   useEffect(() => {
-    if (open) {
-      // 1. Resolver lista de vehículos registrados
+    async function sincronizarModal() {
+      if (!open) return;
+
+      // 1. Resolver identidad del usuario autenticado
+      let userNombre = initialCliente?.nombre || '';
+      let userEmail = initialCliente?.email || '';
+      let userTel = initialCliente?.telefono || '';
+
+      if (!userNombre || !userEmail) {
+        if (typeof window !== 'undefined') {
+          const sesionLocal = localStorage.getItem('ttm_cliente_sesion');
+          if (sesionLocal) {
+            try {
+              const p = JSON.parse(sesionLocal);
+              if (p.nombre) userNombre = p.nombre;
+              if (p.email) userEmail = p.email;
+              if (p.telefono) userTel = p.telefono;
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (!userEmail) {
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            userEmail = user.email || '';
+            userNombre =
+              user.user_metadata?.nombre ||
+              user.user_metadata?.full_name ||
+              userEmail.split('@')[0];
+            userTel = user.user_metadata?.telefono || userTel;
+          }
+        } catch (e) {}
+      }
+
+      if (userNombre || userEmail) {
+        setUsuarioAutenticado({
+          nombre: userNombre,
+          email: userEmail,
+          telefono: userTel
+        });
+        setNombre(userNombre);
+        setEmail(userEmail);
+      } else {
+        setUsuarioAutenticado(null);
+        setNombre('');
+        setEmail('');
+      }
+
+      // 2. Resolver lista de vehículos registrados reales del usuario (SIN datos falsos o mock)
       let vehiculosDisponibles: VehiculoOpcion[] = [];
       if (vehiculosRegistrados && vehiculosRegistrados.length > 0) {
         vehiculosDisponibles = vehiculosRegistrados;
@@ -113,17 +151,9 @@ export function SolicitarMecanicoModal({
         }
       }
 
-      // Si aún está vacía pero el cliente es María o está en sesión
-      if (vehiculosDisponibles.length === 0 && (initialCliente?.email || initialCliente?.nombre)) {
-        vehiculosDisponibles = DEFAULT_VEHICULOS_CLIENTE;
-      }
-
       setListaVehiculos(vehiculosDisponibles);
 
-      if (initialCliente?.nombre) setNombre(initialCliente.nombre);
-      if (initialCliente?.email) setEmail(initialCliente.email);
-
-      // Si se pasó un vehículo inicial específico
+      // 3. Selección y modo de vehículo
       if (initialVehiculo && (initialVehiculo.placa || initialVehiculo.modelo)) {
         const matching = vehiculosDisponibles.find(
           (v) =>
@@ -139,7 +169,6 @@ export function SolicitarMecanicoModal({
           setAnio(String(matching.anio));
           setPlaca(matching.placa);
         } else {
-          // Vehículo específico que no está en la lista -> Modo nuevo prellenado
           setModoVehiculo('nuevo');
           setVehiculoSeleccionadoId('');
           setMarca(initialVehiculo.marca || '');
@@ -148,7 +177,6 @@ export function SolicitarMecanicoModal({
           setPlaca(initialVehiculo.placa || '');
         }
       } else if (vehiculosDisponibles.length > 0) {
-        // Por defecto, seleccionar el primer vehículo registrado
         setModoVehiculo('registrado');
         const primero = vehiculosDisponibles[0];
         setVehiculoSeleccionadoId(primero.id || primero.placa);
@@ -157,12 +185,19 @@ export function SolicitarMecanicoModal({
         setAnio(String(primero.anio));
         setPlaca(primero.placa);
       } else {
+        // Usuario nuevo sin vehículos: Modo NUEVO limpio, sin inventar autos
         setModoVehiculo('nuevo');
         setVehiculoSeleccionadoId('');
+        setMarca('');
+        setModelo('');
+        setAnio('');
+        setPlaca('');
       }
 
       if (initialVehiculo?.falla) setFalla(initialVehiculo.falla);
     }
+
+    sincronizarModal();
   }, [open, initialVehiculo, initialCliente, vehiculosRegistrados]);
 
   const handleSeleccionarVehiculo = (v: VehiculoOpcion) => {
@@ -196,15 +231,18 @@ export function SolicitarMecanicoModal({
     e.preventDefault();
     setErrorMsg('');
 
+    const nombreFinal = nombre.trim() || usuarioAutenticado?.nombre?.trim() || '';
+    const emailFinal = email.trim() || usuarioAutenticado?.email?.trim() || null;
+
     if (
-      !nombre.trim() ||
+      !nombreFinal ||
       !marca.trim() ||
       !modelo.trim() ||
       !anio.trim() ||
       !falla.trim() ||
       !sector.trim()
     ) {
-      setErrorMsg('Por favor completa todos los campos para continuar.');
+      setErrorMsg('Por favor completa todos los campos del vehículo y falla para continuar.');
       return;
     }
 
@@ -234,8 +272,8 @@ export function SolicitarMecanicoModal({
               anio: anioNum || 2022,
               placa: placaLimpia,
               kilometraje: 0,
-              cliente_nombre: nombre.trim(),
-              cliente_email: email.trim() || null
+              cliente_nombre: nombreFinal,
+              cliente_email: emailFinal
             }
           ]);
         } catch (e) {
@@ -259,8 +297,8 @@ export function SolicitarMecanicoModal({
       // 2. Insertar orden en Supabase
       const { data, error } = await supabase.from('ordenes').insert([
         {
-          cliente_nombre: nombre.trim(),
-          cliente_email: email.trim() || null,
+          cliente_nombre: nombreFinal,
+          cliente_email: emailFinal,
           vehiculo_marca: marca.trim(),
           vehiculo_modelo: modeloFinal,
           vehiculo_placa: placaLimpia,
@@ -282,9 +320,7 @@ export function SolicitarMecanicoModal({
         return;
       }
 
-      // Éxito: limpiar campos, cerrar modal y disparar toast
-      setNombre('');
-      setEmail('');
+      // Éxito: limpiar campos de vehículo, cerrar modal y disparar toast
       setMarca('');
       setModelo('');
       setAnio('');
@@ -371,45 +407,75 @@ export function SolicitarMecanicoModal({
 
                   {/* Formulario */}
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Campo 1: Nombre */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                        Tu Nombre Completo <span className="text-rose-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          required
-                          value={nombre}
-                          onChange={(e) => setNombre(e.target.value)}
-                          placeholder="Ej. Roberto Sánchez"
-                          className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
-                        />
+                    {/* Identidad del Solicitante: Si ya inició sesión NO se le pide el nombre ni email */}
+                    {usuarioAutenticado ? (
+                      <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+                            {usuarioAutenticado.nombre ? usuarioAutenticado.nombre[0].toUpperCase() : 'U'}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
+                              Solicitante
+                            </span>
+                            <h4 className="text-sm font-black text-[#0A1525] truncate">
+                              {usuarioAutenticado.nombre || 'Cliente TuTallerMóvil'}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 truncate">
+                              {usuarioAutenticado.email} {usuarioAutenticado.telefono ? `• ${usuarioAutenticado.telefono}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right pl-2">
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Cuenta Activa</span>
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        {/* Campo 1: Nombre (Solo para invitados sin sesión) */}
+                        <div>
+                          <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
+                            Tu Nombre Completo <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              required
+                              value={nombre}
+                              onChange={(e) => setNombre(e.target.value)}
+                              placeholder="Ej. Roberto Sánchez"
+                              className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
+                            />
+                          </div>
+                        </div>
 
-                    {/* Campo 1.5: Correo Electrónico (Opcional para recibo y Mi Garaje) */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider">
-                          Correo Electrónico
-                        </label>
-                        <span className="text-[10px] text-[#1E56B0] font-bold">
-                          Opcional • Para recibo y vincular a Mi Garaje
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="ej. roberto@gmail.com"
-                          className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
-                        />
-                      </div>
-                    </div>
+                        {/* Campo 1.5: Correo Electrónico (Solo para invitados sin sesión) */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider">
+                              Correo Electrónico
+                            </label>
+                            <span className="text-[10px] text-[#1E56B0] font-bold">
+                              Opcional • Para recibo y vincular a Mi Garaje
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="email"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              placeholder="ej. roberto@gmail.com"
+                              className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     {/* SELECCIÓN DE VEHÍCULO: REGISTRADO O AGREGAR NUEVO */}
                     <div className="pt-1">

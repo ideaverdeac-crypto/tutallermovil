@@ -140,12 +140,12 @@ export default function ClienteDashboardPage() {
     email: string;
     telefono?: string;
   }>({
-    nombre: 'María Rodríguez',
-    email: 'maria.rodriguez@tutallermovil.com',
-    telefono: '+58 412 123 4567'
+    nombre: '',
+    email: '',
+    telefono: ''
   });
 
-  const [vehiculos, setVehiculos] = useState<VehiculoGaraje[]>(VEHICULOS_DEFAULT);
+  const [vehiculos, setVehiculos] = useState<VehiculoGaraje[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
 
   // Modales
@@ -168,14 +168,14 @@ export default function ClienteDashboardPage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
-        let emailUsuario = 'maria.rodriguez@tutallermovil.com';
-        let nombreUsuario = 'María Rodríguez';
-        let telefonoUsuario = '+58 412 123 4567';
+        let emailUsuario = '';
+        let nombreUsuario = '';
+        let telefonoUsuario = '';
 
         if (user) {
-          emailUsuario = user.email || emailUsuario;
-          nombreUsuario = user.user_metadata?.nombre || emailUsuario.split('@')[0];
-          telefonoUsuario = user.user_metadata?.telefono || telefonoUsuario;
+          emailUsuario = user.email || '';
+          nombreUsuario = user.user_metadata?.nombre || user.user_metadata?.full_name || emailUsuario.split('@')[0];
+          telefonoUsuario = user.user_metadata?.telefono || '';
         } else if (typeof window !== 'undefined') {
           const sesionLocal = localStorage.getItem('ttm_cliente_sesion');
           if (sesionLocal) {
@@ -194,80 +194,74 @@ export default function ClienteDashboardPage() {
           telefono: telefonoUsuario
         });
 
-        // 1. Consultar vehículos en Supabase asociados al email o teléfono del cliente
-        const { data: vehiculosData } = await supabase
-          .from('vehiculos')
-          .select('*')
-          .or(`cliente_email.ilike.%${emailUsuario}%,cliente_telefono.eq.${telefonoUsuario}`);
-
-        // 2. Consultar órdenes de servicio previas asociadas al correo (para vincular servicios pedidos como invitado)
-        const { data: ordenesData } = await supabase
-          .from('ordenes')
-          .select('*')
-          .ilike('cliente_email', emailUsuario);
-
         const mapaVehiculos = new Map<string, VehiculoGaraje>();
 
-        // Incorporar vehículos registrados en la tabla 'vehiculos'
-        if (vehiculosData && vehiculosData.length > 0) {
-          vehiculosData.forEach((v: any) => {
-            const placa = (v.placa || 'PLACA').toUpperCase().trim();
-            const tieneChecklist = Boolean(v.checklist_json || v.checklist25);
-            const km = typeof v.kilometraje === 'number' ? v.kilometraje : 0;
+        // 1. Consultar vehículos en Supabase solo si hay email o teléfono identificado
+        if (emailUsuario || telefonoUsuario) {
+          const { data: vehiculosData } = await supabase
+            .from('vehiculos')
+            .select('*')
+            .or(`cliente_email.ilike.%${emailUsuario}%,cliente_telefono.eq.${telefonoUsuario}`);
 
-            mapaVehiculos.set(placa, {
-              id: v.id,
-              marca: v.marca || 'Vehículo',
-              modelo: v.modelo || 'Automóvil',
-              anio: v.anio ?? v.año ?? 2020,
-              placa: placa,
-              color: v.color || 'No especificado',
-              kilometraje: km,
-              ultimoServicio: tieneChecklist && v.updated_at
-                ? new Date(v.updated_at).toLocaleDateString('es-VE')
-                : 'Sin servicios aún',
-              tipoUltimoServicio: tieneChecklist
-                ? 'Inspección Certificada TTM'
-                : 'Registro inicial en Mi Garaje',
-              estadoSalud: tieneChecklist ? 'optimo' : 'pendiente',
-              fotoUrl: v.foto_url || 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
-              checklist25: v.checklist_json || v.checklist25 || null
-            });
-          });
-        }
+          if (vehiculosData && vehiculosData.length > 0) {
+            vehiculosData.forEach((v: any) => {
+              const placa = (v.placa || 'PLACA').toUpperCase().trim();
+              const tieneChecklist = Boolean(v.checklist_json && Object.keys(v.checklist_json).length > 0);
+              const km = typeof v.kilometraje === 'number' ? v.kilometraje : 0;
 
-        // Incorporar vehículos de órdenes previas de invitado que coincidan con su correo
-        if (ordenesData && ordenesData.length > 0) {
-          ordenesData.forEach((ord: any) => {
-            const placaOrd = (
-              ord.placa_flota ||
-              ord.vehiculo_modelo?.match(/\[([A-Z0-9-]+)\]/)?.[1] ||
-              `ORD-${ord.id.slice(0, 5).toUpperCase()}`
-            ).toUpperCase().trim();
-
-            if (!mapaVehiculos.has(placaOrd)) {
-              mapaVehiculos.set(placaOrd, {
-                id: `veh_ord_${ord.id}`,
-                marca: ord.vehiculo_marca || 'Automóvil',
-                modelo: ord.vehiculo_modelo?.replace(/\[.*?\]/, '').trim() || 'Vehículo Particular',
-                anio: ord.vehiculo_anio || 2020,
-                placa: placaOrd,
-                kilometraje: ord.kilometraje_actual || 85400,
-                ultimoServicio: ord.created_at ? new Date(ord.created_at).toLocaleDateString('es-VE') : 'Reciente',
-                tipoUltimoServicio: ord.falla_reportada || 'Servicio Técnico TuTallerMóvil',
-                estadoSalud: ord.diagnostico_json?.frenos === 'requiere_cambio' ? 'atencion' : 'optimo',
-                fotoUrl: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
-                checklist25: ord.diagnostico_json || {
-                  puntos_ok: 22,
-                  puntos_cambio: 3,
-                  frenos: 'requiere_cambio',
-                  aceite: 'ok',
-                  suspension: 'ok',
-                  electrico: 'ok'
-                }
+              mapaVehiculos.set(placa, {
+                id: v.id,
+                marca: v.marca || 'Vehículo',
+                modelo: v.modelo || 'Automóvil',
+                anio: v.anio ?? v.año ?? 2020,
+                placa: placa,
+                color: v.color || 'No especificado',
+                kilometraje: km,
+                ultimoServicio: tieneChecklist && v.updated_at
+                  ? new Date(v.updated_at).toLocaleDateString('es-VE')
+                  : 'Sin servicios aún',
+                tipoUltimoServicio: tieneChecklist
+                  ? 'Inspección Certificada TTM'
+                  : 'Registro inicial en Mi Garaje',
+                estadoSalud: tieneChecklist ? 'optimo' : 'pendiente',
+                fotoUrl: v.foto_url || 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
+                checklist25: tieneChecklist ? v.checklist_json : null
               });
-            }
-          });
+            });
+          }
+
+          // 2. Consultar órdenes de servicio previas asociadas al correo
+          const { data: ordenesData } = await supabase
+            .from('ordenes')
+            .select('*')
+            .ilike('cliente_email', emailUsuario);
+
+          if (ordenesData && ordenesData.length > 0) {
+            ordenesData.forEach((ord: any) => {
+              const placaOrd = (
+                ord.placa_flota ||
+                ord.vehiculo_modelo?.match(/\[([A-Z0-9-]+)\]/)?.[1] ||
+                `ORD-${ord.id.slice(0, 5).toUpperCase()}`
+              ).toUpperCase().trim();
+
+              if (!mapaVehiculos.has(placaOrd)) {
+                const tieneChecklistReal = Boolean(ord.diagnostico_json && Object.keys(ord.diagnostico_json).length > 0);
+                mapaVehiculos.set(placaOrd, {
+                  id: `veh_ord_${ord.id}`,
+                  marca: ord.vehiculo_marca || 'Automóvil',
+                  modelo: ord.vehiculo_modelo?.replace(/\[.*?\]/, '').trim() || 'Vehículo Particular',
+                  anio: ord.vehiculo_anio || 2020,
+                  placa: placaOrd,
+                  kilometraje: typeof ord.kilometraje_actual === 'number' ? ord.kilometraje_actual : 0,
+                  ultimoServicio: ord.created_at ? new Date(ord.created_at).toLocaleDateString('es-VE') : 'Reciente',
+                  tipoUltimoServicio: ord.falla_reportada || 'Servicio Técnico TuTallerMóvil',
+                  estadoSalud: tieneChecklistReal ? 'optimo' : 'pendiente',
+                  fotoUrl: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
+                  checklist25: tieneChecklistReal ? ord.diagnostico_json : null
+                });
+              }
+            });
+          }
         }
 
         const listaFinal = Array.from(mapaVehiculos.values());
@@ -275,30 +269,30 @@ export default function ClienteDashboardPage() {
         if (listaFinal.length > 0) {
           setVehiculos(listaFinal);
         } else {
-          // Si es cuenta demo o precargada, mostrar vehículos demo
-          if (emailUsuario.includes('demo') || emailUsuario.includes('maria')) {
-            setVehiculos(VEHICULOS_DEFAULT);
-          } else {
-            // Verificar localStorage
-            if (typeof window !== 'undefined') {
-              const garajeLocal = localStorage.getItem('ttm_garaje_vehiculos');
-              if (garajeLocal) {
-                try {
-                  const parseLocal = JSON.parse(garajeLocal);
-                  if (parseLocal && parseLocal.length > 0) {
-                    setVehiculos(parseLocal);
-                    return;
-                  }
-                } catch (e) {}
-              }
+          // Si no hay en Supabase, verificar si guardó alguno localmente en su sesión
+          let cargadoLocal = false;
+          if (typeof window !== 'undefined') {
+            const garajeLocal = localStorage.getItem('ttm_garaje_vehiculos');
+            if (garajeLocal) {
+              try {
+                const parseLocal = JSON.parse(garajeLocal);
+                if (Array.isArray(parseLocal) && parseLocal.length > 0) {
+                  setVehiculos(parseLocal);
+                  cargadoLocal = true;
+                }
+              } catch (e) {}
             }
-            // Usuario nuevo sin vehículos registrados: estado vacío para registrar
+          }
+
+          // Si es un usuario nuevo sin vehículos: Garaje 100% limpio en cero
+          if (!cargadoLocal) {
             setVehiculos([]);
           }
         }
 
       } catch (err) {
-        console.warn('Cargando garaje con configuración por defecto:', err);
+        console.warn('Error inicializando garaje:', err);
+        setVehiculos([]);
       } finally {
         setCargando(false);
       }
@@ -364,6 +358,7 @@ export default function ClienteDashboardPage() {
 
     if (typeof window !== 'undefined') {
       localStorage.removeItem('ttm_cliente_sesion');
+      localStorage.removeItem('ttm_garaje_vehiculos');
     }
     router.push('/');
   };
