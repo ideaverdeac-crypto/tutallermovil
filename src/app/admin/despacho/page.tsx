@@ -23,6 +23,7 @@ import {
   Loader2,
   RefreshCw,
   ExternalLink,
+  Bell,
   Sparkles,
   Check,
   FileText,
@@ -67,6 +68,12 @@ import CredencialesOperadorasModal from '@/components/CredencialesOperadorasModa
 import { generarLinkWhatsApp } from '@/lib/utils';
 import { enviarEmailRecibo } from '@/lib/email';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
+import {
+  solicitarPermisoNotificaciones,
+  estanNotificacionesActivas,
+  notificarNuevoServicio,
+  reproducirSonidoNuevoServicio
+} from '@/lib/notificaciones';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -526,6 +533,34 @@ export default function TableroDespachoPage() {
 
   // Estados de Validación de Comprobante de Pago
   const [modalComprobanteOpen, setModalComprobanteOpen] = useState(false);
+
+  // Notificaciones Push y Alertas Sonoras (Piano Elegante)
+  const [pushActivo, setPushActivo] = useState<boolean>(false);
+  const [toastPush, setToastPush] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPushActivo(estanNotificacionesActivas());
+  }, []);
+
+  const handleToggleNotificaciones = async () => {
+    const permiso = await solicitarPermisoNotificaciones();
+    if (permiso === 'granted') {
+      setPushActivo(true);
+      notificarNuevoServicio({
+        id: 'test',
+        cliente: 'Torre de Despacho',
+        vehiculo: 'Alerta Sonora de Despacho',
+        falla: 'Notificaciones Push activadas con éxito',
+        direccion: 'Central Caracas'
+      });
+      setToastPush('🔔 Notificaciones push activadas con tono de piano elegante');
+      setTimeout(() => setToastPush(null), 4000);
+    } else {
+      reproducirSonidoNuevoServicio();
+      setToastPush('⚠️ Permiso push bloqueado en el navegador. (Sonido de prueba ejecutado)');
+      setTimeout(() => setToastPush(null), 4000);
+    }
+  };
   const [ordenParaComprobante, setOrdenParaComprobante] = useState<OrdenKanban | null>(null);
 
   // Estados de Visor de Diagnóstico Checklist 25 Puntos
@@ -1059,8 +1094,22 @@ export default function TableroDespachoPage() {
           schema: 'public',
           table: 'ordenes'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('⚡ Kanban Despacho Realtime Update:', payload);
+          if (
+            payload.eventType === 'INSERT' ||
+            (payload.new && (payload.new.estado === 'DISPONIBLE' || payload.new.estado === 'LEAD_NUEVO'))
+          ) {
+            const ord = payload.new;
+            notificarNuevoServicio({
+              id: ord?.id,
+              cliente: ord?.cliente_nombre,
+              vehiculo: ord?.marca_modelo || `${ord?.vehiculo_marca || ''} ${ord?.vehiculo_modelo || ''}`.trim(),
+              falla: ord?.falla_reportada,
+              direccion: ord?.direccion_texto || ord?.sector,
+              monto: ord?.monto_total || ord?.ganancia_estimada
+            });
+          }
           cargarOrdenes();
         }
       )
@@ -1908,6 +1957,28 @@ export default function TableroDespachoPage() {
               title="Actualizar tablero"
             >
               <RefreshCw className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleToggleNotificaciones}
+              className={`relative p-2 rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                pushActivo
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  : 'border-[#E2E8F0] bg-white text-[#475569] hover:text-[#0A1525] hover:bg-slate-50'
+              }`}
+              title={
+                pushActivo
+                  ? 'Notificaciones Push y Sonido Piano Elegante Activos (Clic para probar)'
+                  : 'Activar Notificaciones Push con Sonido de Piano Elegante'
+              }
+            >
+              <Bell className={`w-4 h-4 ${pushActivo ? 'text-emerald-600' : ''}`} />
+              <span
+                className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ring-2 ring-white transition-all ${
+                  pushActivo ? 'bg-emerald-500 animate-pulse' : 'bg-[#CCFF00]'
+                }`}
+              />
             </button>
 
             {mostrarBotonTutorial && (
@@ -4068,6 +4139,32 @@ export default function TableroDespachoPage() {
           }
         }}
       />
+
+      {/* Toast Flotante de Notificaciones Push */}
+      <AnimatePresence>
+        {toastPush && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-20 right-4 z-50 bg-[#0A1525] text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 max-w-sm"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#CCFF00] text-[#0A1525] flex items-center justify-center shrink-0 font-black">
+              <Bell className="w-4 h-4 text-[#0A1525]" />
+            </div>
+            <div className="text-xs font-semibold text-slate-100 flex-1">
+              {toastPush}
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastPush(null)}
+              className="text-slate-400 hover:text-white cursor-pointer ml-1 text-xs"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
       <FloatingSupportButton mensajePersonalizado="Hola, soy operadora de TuTallerMóvil y necesito soporte técnico con el Tablero de Despacho." />

@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import {
+  solicitarPermisoNotificaciones,
+  estanNotificacionesActivas,
+  notificarNuevoServicio,
+  reproducirSonidoNuevoServicio
+} from '@/lib/notificaciones';
+import {
   Star,
   Wrench,
   DollarSign,
@@ -97,6 +103,38 @@ export default function PortalAliadosPage() {
   const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-0842');
   const [nombreMecanico, setNombreMecanico] = useState<string>('Carlos Mendoza');
 
+  // Notificaciones Push y Alertas Sonoras (Piano Elegante)
+  const [pushActivo, setPushActivo] = useState<boolean>(false);
+  const [toastPush, setToastPush] = useState<string | null>(null);
+  const ordenesIdsConocidasRef = React.useRef<Set<string>>(new Set());
+  const esPrimeraCargaRef = React.useRef<boolean>(true);
+
+  useEffect(() => {
+    setPushActivo(estanNotificacionesActivas());
+  }, []);
+
+  const handleToggleNotificaciones = async () => {
+    const permiso = await solicitarPermisoNotificaciones();
+    if (permiso === 'granted') {
+      setPushActivo(true);
+      // Prueba inmediata para que el usuario verifique el tono de piano y la notificación
+      notificarNuevoServicio({
+        id: 'test',
+        cliente: 'Prueba de Alerta Sonora',
+        vehiculo: 'Tono Piano Elegante Activo',
+        falla: 'Notificaciones Push configuradas correctamente',
+        direccion: 'Caracas'
+      });
+      setToastPush('🔔 Notificaciones push activadas con el tono de piano elegante');
+      setTimeout(() => setToastPush(null), 4500);
+    } else {
+      // Reproducir sonido de prueba de todas formas
+      reproducirSonidoNuevoServicio();
+      setToastPush('⚠️ Permiso push bloqueado en el navegador. (Sonido de prueba ejecutado)');
+      setTimeout(() => setToastPush(null), 4500);
+    }
+  };
+
   const MECANICO_ID_ACTUAL = '123e4567-e89b-12d3-a456-426614174000';
 
   // 1. Geolocalización del mecánico
@@ -168,6 +206,30 @@ export default function PortalAliadosPage() {
         console.error('Error consultando tabla ordenes:', error);
       } else if (data) {
         setOrdenes(data);
+
+        // Detectar si llegaron órdenes nuevas para disparar sonido de piano y notificación
+        if (!esPrimeraCargaRef.current) {
+          const nuevas = data.filter(
+            (o) =>
+              !ordenesIdsConocidasRef.current.has(o.id) &&
+              (o.estado === 'DISPONIBLE' || o.estado === 'LEAD_NUEVO')
+          );
+          if (nuevas.length > 0) {
+            const ord = nuevas[0];
+            notificarNuevoServicio({
+              id: ord.id,
+              cliente: ord.cliente_nombre,
+              vehiculo: ord.marca_modelo,
+              falla: ord.falla_reportada,
+              direccion: ord.direccion_texto,
+              monto: ord.monto_total
+            });
+          }
+        }
+
+        // Registrar IDs conocidos
+        data.forEach((o) => ordenesIdsConocidasRef.current.add(o.id));
+        esPrimeraCargaRef.current = false;
       }
     } catch (err) {
       console.error('Excepción al cargar ordenes:', err);
@@ -191,8 +253,24 @@ export default function PortalAliadosPage() {
           schema: 'public',
           table: 'ordenes'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('⚡ Orden modificada/creada en tiempo real:', payload);
+          if (
+            payload.eventType === 'INSERT' ||
+            (payload.new && (payload.new.estado === 'DISPONIBLE' || payload.new.estado === 'LEAD_NUEVO'))
+          ) {
+            const ord = payload.new;
+            if (ord && !ordenesIdsConocidasRef.current.has(ord.id)) {
+              notificarNuevoServicio({
+                id: ord.id,
+                cliente: ord.cliente_nombre,
+                vehiculo: ord.marca_modelo,
+                falla: ord.falla_reportada,
+                direccion: ord.direccion_texto,
+                monto: ord.monto_total
+              });
+            }
+          }
           cargarOrdenes();
         }
       )
@@ -453,10 +531,24 @@ export default function PortalAliadosPage() {
             </button>
             <button
               type="button"
-              className="relative p-2 rounded-lg border border-[#CBD5E1] text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              onClick={handleToggleNotificaciones}
+              className={`relative p-2 rounded-lg border transition-all cursor-pointer ${
+                pushActivo
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-2xs'
+                  : 'border-[#CBD5E1] text-slate-600 hover:bg-slate-50'
+              }`}
+              title={
+                pushActivo
+                  ? 'Notificaciones Push y Sonido Piano Elegante Activos (Clic para probar)'
+                  : 'Activar Notificaciones Push con Sonido de Piano Elegante'
+              }
             >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#CCFF00] ring-2 ring-white"></span>
+              <Bell className={`w-4 h-4 ${pushActivo ? 'text-emerald-600' : ''}`} />
+              <span
+                className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full ring-2 ring-white transition-all ${
+                  pushActivo ? 'bg-emerald-500 animate-pulse' : 'bg-[#CCFF00]'
+                }`}
+              ></span>
             </button>
 
             {mostrarBotonTutorial && (
@@ -1204,6 +1296,29 @@ export default function PortalAliadosPage() {
             <button
               type="button"
               onClick={() => setToastAceptado(null)}
+              className="text-slate-400 hover:text-white cursor-pointer ml-1 text-xs"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+
+        {toastPush && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-20 right-4 z-50 bg-[#0A1525] text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 max-w-sm"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#CCFF00] text-[#0A1525] flex items-center justify-center shrink-0 font-black">
+              <Bell className="w-4 h-4 text-[#0A1525]" />
+            </div>
+            <div className="text-xs font-semibold text-slate-100 flex-1">
+              {toastPush}
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastPush(null)}
               className="text-slate-400 hover:text-white cursor-pointer ml-1 text-xs"
             >
               ✕
