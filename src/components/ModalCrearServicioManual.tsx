@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
-import { notificarNuevoServicio, reproducirSonidoNuevoServicio } from '@/lib/notificaciones';
+import { notificarNuevoServicioOperadora } from '@/lib/notificaciones';
 import { generarLinkWhatsApp } from '@/lib/utils';
 import {
   X,
@@ -210,8 +210,8 @@ export default function ModalCrearServicioManual({
         }
       });
 
-      // 2. Disparar Sonido de Piano Elegante y Notificación Push
-      notificarNuevoServicio({
+      // 2. Disparar Sonido Especial de Operadora y Notificación Push
+      notificarNuevoServicioOperadora({
         id: ordenId,
         cliente: nombre.trim(),
         vehiculo: `${marca} ${modeloFinal}`,

@@ -72,8 +72,8 @@ import { registrarOperacionEnBitacora } from '@/lib/audit';
 import {
   solicitarPermisoNotificaciones,
   estanNotificacionesActivas,
-  notificarNuevoServicio,
-  reproducirSonidoNuevoServicio
+  notificarNuevoServicioOperadora,
+  reproducirSonidoOperadora
 } from '@/lib/notificaciones';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -548,17 +548,17 @@ export default function TableroDespachoPage() {
     const permiso = await solicitarPermisoNotificaciones();
     if (permiso === 'granted') {
       setPushActivo(true);
-      notificarNuevoServicio({
+      notificarNuevoServicioOperadora({
         id: 'test',
         cliente: 'Torre de Despacho',
-        vehiculo: 'Alerta Sonora de Despacho',
-        falla: 'Notificaciones Push activadas con éxito',
+        vehiculo: 'Alerta Sonora Especial de Operadora',
+        falla: 'Notificaciones Push activadas con tono New Notification 010',
         direccion: 'Central Caracas'
       });
-      setToastPush('🔔 Notificaciones push activadas con tono de piano elegante');
+      setToastPush('🔔 Notificaciones push de operadora activadas con sonido especial');
       setTimeout(() => setToastPush(null), 4000);
     } else {
-      reproducirSonidoNuevoServicio();
+      reproducirSonidoOperadora();
       setToastPush('⚠️ Permiso push bloqueado en el navegador. (Sonido de prueba ejecutado)');
       setTimeout(() => setToastPush(null), 4000);
     }
@@ -1103,7 +1103,7 @@ export default function TableroDespachoPage() {
             (payload.new && (payload.new.estado === 'DISPONIBLE' || payload.new.estado === 'LEAD_NUEVO'))
           ) {
             const ord = payload.new;
-            notificarNuevoServicio({
+            notificarNuevoServicioOperadora({
               id: ord?.id,
               cliente: ord?.cliente_nombre,
               vehiculo: ord?.marca_modelo || `${ord?.vehiculo_marca || ''} ${ord?.vehiculo_modelo || ''}`.trim(),
@@ -1985,8 +1985,8 @@ export default function TableroDespachoPage() {
               }`}
               title={
                 pushActivo
-                  ? 'Notificaciones Push y Sonido Piano Elegante Activos (Clic para probar)'
-                  : 'Activar Notificaciones Push con Sonido de Piano Elegante'
+                  ? 'Notificaciones Push y Sonido Especial de Operadora Activos (Clic para probar)'
+                  : 'Activar Notificaciones Push con Sonido Especial de Operadora'
               }
             >
               <Bell className={`w-4 h-4 ${pushActivo ? 'text-emerald-600' : ''}`} />
