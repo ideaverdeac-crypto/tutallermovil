@@ -65,6 +65,7 @@ import OnboardingModal from '@/components/ui/onboarding-modal';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import FloatingSupportButton from '@/components/ui/floating-support-button';
 import CredencialesOperadorasModal from '@/components/CredencialesOperadorasModal';
+import ModalCrearServicioManual from '@/components/ModalCrearServicioManual';
 import { generarLinkWhatsApp } from '@/lib/utils';
 import { enviarEmailRecibo } from '@/lib/email';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
@@ -521,6 +522,7 @@ export default function TableroDespachoPage() {
 
   // Estados de Modales y Paneles Tácticos
   const [modalCotizadorOpen, setModalCotizadorOpen] = useState(false);
+  const [modalCrearServicioManualOpen, setModalCrearServicioManualOpen] = useState(false);
   const [modalOperadorasOpen, setModalOperadorasOpen] = useState(false);
   const [modalAsignarOpen, setModalAsignarOpen] = useState(false);
   const [modalMecanicoDetalleOpen, setModalMecanicoDetalleOpen] = useState(false);
@@ -1889,6 +1891,20 @@ export default function TableroDespachoPage() {
                 </Link>
               </>
             )}
+
+            {/* Botón Nuevo Servicio Manual (Llamada / WhatsApp) */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setModalCrearServicioManualOpen(true)}
+              className="h-10 px-3.5 sm:px-4 text-xs font-black bg-[#16a34a] hover:bg-[#15803d] text-white rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border border-emerald-600/30"
+              title="Crear servicio manual recibido por llamada telefónica o WhatsApp directo"
+            >
+              <Phone className="w-4 h-4 text-white" />
+              <span className="hidden sm:inline">Nuevo Servicio (Llamada/WA)</span>
+              <span className="sm:hidden">Nuevo</span>
+            </motion.button>
 
             {/* Botón Cotizador Orden con Tooltip explicativo */}
             <div className="flex items-center gap-1">
@@ -4165,6 +4181,18 @@ export default function TableroDespachoPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal para Crear Servicio Manual (Llamadas / WhatsApp) */}
+      <ModalCrearServicioManual
+        isOpen={modalCrearServicioManualOpen}
+        onClose={() => setModalCrearServicioManualOpen(false)}
+        onOrdenCreada={() => {
+          cargarOrdenes();
+          setToastPagoExitoso('✅ Nuevo servicio despachado con éxito al tablero.');
+          setTimeout(() => setToastPagoExitoso(null), 4000);
+        }}
+        operadora={miOperadora}
+      />
 
       {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
       <FloatingSupportButton mensajePersonalizado="Hola, soy operadora de TuTallerMóvil y necesito soporte técnico con el Tablero de Despacho." />
