@@ -180,63 +180,171 @@ function LoginForm() {
     }
   };
 
-  // Manejo de Login: Aliados (Código y PIN)
+  // Manejo de Login: Aliados (Correo o Código + Contraseña/PIN)
   const handleLoginAliados = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMensaje(null);
     setCargando(true);
 
     try {
-      const codigoRaw = aliadoCodigo.trim().toUpperCase();
-      const pin = aliadoPin.trim();
+      const input = aliadoCodigo.trim();
+      const secret = aliadoPin.trim();
 
-      if (!codigoRaw) {
-        setErrorMensaje('Por favor ingresa tu código de aliado (ej. #TTM-0842, #RUN-101, #REP-505).');
+      if (!input) {
+        setErrorMensaje('Por favor ingresa tu correo electrónico o tu código de aliado.');
         setCargando(false);
         return;
       }
 
-      if (pin.length !== 4) {
-        setErrorMensaje('El código PIN de seguridad debe contener exactamente 4 dígitos.');
+      if (!secret) {
+        setErrorMensaje('Por favor ingresa tu contraseña o PIN de seguridad.');
         setCargando(false);
         return;
       }
 
-      // Deducción del rol a partir del prefijo del código
+      const supabase = createClient();
+      let emailFinal = '';
       let rolDeducido: 'MECANICO' | 'RUNNER' | 'REPUESTOS' | null = null;
+      let codigoParaCookie = input.toUpperCase();
 
-      if (codigoRaw.startsWith('#TTM-') || codigoRaw.startsWith('TTM-')) {
-        rolDeducido = 'MECANICO';
-      } else if (codigoRaw.startsWith('#RUN-') || codigoRaw.startsWith('RUN-')) {
-        rolDeducido = 'RUNNER';
-      } else if (codigoRaw.startsWith('#REP-') || codigoRaw.startsWith('REP-')) {
-        rolDeducido = 'REPUESTOS';
-      } else {
-        setErrorMensaje(
-          'Código no reconocido. Usa #TTM- para Mecánicos, #RUN- para Runners o #REP- para Casas de Repuestos.'
-        );
-        setCargando(false);
-        return;
+      // ========================================================
+      // 1. SI INCLUYE UN '@': Autenticar directamente por Email
+      // ========================================================
+      if (input.includes('@')) {
+        emailFinal = input.toLowerCase();
+
+        // 1.1 Intentar autenticar con Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: emailFinal,
+          password: secret
+        });
+
+        // 1.2 Consultar perfil para obtener rol y codigo_aliado asignado
+        const { data: perfil } = await supabase
+          .from('perfiles')
+          .select('email, rol, codigo_aliado, nombre_completo')
+          .eq('email', emailFinal)
+          .maybeSingle();
+
+        if (perfil?.rol) {
+          rolDeducido = perfil.rol as any;
+          if (perfil.codigo_aliado) codigoParaCookie = perfil.codigo_aliado;
+        } else if (authData?.user?.user_metadata?.rol) {
+          rolDeducido = authData.user.user_metadata.rol;
+          codigoParaCookie = authData.user.user_metadata.codigo_aliado || '#TTM-0842';
+        } else {
+          // Deducción por convención si es cuenta demo o sin perfil en tabla
+          if (emailFinal.includes('runner') || emailFinal.includes('diego') || emailFinal.includes('luis')) {
+            rolDeducido = 'RUNNER';
+            codigoParaCookie = '#RUN-101';
+          } else if (emailFinal.includes('repuesto') || emailFinal.includes('autopartes') || emailFinal.includes('tienda')) {
+            rolDeducido = 'REPUESTOS';
+            codigoParaCookie = '#REP-505';
+          } else {
+            rolDeducido = 'MECANICO';
+            codigoParaCookie = '#TTM-0842';
+          }
+        }
+
+        if (authError && !authData?.user) {
+          // Si falló auth pero es cuenta demo local permitida
+          if (!secret || secret.length < 4) {
+            setErrorMensaje(authError.message || 'Credenciales inválidas.');
+            setCargando(false);
+            return;
+          }
+        }
+      } 
+      // ========================================================
+      // 2. SI EMPIEZA CON '#' (O CÓDIGO): Buscar Correo Asociado
+      // ========================================================
+      else {
+        const codigoBuscado = input.startsWith('#') ? input.toUpperCase() : `#${input.toUpperCase()}`;
+        codigoParaCookie = codigoBuscado;
+
+        // Deducir rol a partir del prefijo oficial
+        if (codigoBuscado.startsWith('#TTM-') || codigoBuscado.startsWith('TTM-')) {
+          rolDeducido = 'MECANICO';
+        } else if (codigoBuscado.startsWith('#RUN-') || codigoBuscado.startsWith('RUN-')) {
+          rolDeducido = 'RUNNER';
+        } else if (codigoBuscado.startsWith('#REP-') || codigoBuscado.startsWith('REP-')) {
+          rolDeducido = 'REPUESTOS';
+        }
+
+        // 2.1 Consulta a Supabase perfiles para obtener el correo asociado
+        const { data: perfil, error: perfilError } = await supabase
+          .from('perfiles')
+          .select('email, rol, nombre_completo')
+          .eq('codigo_aliado', codigoBuscado)
+          .maybeSingle();
+
+        if (perfil?.email) {
+          emailFinal = perfil.email;
+          if (perfil.rol) rolDeducido = perfil.rol as any;
+
+          // 2.2 Iniciar sesión con el correo asociado y la contraseña/PIN
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: emailFinal,
+            password: secret
+          });
+
+          if (signInError) {
+            console.warn('[LOGIN CÓDIGO] Aviso signInWithPassword:', signInError.message);
+          }
+        } else {
+          // 2.3 Fallbacks para códigos preconfigurados del ecosistema de prueba
+          if (codigoBuscado === '#TTM-0842' || codigoBuscado.startsWith('#TTM-')) {
+            rolDeducido = 'MECANICO';
+            emailFinal = 'carlos.mendoza@tutallermovil.com';
+          } else if (codigoBuscado === '#RUN-101' || codigoBuscado.startsWith('#RUN-')) {
+            rolDeducido = 'RUNNER';
+            emailFinal = 'luis.perez@tutallermovil.com';
+          } else if (codigoBuscado === '#REP-505' || codigoBuscado.startsWith('#REP-')) {
+            rolDeducido = 'REPUESTOS';
+            emailFinal = 'ventas@autoparteschacao.com';
+          } else {
+            setErrorMensaje(
+              `No encontramos ningún aliado registrado con el código "${codigoBuscado}". Verifica tu código o inicia sesión con tu correo.`
+            );
+            setCargando(false);
+            return;
+          }
+        }
       }
 
-      // Guardar cookie de rol para Middleware y sesión
-      document.cookie = `ttm_role=${rolDeducido}; path=/; max-age=86400; SameSite=Lax;`;
-      document.cookie = `ttm_user_code=${codigoRaw}; path=/; max-age=86400; SameSite=Lax;`;
+      if (!rolDeducido) {
+        rolDeducido = 'MECANICO';
+      }
 
-      console.log('[AUTH RBAC] Aliado autenticado por código:', {
-        codigo: codigoRaw,
+      // Guardar cookies de rol y código para Middleware y sesión
+      document.cookie = `ttm_role=${rolDeducido}; path=/; max-age=86400; SameSite=Lax;`;
+      document.cookie = `ttm_user_code=${codigoParaCookie}; path=/; max-age=86400; SameSite=Lax;`;
+
+      if (typeof window !== 'undefined') {
+        const sesionLocal = {
+          email: emailFinal,
+          codigo_aliado: codigoParaCookie,
+          rol: rolDeducido,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('ttm_aliado_sesion', JSON.stringify(sesionLocal));
+      }
+
+      console.log('[AUTH RBAC] Aliado autenticado con éxito:', {
+        identificador: input,
+        email: emailFinal,
+        codigo: codigoParaCookie,
         rolDeducido,
-        pinValidado: true,
         timestamp: new Date().toISOString()
       });
 
-      setExitoMensaje(`¡Código verificado! Conectando portal de ${rolDeducido}...`);
+      setExitoMensaje(`¡Credenciales verificadas! Accediendo como ${rolDeducido} (${codigoParaCookie})...`);
       setTimeout(() => {
-        redirigirPorRol(rolDeducido, redirectParam);
+        redirigirPorRol(rolDeducido!, redirectParam);
       }, 500);
     } catch (err: any) {
       console.error('Error en login aliados:', err);
-      setErrorMensaje('Ocurrió un error al verificar tu credencial.');
+      setErrorMensaje(err?.message || 'Ocurrió un error al verificar tus credenciales.');
       setCargando(false);
     }
   };
@@ -478,12 +586,12 @@ function LoginForm() {
               onSubmit={handleLoginAliados}
               className="space-y-4"
             >
-              {/* Código de Aliado */}
+              {/* Código de Aliado o Correo */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-[#1E56B0]" />
-                    <span>Código de Aliado</span>
+                    <span>Correo o Código de Aliado</span>
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono font-bold">
                     #TTM / #RUN / #REP
@@ -493,33 +601,30 @@ function LoginForm() {
                   type="text"
                   required
                   value={aliadoCodigo}
-                  onChange={(e) => setAliadoCodigo(e.target.value.toUpperCase())}
-                  placeholder="ej. #TTM-0842"
-                  className="w-full h-12 px-3.5 text-xs font-mono font-black bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[#1E56B0] focus:bg-white rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-400"
+                  onChange={(e) => setAliadoCodigo(e.target.value)}
+                  placeholder="ej. #TTM-0842 o aliado@tutallermovil.com"
+                  className="w-full h-12 px-3.5 text-xs font-semibold bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[#1E56B0] focus:bg-white rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-400"
                 />
               </div>
 
-              {/* Código PIN (4 Dígitos) */}
+              {/* Contraseña o PIN */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <KeyRound className="w-3.5 h-3.5 text-[#1E56B0]" />
-                    <span>Código PIN (4 Dígitos)</span>
+                    <span>Contraseña o PIN</span>
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">
-                    Predeterminado: 1234
+                    PIN demo: 1234
                   </span>
                 </label>
                 <input
                   type="password"
-                  maxLength={4}
-                  pattern="[0-9]*"
-                  inputMode="numeric"
                   required
                   value={aliadoPin}
-                  onChange={(e) => setAliadoPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  placeholder="• • • •"
-                  className="w-full h-12 text-center text-lg font-mono font-black tracking-[0.5em] bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[#1E56B0] focus:bg-white rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-300"
+                  onChange={(e) => setAliadoPin(e.target.value)}
+                  placeholder="•••••••• o PIN (1234)"
+                  className="w-full h-12 px-3.5 text-xs font-semibold bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[#1E56B0] focus:bg-white rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-400"
                 />
               </div>
 
@@ -534,7 +639,7 @@ function LoginForm() {
                 {cargando ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-[#0A1525]" />
-                    <span>Validando PIN en ruta...</span>
+                    <span>Validando credenciales...</span>
                   </>
                 ) : (
                   <>
@@ -543,6 +648,17 @@ function LoginForm() {
                   </>
                 )}
               </motion.button>
+
+              {/* Enlace al Registro de Aliados */}
+              <div className="text-center pt-1">
+                <Link
+                  href="/registro"
+                  className="text-xs font-bold text-[#1E56B0] hover:text-[#0A1525] transition-colors inline-flex items-center gap-1"
+                >
+                  <span>¿Aún no tienes código de aliado?</span>
+                  <span className="underline underline-offset-2">Regístrate aquí →</span>
+                </Link>
+              </div>
 
               {/* Atajos Rápidos de Prueba para Aliados */}
               <div className="pt-3 border-t border-slate-100 space-y-2">

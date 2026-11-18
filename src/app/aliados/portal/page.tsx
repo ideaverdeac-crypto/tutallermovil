@@ -94,6 +94,8 @@ export default function PortalAliadosPage() {
   const [creandoOrdenPrueba, setCreandoOrdenPrueba] = useState<boolean>(false);
   const [modalBloqueoOrden, setModalBloqueoOrden] = useState<boolean>(false);
   const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
+  const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-0842');
+  const [nombreMecanico, setNombreMecanico] = useState<string>('Carlos Mendoza');
 
   const MECANICO_ID_ACTUAL = '123e4567-e89b-12d3-a456-426614174000';
 
@@ -104,6 +106,22 @@ export default function PortalAliadosPage() {
   // Obtener geolocalización al montar el componente
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const matchCode = document.cookie.match(/(^| )ttm_user_code=([^;]+)/);
+      if (matchCode && matchCode[2]) {
+        const val = decodeURIComponent(matchCode[2]);
+        if (val.startsWith('#') || val.startsWith('TTM-')) {
+          setCodigoAliado(val.startsWith('#') ? val : `#${val}`);
+        }
+      }
+      const rawSesion = localStorage.getItem('ttm_aliado_sesion');
+      if (rawSesion) {
+        try {
+          const parsed = JSON.parse(rawSesion);
+          if (parsed.codigo_aliado) setCodigoAliado(parsed.codigo_aliado);
+          if (parsed.nombre) setNombreMecanico(parsed.nombre);
+        } catch (e) {}
+      }
+
       const estaRegistrado = typeof document !== 'undefined' && Boolean(
         document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
         document.cookie.match(/(^| )ttm_role=([^;]+)/)
@@ -416,6 +434,9 @@ export default function PortalAliadosPage() {
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-[#1E56B0]/10 text-[#1E56B0] px-2 py-0.5 rounded">
                   Portal Aliados
                 </span>
+                <span className="px-2 py-0.5 rounded-md bg-[#0A1525] text-[#CCFF00] font-mono text-[10px] font-black shadow-2xs border border-slate-800">
+                  {codigoAliado}
+                </span>
               </div>
             </div>
           </div>
@@ -493,16 +514,20 @@ export default function PortalAliadosPage() {
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                   <h1 className="text-xl sm:text-2xl font-extrabold text-[#0A1525] tracking-tight">
-                    Carlos Mendoza
+                    {nombreMecanico}
                   </h1>
+                  <span className="px-2.5 py-0.5 rounded-lg bg-[#0A1525] text-[#CCFF00] font-mono text-xs font-black shadow-2xs border border-slate-800 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#CCFF00]" />
+                    {codigoAliado}
+                  </span>
                   <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Verificado
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Verificado
                   </span>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-slate-500 font-medium">
                   <span className="font-mono font-bold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                    #TTM-0842
+                    {codigoAliado}
                   </span>
                   <span>•</span>
                   <span>Mecánica General &amp; Inyección</span>

@@ -63,6 +63,8 @@ export default function RunnerPortalPage() {
   const [toastExito, setToastExito] = useState<string | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
   const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
+  const [codigoAliado, setCodigoAliado] = useState<string>('#RUN-101');
+  const [nombreRunner, setNombreRunner] = useState<string>('Luis Pérez');
 
   // Cargar órdenes en REPUESTOS_EN_RUTA de Supabase
   const cargarOrdenesRunner = async () => {
@@ -126,6 +128,22 @@ export default function RunnerPortalPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const matchCode = document.cookie.match(/(^| )ttm_user_code=([^;]+)/);
+      if (matchCode && matchCode[2]) {
+        const val = decodeURIComponent(matchCode[2]);
+        if (val.startsWith('#') || val.startsWith('RUN-')) {
+          setCodigoAliado(val.startsWith('#') ? val : `#${val}`);
+        }
+      }
+      const rawSesion = localStorage.getItem('ttm_aliado_sesion');
+      if (rawSesion) {
+        try {
+          const parsed = JSON.parse(rawSesion);
+          if (parsed.codigo_aliado) setCodigoAliado(parsed.codigo_aliado);
+          if (parsed.nombre) setNombreRunner(parsed.nombre);
+        } catch (e) {}
+      }
+
       const estaRegistrado = typeof document !== 'undefined' && Boolean(
         document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
         document.cookie.match(/(^| )ttm_role=([^;]+)/)
@@ -274,12 +292,15 @@ export default function RunnerPortalPage() {
                     </div>
 
                     <div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <h1 className="text-base font-black text-[#0A1525] tracking-tight">
-                          Luis Pérez
+                          {nombreRunner}
                         </h1>
                         <span className="w-4 h-4 rounded-full bg-[#16A34A] flex items-center justify-center text-white shadow-2xs">
                           <Check className="w-2.5 h-2.5 stroke-[3.5]" />
+                        </span>
+                        <span className="px-2 py-0.5 rounded-lg bg-[#0A1525] text-[#CCFF00] font-mono text-[11px] font-black shadow-2xs border border-slate-800">
+                          {codigoAliado}
                         </span>
                       </div>
                       <p className="text-xs text-[#475569] font-medium flex items-center gap-1">

@@ -148,6 +148,8 @@ export default function PedidosProveedorPage() {
   const [validandoPIN, setValidandoPIN] = useState<boolean>(false);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
   const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
+  const [codigoAliado, setCodigoAliado] = useState<string>('#REP-505');
+  const [nombreTienda, setNombreTienda] = useState<string>('AutoPartes Chacao');
 
   // Carga inicial y obtención de pedidos desde Supabase
   const cargarPedidos = async (esRefrescoManual = false) => {
@@ -256,6 +258,24 @@ export default function PedidosProveedorPage() {
   // Configuración de Supabase Realtime para escuchar cambios en la tabla 'ordenes'
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const matchCode = document.cookie.match(/(^| )ttm_user_code=([^;]+)/);
+      if (matchCode && matchCode[2]) {
+        const val = decodeURIComponent(matchCode[2]);
+        if (val.startsWith('#') || val.startsWith('REP-')) {
+          setCodigoAliado(val.startsWith('#') ? val : `#${val}`);
+        }
+      }
+      const rawSesion = localStorage.getItem('ttm_aliado_sesion');
+      if (rawSesion) {
+        try {
+          const parsed = JSON.parse(rawSesion);
+          if (parsed.codigo_aliado) setCodigoAliado(parsed.codigo_aliado);
+          if (parsed.detalles?.nombre_tienda || parsed.nombre) {
+            setNombreTienda(parsed.detalles?.nombre_tienda || parsed.nombre);
+          }
+        } catch (e) {}
+      }
+
       const estaRegistrado = typeof document !== 'undefined' && Boolean(
         document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
         document.cookie.match(/(^| )ttm_role=([^;]+)/)
@@ -394,13 +414,16 @@ export default function PedidosProveedorPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl sm:text-2xl font-black text-[#0A1525] tracking-tight truncate">
-                    AutoPartes Chacao
+                    {nombreTienda}
                   </h1>
                   <span
                     className="w-5 h-5 rounded-full bg-[#16A34A] flex items-center justify-center shrink-0 shadow-2xs text-white"
                     title="Proveedor Verificado Oficial TTM"
                   >
                     <Check className="w-3 h-3 stroke-[3.5]" />
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-lg bg-[#0A1525] text-[#CCFF00] font-mono text-xs font-black shadow-2xs border border-slate-800">
+                    {codigoAliado}
                   </span>
                   <span className="hidden md:inline-flex text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
                     B2B Repuestos
