@@ -939,6 +939,28 @@ export default function ClienteDashboardPage() {
       <SolicitarMecanicoModal
         open={modalSolicitarOpen}
         onOpenChange={setModalSolicitarOpen}
+        vehiculosRegistrados={vehiculos}
+        onVehiculoCreado={(nuevo) => {
+          setVehiculos((prev) => {
+            if (prev.some((v) => v.placa === nuevo.placa)) return prev;
+            return [
+              ...prev,
+              {
+                id: nuevo.id || `veh_${Date.now()}`,
+                marca: nuevo.marca,
+                modelo: nuevo.modelo,
+                anio: Number(nuevo.anio) || 2022,
+                placa: nuevo.placa,
+                kilometraje: 0,
+                ultimoServicio: 'Sin servicios aún',
+                tipoUltimoServicio: 'Registro inicial en Mi Garaje',
+                estadoSalud: 'pendiente',
+                fotoUrl: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
+                checklist25: null
+              }
+            ];
+          });
+        }}
         initialVehiculo={
           vehiculoSeleccionado
             ? {

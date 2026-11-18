@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,13 +16,25 @@ import {
   CheckCircle2,
   Sparkles,
   Calendar,
-  Mail
+  Mail,
+  Plus,
+  Check
 } from 'lucide-react';
 
-interface SolicitarMecanicoModalProps {
+export interface VehiculoOpcion {
+  id?: string;
+  marca: string;
+  modelo: string;
+  anio: string | number;
+  placa: string;
+  color?: string;
+}
+
+export interface SolicitarMecanicoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccessToast?: (msg: string) => void;
+  onVehiculoCreado?: (vehiculo: VehiculoOpcion) => void;
   initialVehiculo?: {
     marca?: string;
     modelo?: string;
@@ -35,14 +47,36 @@ interface SolicitarMecanicoModalProps {
     email?: string;
     telefono?: string;
   };
+  vehiculosRegistrados?: VehiculoOpcion[];
 }
+
+const DEFAULT_VEHICULOS_CLIENTE: VehiculoOpcion[] = [
+  {
+    id: 'veh-01',
+    marca: 'Toyota',
+    modelo: 'Corolla GLi 1.8L',
+    anio: 2018,
+    placa: 'AB123CD',
+    color: 'Plata Metalizado'
+  },
+  {
+    id: 'veh-02',
+    marca: 'Jeep',
+    modelo: 'Grand Cherokee Limited 4x4',
+    anio: 2019,
+    placa: 'AE456FG',
+    color: 'Negro Brillante'
+  }
+];
 
 export function SolicitarMecanicoModal({
   open,
   onOpenChange,
   onSuccessToast,
+  onVehiculoCreado,
   initialVehiculo,
-  initialCliente
+  initialCliente,
+  vehiculosRegistrados
 }: SolicitarMecanicoModalProps) {
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -55,20 +89,108 @@ export function SolicitarMecanicoModal({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  React.useEffect(() => {
+  // Selector entre vehículo registrado o agregar uno nuevo
+  const [listaVehiculos, setListaVehiculos] = useState<VehiculoOpcion[]>([]);
+  const [modoVehiculo, setModoVehiculo] = useState<'registrado' | 'nuevo'>('registrado');
+  const [vehiculoSeleccionadoId, setVehiculoSeleccionadoId] = useState<string>('');
+  const [guardarEnGaraje, setGuardarEnGaraje] = useState<boolean>(true);
+
+  useEffect(() => {
     if (open) {
-      if (initialVehiculo?.marca) setMarca(initialVehiculo.marca);
-      if (initialVehiculo?.modelo) {
-        setModelo(initialVehiculo.modelo);
+      // 1. Resolver lista de vehículos registrados
+      let vehiculosDisponibles: VehiculoOpcion[] = [];
+      if (vehiculosRegistrados && vehiculosRegistrados.length > 0) {
+        vehiculosDisponibles = vehiculosRegistrados;
+      } else if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('ttm_garaje_vehiculos');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              vehiculosDisponibles = parsed;
+            }
+          } catch (e) {}
+        }
       }
-      if (initialVehiculo?.placa) setPlaca(initialVehiculo.placa);
-      if (initialVehiculo?.anio) setAnio(String(initialVehiculo.anio));
-      if (initialVehiculo?.falla) setFalla(initialVehiculo.falla);
+
+      // Si aún está vacía pero el cliente es María o está en sesión
+      if (vehiculosDisponibles.length === 0 && (initialCliente?.email || initialCliente?.nombre)) {
+        vehiculosDisponibles = DEFAULT_VEHICULOS_CLIENTE;
+      }
+
+      setListaVehiculos(vehiculosDisponibles);
 
       if (initialCliente?.nombre) setNombre(initialCliente.nombre);
       if (initialCliente?.email) setEmail(initialCliente.email);
+
+      // Si se pasó un vehículo inicial específico
+      if (initialVehiculo && (initialVehiculo.placa || initialVehiculo.modelo)) {
+        const matching = vehiculosDisponibles.find(
+          (v) =>
+            (initialVehiculo.placa && v.placa.toUpperCase() === initialVehiculo.placa.toUpperCase()) ||
+            (initialVehiculo.modelo && v.modelo.toLowerCase().includes(initialVehiculo.modelo.toLowerCase()))
+        );
+
+        if (matching) {
+          setModoVehiculo('registrado');
+          setVehiculoSeleccionadoId(matching.id || matching.placa);
+          setMarca(matching.marca);
+          setModelo(matching.modelo);
+          setAnio(String(matching.anio));
+          setPlaca(matching.placa);
+        } else {
+          // Vehículo específico que no está en la lista -> Modo nuevo prellenado
+          setModoVehiculo('nuevo');
+          setVehiculoSeleccionadoId('');
+          setMarca(initialVehiculo.marca || '');
+          setModelo(initialVehiculo.modelo || '');
+          setAnio(initialVehiculo.anio ? String(initialVehiculo.anio) : '');
+          setPlaca(initialVehiculo.placa || '');
+        }
+      } else if (vehiculosDisponibles.length > 0) {
+        // Por defecto, seleccionar el primer vehículo registrado
+        setModoVehiculo('registrado');
+        const primero = vehiculosDisponibles[0];
+        setVehiculoSeleccionadoId(primero.id || primero.placa);
+        setMarca(primero.marca);
+        setModelo(primero.modelo);
+        setAnio(String(primero.anio));
+        setPlaca(primero.placa);
+      } else {
+        setModoVehiculo('nuevo');
+        setVehiculoSeleccionadoId('');
+      }
+
+      if (initialVehiculo?.falla) setFalla(initialVehiculo.falla);
     }
-  }, [open, initialVehiculo, initialCliente]);
+  }, [open, initialVehiculo, initialCliente, vehiculosRegistrados]);
+
+  const handleSeleccionarVehiculo = (v: VehiculoOpcion) => {
+    setVehiculoSeleccionadoId(v.id || v.placa);
+    setMarca(v.marca);
+    setModelo(v.modelo);
+    setAnio(String(v.anio));
+    setPlaca(v.placa);
+  };
+
+  const handleCambiarANuevo = () => {
+    setModoVehiculo('nuevo');
+    setVehiculoSeleccionadoId('');
+    setMarca('');
+    setModelo('');
+    setAnio('');
+    setPlaca('');
+  };
+
+  const handleCambiarARegistrado = () => {
+    setModoVehiculo('registrado');
+    if (listaVehiculos.length > 0) {
+      const v =
+        listaVehiculos.find((item) => (item.id || item.placa) === vehiculoSeleccionadoId) ||
+        listaVehiculos[0];
+      handleSeleccionarVehiculo(v);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +216,47 @@ export function SolicitarMecanicoModal({
       const placaLimpia = (placa.trim() || 'AD456EF').toUpperCase();
       const modeloFinal = modelo.includes('[') ? modelo.trim() : `${modelo.trim()} [${placaLimpia}]`;
 
+      // 1. Si está en modo nuevo y el usuario marcó guardar en Garaje
+      if (modoVehiculo === 'nuevo' && guardarEnGaraje) {
+        const nuevoVehiculo: VehiculoOpcion = {
+          id: `veh_${Date.now()}`,
+          marca: marca.trim(),
+          modelo: modelo.trim(),
+          anio: anioNum || 2022,
+          placa: placaLimpia
+        };
+
+        try {
+          await supabase.from('vehiculos').insert([
+            {
+              marca: marca.trim(),
+              modelo: modelo.trim(),
+              anio: anioNum || 2022,
+              placa: placaLimpia,
+              kilometraje: 0,
+              cliente_nombre: nombre.trim(),
+              cliente_email: email.trim() || null
+            }
+          ]);
+        } catch (e) {
+          console.warn('No se pudo guardar vehículo en Supabase vehiculos:', e);
+        }
+
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('ttm_garaje_vehiculos');
+            const listaActual = stored ? JSON.parse(stored) : [];
+            const nueva = [...listaActual.filter((x: any) => x.placa !== placaLimpia), nuevoVehiculo];
+            localStorage.setItem('ttm_garaje_vehiculos', JSON.stringify(nueva));
+          } catch (e) {}
+        }
+
+        if (onVehiculoCreado) {
+          onVehiculoCreado(nuevoVehiculo);
+        }
+      }
+
+      // 2. Insertar orden en Supabase
       const { data, error } = await supabase.from('ordenes').insert([
         {
           cliente_nombre: nombre.trim(),
@@ -248,86 +411,229 @@ export function SolicitarMecanicoModal({
                       </div>
                     </div>
 
-                    {/* Fila 2: Grid Marca y Año (grid-cols-2) */}
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Campo: Marca */}
-                      <div>
-                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                          Marca
+                    {/* SELECCIÓN DE VEHÍCULO: REGISTRADO O AGREGAR NUEVO */}
+                    <div className="pt-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider">
+                          Vehículo para el Servicio <span className="text-rose-500">*</span>
                         </label>
-                        <div className="relative">
-                          <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            required
-                            value={marca}
-                            onChange={(e) => setMarca(e.target.value)}
-                            placeholder="Ej. Toyota"
-                            className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
-                          />
-                        </div>
+                        {listaVehiculos.length > 0 && (
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            {listaVehiculos.length} {listaVehiculos.length === 1 ? 'vehículo en tu garaje' : 'vehículos en tu garaje'}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Campo: Año */}
-                      <div>
-                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                          Año
-                        </label>
-                        <div className="relative">
-                          <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="number"
-                            required
-                            min="1970"
-                            max="2030"
-                            value={anio}
-                            onChange={(e) => setAnio(e.target.value)}
-                            placeholder="Ej. 2018"
-                            className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                      {/* Selector Toggle de Modo (Mis Registrados vs Agregar Nuevo) */}
+                      {listaVehiculos.length > 0 && (
+                        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl gap-1 mb-3">
+                          <button
+                            type="button"
+                            onClick={handleCambiarARegistrado}
+                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              modoVehiculo === 'registrado'
+                                ? 'bg-white text-[#0A1525] shadow-xs ring-1 ring-slate-200'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Car className={`w-3.5 h-3.5 ${modoVehiculo === 'registrado' ? 'text-[#1E56B0]' : 'text-slate-400'}`} />
+                            <span>Mis Registrados ({listaVehiculos.length})</span>
+                          </button>
 
-                    {/* Fila 3: Modelo y Placa (grid-cols-2) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                          Modelo <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            required
-                            value={modelo}
-                            onChange={(e) => setModelo(e.target.value)}
-                            placeholder="Ej. Corolla / Yaris"
-                            className="w-full h-11 pl-9 pr-3 text-sm bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all font-medium"
-                          />
+                          <button
+                            type="button"
+                            onClick={handleCambiarANuevo}
+                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              modoVehiculo === 'nuevo'
+                                ? 'bg-white text-[#0A1525] shadow-xs ring-1 ring-slate-200'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Plus className={`w-3.5 h-3.5 ${modoVehiculo === 'nuevo' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                            <span>+ Agregar Nuevo</span>
+                          </button>
                         </div>
-                      </div>
+                      )}
 
-                      <div>
-                        <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                          Placa / Matrícula
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={placa}
-                            onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-                            placeholder="Ej. AD456EF"
-                            className="w-full h-11 px-3 text-sm font-mono font-bold uppercase bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] focus:bg-white transition-all"
-                          />
+                      {/* 1. MODO: ELEGIR DE LOS REGISTRADOS */}
+                      {modoVehiculo === 'registrado' && listaVehiculos.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {listaVehiculos.map((v) => {
+                              const isSelected =
+                                (vehiculoSeleccionadoId === (v.id || v.placa)) || (placa === v.placa);
+
+                              return (
+                                <div
+                                  key={v.id || v.placa}
+                                  onClick={() => handleSeleccionarVehiculo(v)}
+                                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
+                                    isSelected
+                                      ? 'border-[#1E56B0] bg-blue-50/70 shadow-xs ring-1 ring-blue-200'
+                                      : 'border-slate-200 hover:border-slate-300 bg-[#F8FAFC]'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div
+                                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                        isSelected ? 'bg-[#0A1525] text-[#CCFF00]' : 'bg-slate-200 text-slate-600'
+                                      }`}
+                                    >
+                                      <Car className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-xs text-[#0A1525] truncate">
+                                        {v.marca} {v.modelo}
+                                      </p>
+                                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                                        <span className="font-mono font-bold text-slate-700 bg-white border border-slate-200 px-1 rounded">
+                                          {v.placa}
+                                        </span>
+                                        <span>• {v.anio}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="shrink-0">
+                                    {isSelected ? (
+                                      <div className="w-5 h-5 rounded-full bg-[#1E56B0] text-white flex items-center justify-center">
+                                        <Check className="w-3 h-3 stroke-[3]" />
+                                      </div>
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-full border border-slate-300" />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <p className="text-[11px] text-slate-500">
+                              ¿Vas a reparar un vehículo diferente?
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleCambiarANuevo}
+                              className="text-[11px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Agregar otro vehículo</span>
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        /* 2. MODO: AGREGAR NUEVO VEHÍCULO */
+                        <div className="space-y-3 p-3.5 bg-slate-50/70 border border-slate-200 rounded-xl">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#0A1525] flex items-center gap-1.5">
+                              <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                              Datos del Nuevo Vehículo
+                            </span>
+                            {listaVehiculos.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleCambiarARegistrado}
+                                className="text-[11px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <Car className="w-3 h-3" />
+                                <span>← Elegir de mis registrados</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Grid Marca y Año */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-[#0A1525] uppercase tracking-wider mb-1">
+                                Marca <span className="text-rose-500">*</span>
+                              </label>
+                              <div className="relative">
+                                <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <input
+                                  type="text"
+                                  required={modoVehiculo === 'nuevo'}
+                                  value={marca}
+                                  onChange={(e) => setMarca(e.target.value)}
+                                  placeholder="Ej. Toyota"
+                                  className="w-full h-10 pl-9 pr-3 text-sm bg-white border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] transition-all font-medium"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-[#0A1525] uppercase tracking-wider mb-1">
+                                Año <span className="text-rose-500">*</span>
+                              </label>
+                              <div className="relative">
+                                <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <input
+                                  type="number"
+                                  required={modoVehiculo === 'nuevo'}
+                                  min="1970"
+                                  max="2030"
+                                  value={anio}
+                                  onChange={(e) => setAnio(e.target.value)}
+                                  placeholder="Ej. 2018"
+                                  className="w-full h-10 pl-9 pr-3 text-sm bg-white border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] transition-all font-medium"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Grid Modelo y Placa */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-[#0A1525] uppercase tracking-wider mb-1">
+                                Modelo <span className="text-rose-500">*</span>
+                              </label>
+                              <div className="relative">
+                                <Car className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <input
+                                  type="text"
+                                  required={modoVehiculo === 'nuevo'}
+                                  value={modelo}
+                                  onChange={(e) => setModelo(e.target.value)}
+                                  placeholder="Ej. Corolla / Yaris"
+                                  className="w-full h-10 pl-9 pr-3 text-sm bg-white border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] transition-all font-medium"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-[#0A1525] uppercase tracking-wider mb-1">
+                                Placa / Matrícula
+                              </label>
+                              <input
+                                type="text"
+                                value={placa}
+                                onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+                                placeholder="Ej. AD456EF"
+                                className="w-full h-10 px-3 text-sm font-mono font-bold uppercase bg-white border border-[#CBD5E1] rounded-xl text-[#0A1525] placeholder:text-slate-400 focus:outline-none focus:border-[#1E56B0] transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Checkbox guardar en Garaje */}
+                          <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={guardarEnGaraje}
+                              onChange={(e) => setGuardarEnGaraje(e.target.checked)}
+                              className="w-4 h-4 text-[#1E56B0] rounded border-slate-300 focus:ring-[#1E56B0]"
+                            />
+                            <span className="text-xs text-slate-600 font-medium">
+                              Guardar este vehículo en <strong>Mi Garaje</strong> para futuros servicios
+                            </span>
+                          </label>
+                        </div>
+                      )}
                     </div>
 
                     {/* Campo 4: Falla Reportada */}
                     <div>
                       <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                        Falla Reportada o Síntoma
+                        Falla Reportada o Síntoma <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
                         <Wrench className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -345,7 +651,7 @@ export function SolicitarMecanicoModal({
                     {/* Campo 5: Sector */}
                     <div>
                       <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider mb-1.5">
-                        Sector en Caracas
+                        Sector en Caracas <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
                         <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
