@@ -422,9 +422,10 @@ function CronometroSLA({ createdAt }: { createdAt?: string }) {
   );
 }
 
-// Avatar del mecánico asignado con estilo squircle oscuro, iniciales CM en verde neón y badge de estatus (Fiel a la referencia de diseño)
+// Avatar del mecánico asignado con foto oficial en el círculo y badge de técnico verificado
 interface MecanicoAvatarSquircleProps {
   initials?: string;
+  fotoUrl?: string;
   size?: 'sm' | 'md' | 'lg';
   status?: 'verified' | 'available' | 'slate';
   className?: string;
@@ -433,15 +434,16 @@ interface MecanicoAvatarSquircleProps {
 
 function MecanicoAvatarSquircle({
   initials = 'CM',
+  fotoUrl = FOTO_MECANICO_OFICIAL,
   size = 'sm',
   status = 'verified',
   className = '',
   onClick
 }: MecanicoAvatarSquircleProps) {
   const sizeClasses = {
-    sm: 'w-7 h-7 rounded-xl text-[11px]',
-    md: 'w-11 h-11 rounded-2xl text-sm',
-    lg: 'w-20 h-20 rounded-3xl text-2xl'
+    sm: 'w-7 h-7 rounded-full text-[11px]',
+    md: 'w-11 h-11 rounded-full text-sm',
+    lg: 'w-20 h-20 rounded-full text-2xl'
   }[size];
 
   const dotSize = {
@@ -450,33 +452,43 @@ function MecanicoAvatarSquircle({
     lg: 'w-6 h-6 -bottom-1 -right-1 ring-[3px]'
   }[size];
 
+  const fotoParaMostrar = fotoUrl || FOTO_MECANICO_OFICIAL;
+
   return (
     <div
       onClick={onClick}
-      className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-700/60 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 ${onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
-        } ${className}`}
+      className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-300/80 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 overflow-visible ${
+        onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
+      } ${className}`}
     >
-      <span className="drop-shadow-xs">{initials}</span>
+      {/* Fotografía Oficial del Mecánico en el Círculo */}
+      <img
+        src={fotoParaMostrar}
+        alt={initials}
+        className="w-full h-full rounded-full object-cover"
+        onError={(e) => {
+          (e.currentTarget as HTMLElement).style.display = 'none';
+        }}
+      />
 
       {/* Indicador inferior derecho con aro blanco idéntico a las referencias del usuario */}
       {status === 'verified' ? (
         <span
-          className={`absolute ${dotSize} rounded-full bg-[#16A34A] ring-white flex items-center justify-center shadow-xs text-white`}
+          className={`absolute ${dotSize} rounded-full bg-[#16A34A] ring-white ring-2 flex items-center justify-center shadow-xs text-white z-10`}
           title="Técnico Verificado Oficial"
         >
           <Check className={`${size === 'lg' ? 'w-3.5 h-3.5 stroke-[3.5]' : size === 'md' ? 'w-2 h-2 stroke-[3.5]' : 'w-1.5 h-1.5 stroke-[3.5]'}`} />
         </span>
       ) : status === 'available' ? (
         <span
-          className={`absolute ${dotSize} rounded-full bg-emerald-500 ring-white flex items-center justify-center shadow-xs`}
+          className={`absolute ${dotSize} rounded-full bg-emerald-500 ring-white ring-2 flex items-center justify-center shadow-xs z-10`}
           title="Disponible / En ruta"
         >
           <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
         </span>
       ) : (
-        /* Estado base (círculo gris/slate con aro blanco idéntico a la imagen CM) */
         <span
-          className={`absolute ${dotSize} rounded-full bg-[#8B9BB4] ring-white shadow-xs`}
+          className={`absolute ${dotSize} rounded-full bg-[#8B9BB4] ring-white ring-2 shadow-xs z-10`}
           title="Estatus de servicio"
         />
       )}
@@ -484,8 +496,24 @@ function MecanicoAvatarSquircle({
   );
 }
 
-// Badge interactivo del mecánico asignado con avatar squircle 'CM' neon lime
-function MecanicoAsignadoBadge({ onClick }: { onClick?: () => void }) {
+// Badge interactivo del mecánico asignado con la foto oficial en el círculo
+function MecanicoAsignadoBadge({
+  nombre = 'Carlos Mendoza',
+  credencial = '#TTM-0842',
+  fotoUrl = FOTO_MECANICO_OFICIAL,
+  onClick
+}: {
+  nombre?: string;
+  credencial?: string;
+  fotoUrl?: string;
+  onClick?: () => void;
+}) {
+  const iniciales = nombre
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('') || 'CM';
+
   return (
     <button
       type="button"
@@ -494,17 +522,22 @@ function MecanicoAsignadoBadge({ onClick }: { onClick?: () => void }) {
         if (onClick) onClick();
       }}
       className="flex items-center gap-2 hover:bg-slate-100/90 px-2 py-1 -mx-2 -my-1 rounded-xl transition-all cursor-pointer text-left w-full group select-none"
-      title="Ver ficha operativa de Carlos Mendoza (#TTM-0842)"
+      title={`Ver ficha operativa de ${nombre} (${credencial})`}
     >
-      {/* Avatar Squircle con 'CM' en verde neón e indicador de estado según la referencia */}
-      <MecanicoAvatarSquircle initials="CM" size="sm" status="verified" />
+      {/* Círculo con la foto del mecánico e indicador verificado */}
+      <MecanicoAvatarSquircle
+        fotoUrl={fotoUrl}
+        initials={iniciales}
+        size="sm"
+        status="verified"
+      />
 
       <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
         <span className="text-xs font-bold text-[#0A1525] group-hover:text-[#1E56B0] transition-colors truncate">
-          Carlos Mendoza
+          {nombre}
         </span>
         <span className="font-mono text-[10px] text-slate-500 font-semibold shrink-0">
-          #TTM-0842
+          {credencial}
         </span>
       </div>
     </button>
@@ -2464,18 +2497,25 @@ export default function TableroDespachoPage() {
                             )}
 
                             {/* En EN_INSPECCION: Avatar del Mecánico + Icono Redondo + WhatsApp Carnet + Botón Diagnóstico + Botón de Cotizar */}
-                            {columna.id === 'EN_INSPECCION' && (
-                              <div className="space-y-2 ml-5">
-                                <div className="flex items-center justify-between gap-2">
-                                  <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
-                                  <div
-                                    className="w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#1E56B0] flex items-center justify-center shrink-0 relative shadow-2xs transition-colors cursor-help"
-                                    title="Diagnóstico en curso • Mecánico en sitio realizando inspección"
-                                  >
-                                    <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1E56B0] animate-pulse ring-2 ring-white" />
+                            {columna.id === 'EN_INSPECCION' && (() => {
+                              const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                              return (
+                                <div className="space-y-2 ml-5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <MecanicoAsignadoBadge
+                                      nombre={mecAsignado.nombre}
+                                      credencial={mecAsignado.credencial}
+                                      fotoUrl={mecAsignado.foto}
+                                      onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
+                                    />
+                                    <div
+                                      className="w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#1E56B0] flex items-center justify-center shrink-0 relative shadow-2xs transition-colors cursor-help"
+                                      title="Diagnóstico en curso • Mecánico en sitio realizando inspección"
+                                    >
+                                      <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1E56B0] animate-pulse ring-2 ring-white" />
+                                    </div>
                                   </div>
-                                </div>
 
                                 {/* Botón: Ver Diagnóstico de 25 Puntos */}
                                 <button
@@ -2519,7 +2559,8 @@ export default function TableroDespachoPage() {
                                   <span>Cotizar y Enviar al Cliente</span>
                                 </button>
                               </div>
-                            )}
+                            );
+                          })()}
 
                             {/* En COTIZADO: Monto cotizado en grande + Esperando al cliente + Botón de Aprobación */}
                             {columna.id === 'COTIZADO' && (
@@ -2549,18 +2590,38 @@ export default function TableroDespachoPage() {
                             )}
 
                             {/* En REPUESTOS_EN_RUTA: Avatar del Mecánico Asignado + Gestión de Runner */}
-                            {columna.id === 'REPUESTOS_EN_RUTA' && (
-                              <div className="space-y-1.5 ml-5">
-                                <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                  <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
-                                </div>
+                            {columna.id === 'REPUESTOS_EN_RUTA' && (() => {
+                              const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                              return (
+                                <div className="space-y-1.5 ml-5">
+                                  <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
+                                    <MecanicoAsignadoBadge
+                                      nombre={mecAsignado.nombre}
+                                      credencial={mecAsignado.credencial}
+                                      fotoUrl={mecAsignado.foto}
+                                      onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
+                                    />
+                                  </div>
 
-                                {runnersAsignados[orden.id] ? (
-                                  <div className="p-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs shadow-2xs">
-                                    <span className="font-extrabold text-emerald-800 flex items-center gap-1.5 text-xs">
-                                      <Check className="w-3.5 h-3.5 text-emerald-700 stroke-[3]" />
-                                      Runner: {runnersAsignados[orden.id]}
-                                    </span>
+                                  {runnersAsignados[orden.id] ? (
+                                    <div className="p-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs shadow-2xs">
+                                      <span className="font-extrabold text-emerald-800 flex items-center gap-1.5 text-xs">
+                                        <Check className="w-3.5 h-3.5 text-emerald-700 stroke-[3]" />
+                                        Runner: {runnersAsignados[orden.id]}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOrdenParaRunner(orden);
+                                          setModalRunnerOpen(true);
+                                        }}
+                                        className="text-[10px] font-bold text-slate-400 hover:text-[#0A1525] underline ml-1 cursor-pointer"
+                                      >
+                                        Cambiar
+                                      </button>
+                                    </div>
+                                  ) : (
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -2568,53 +2629,48 @@ export default function TableroDespachoPage() {
                                         setOrdenParaRunner(orden);
                                         setModalRunnerOpen(true);
                                       }}
-                                      className="text-[10px] font-bold text-slate-400 hover:text-[#0A1525] underline ml-1 cursor-pointer"
+                                      className="w-full h-8 px-3 rounded-xl bg-sky-500 hover:bg-[#0A1525] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
                                     >
-                                      Cambiar
+                                      <Bike className="w-3.5 h-3.5" />
+                                      <span>Asignar Runner</span>
                                     </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOrdenParaRunner(orden);
-                                      setModalRunnerOpen(true);
-                                    }}
-                                    className="w-full h-8 px-3 rounded-xl bg-sky-500 hover:bg-[#0A1525] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                  >
-                                    <Bike className="w-3.5 h-3.5" />
-                                    <span>Asignar Runner</span>
-                                  </button>
-                                )}
-                              </div>
-                            )}
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {/* En EN_EJECUCION: Avatar del Mecánico Asignado + Estado de Instalación + Ver Checklist */}
-                            {columna.id === 'EN_EJECUCION' && (
-                              <div className="space-y-2 ml-5">
-                                <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                  <MecanicoAsignadoBadge onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }} />
-                                  <span className="text-[10px] font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse" />
-                                    En Ejecución
-                                  </span>
+                            {columna.id === 'EN_EJECUCION' && (() => {
+                              const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                              return (
+                                <div className="space-y-2 ml-5">
+                                  <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
+                                    <MecanicoAsignadoBadge
+                                      nombre={mecAsignado.nombre}
+                                      credencial={mecAsignado.credencial}
+                                      fotoUrl={mecAsignado.foto}
+                                      onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
+                                    />
+                                    <span className="text-[10px] font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse" />
+                                      En Ejecución
+                                    </span>
+                                  </div>
+                                  <div className="pt-0.5">
+                                    <Link
+                                      href={`/aliados/servicio/${orden.id}`}
+                                      target="_blank"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-full h-8 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black flex items-center justify-center gap-1.5 border border-slate-200 transition-colors shadow-2xs"
+                                      title="Ver Checklist TTM y Candado de Odómetro"
+                                    >
+                                      <ClipboardCheck className="w-3.5 h-3.5 text-slate-600" />
+                                      <span>Ver Checklist TTM</span>
+                                    </Link>
+                                  </div>
                                 </div>
-                                <div className="pt-0.5">
-                                  <Link
-                                    href={`/aliados/servicio/${orden.id}`}
-                                    target="_blank"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-full h-8 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black flex items-center justify-center gap-1.5 border border-slate-200 transition-colors shadow-2xs"
-                                    title="Ver Checklist TTM y Candado de Odómetro"
-                                  >
-                                    <ClipboardCheck className="w-3.5 h-3.5 text-slate-600" />
-                                    <span>Ver Checklist TTM</span>
-                                    <ExternalLink className="w-3 h-3 text-slate-500" />
-                                  </Link>
-                                </div>
-                              </div>
-                            )}
+                              );
+                            })()}
 
                             {/* En PAGO_REPORTADO / PENDIENTE_PAGO: Ver Comprobante + Rechazar / Aprobar */}
                             {(columna.id === 'PAGO_REPORTADO' || columna.id === 'PENDIENTE_PAGO') && (
@@ -3332,6 +3388,7 @@ export default function TableroDespachoPage() {
                     <div className="flex items-center gap-3">
                       <MecanicoAvatarSquircle
                         initials={mec.iniciales}
+                        fotoUrl={mec.foto}
                         size="md"
                         status="verified"
                       />
@@ -3401,7 +3458,7 @@ export default function TableroDespachoPage() {
 
               {/* Cabecera: Avatar Squircle Oficial w-20 h-20, Nombre, Código y Calificación */}
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1 text-center sm:text-left">
-                <MecanicoAvatarSquircle initials="CM" size="lg" status="verified" />
+                <MecanicoAvatarSquircle initials="CM" fotoUrl={FOTO_MECANICO_OFICIAL} size="lg" status="verified" />
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-center sm:justify-start gap-2">
@@ -3621,6 +3678,7 @@ export default function TableroDespachoPage() {
                       <div className="flex items-center gap-3">
                         <MecanicoAvatarSquircle
                           initials={mec.iniciales}
+                          fotoUrl={mec.foto}
                           size="md"
                           status={mec.disponible ? 'verified' : 'slate'}
                         />
