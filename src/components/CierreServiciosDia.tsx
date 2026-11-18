@@ -15,7 +15,8 @@ import {
   Receipt,
   Eye,
   ExternalLink,
-  MessageCircle,
+  Info,
+  Maximize2,
   FileText,
   Search,
   Filter,
@@ -458,6 +459,13 @@ export default function CierreServiciosDia({
   const [modalFotoUrl, setModalFotoUrl] = useState<{ url: string; titulo: string } | null>(null);
   const [acordeonDesglose, setAcordeonDesglose] = useState<Record<string, boolean>>({});
 
+  // Control de lista desplegable (Acordeón de expedientes)
+  const [serviciosExpandidos, setServiciosExpandidos] = useState<Record<string, boolean>>({});
+
+  const toggleDesplegar = (id: string) => {
+    setServiciosExpandidos((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const toggleAcordeon = (id: string) => {
     setAcordeonDesglose((prev) => ({ ...prev, [id]: !prev[id] }));
   };
@@ -501,6 +509,23 @@ export default function CierreServiciosDia({
       particulares
     };
   }, [servicios]);
+
+  const expandirTodos = () => {
+    const todos: Record<string, boolean> = {};
+    serviciosFiltrados.forEach((s) => {
+      todos[s.id] = true;
+    });
+    setServiciosExpandidos(todos);
+  };
+
+  const colapsarTodos = () => {
+    setServiciosExpandidos({});
+  };
+
+  const estanTodosExpandidos = useMemo(() => {
+    if (serviciosFiltrados.length === 0) return false;
+    return serviciosFiltrados.every((s) => serviciosExpandidos[s.id]);
+  }, [serviciosFiltrados, serviciosExpandidos]);
 
   // Generador de PDF de Cierre Diario Oficial
   const handleExportarCierrePDF = () => {
@@ -752,6 +777,31 @@ ${linkPasaporte}`;
       </div>
 
       {/* 4. Listado de Expedientes de Servicios Finalizados */}
+      <div className="flex items-center justify-between pb-1 px-1">
+        <p className="text-xs font-bold text-slate-500">
+          Mostrando <span className="text-[#0A1525] font-black">{serviciosFiltrados.length}</span> {serviciosFiltrados.length === 1 ? 'expediente' : 'expedientes'}
+        </p>
+        {serviciosFiltrados.length > 0 && (
+          <button
+            type="button"
+            onClick={estanTodosExpandidos ? colapsarTodos : expandirTodos}
+            className="text-xs font-bold text-[#1E56B0] hover:text-[#0A1525] flex items-center gap-1.5 transition-colors cursor-pointer bg-blue-50/80 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-200/60 shadow-2xs"
+          >
+            {estanTodosExpandidos ? (
+              <>
+                <ChevronUp className="w-3.5 h-3.5" />
+                <span>Colapsar Todos</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-3.5 h-3.5" />
+                <span>Desplegar Todos</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
       {serviciosFiltrados.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-xs space-y-3">
           <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
@@ -767,461 +817,823 @@ ${linkPasaporte}`;
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {serviciosFiltrados.map((servicio) => {
             const isDesgloseOpen = Boolean(acordeonDesglose[servicio.id]);
+            const isExpandido = Boolean(serviciosExpandidos[servicio.id]);
 
             return (
               <motion.div
                 key={servicio.id}
                 layout
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-3xl border border-slate-200/90 hover:border-slate-300 shadow-xs hover:shadow-md transition-all overflow-hidden"
+                className={`bg-white rounded-2xl border transition-all overflow-hidden ${
+                  isExpandido
+                    ? 'border-blue-300 shadow-md ring-1 ring-blue-100'
+                    : 'border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-xs'
+                }`}
               >
-                {/* Cabecera del Expediente */}
-                <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50/50 via-white to-slate-50/50">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    {/* Identificación y Tags */}
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <span className="font-mono text-xs font-black bg-[#0A1525] text-[#CCFF00] px-2.5 py-1 rounded-lg">
-                        {servicio.codigo_servicio}
-                      </span>
-
-                      {servicio.es_flota ? (
-                        <span className="text-[11px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-md flex items-center gap-1">
-                          <Building2 className="w-3.5 h-3.5" />
-                          <span>Flota: {servicio.empresa_flota || 'Corporativa'}</span>
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-black uppercase tracking-wider bg-blue-100 text-[#1E56B0] border border-blue-200 px-2.5 py-0.5 rounded-md">
-                          Particular
-                        </span>
-                      )}
-
-                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>PAGADO &amp; CONCILIADO</span>
-                      </span>
-
-                      <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>{servicio.fecha_cierre} • {servicio.duracion_total_minutos} min en sitio</span>
-                      </span>
-                    </div>
-
-                    {/* Acciones Rápidas */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleCopiarRecibo(servicio)}
-                        className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                        title="Copiar comprobante oficial del servicio"
+                {/* FILA DE LISTA: Vista compacta con preview táctil de descripción */}
+                <div
+                  onClick={() => toggleDesplegar(servicio.id)}
+                  className={`p-4 sm:p-5 transition-colors cursor-pointer select-none ${
+                    isExpandido ? 'bg-slate-50/90 border-b border-slate-200/80' : 'bg-white hover:bg-slate-50/70'
+                  }`}
+                >
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                    {/* Bloque Izquierdo: Identificación, Vehículo, Cliente y Descripción */}
+                    <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                      <div
+                        className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black shrink-0 transition-all ${
+                          isExpandido
+                            ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs scale-105'
+                            : 'bg-blue-50 text-[#1E56B0]'
+                        }`}
                       >
-                        <Copy className="w-3.5 h-3.5 text-slate-600" />
-                        <span className="hidden sm:inline">Copiar Recibo</span>
-                      </button>
-
-                      <Link
-                        href={`/historial/${servicio.vehiculo.placa}`}
-                        target="_blank"
-                        className="h-9 px-3 rounded-xl bg-[#0A1525] hover:bg-slate-800 text-[#CCFF00] text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
-                        title="Ver Pasaporte Técnico Inmutable en una nueva pestaña"
-                      >
-                        <Award className="w-3.5 h-3.5 text-[#CCFF00]" />
-                        <span>Pasaporte Técnico</span>
-                        <ArrowUpRight className="w-3 h-3 opacity-70" />
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Vehículo y Cliente */}
-                  <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center font-black shrink-0">
-                        <Car className="w-6 h-6" />
+                        <Car className="w-5 h-5" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-base font-black text-[#0A1525]">
-                            {servicio.vehiculo.marca} {servicio.vehiculo.modelo} ({servicio.vehiculo.anio})
-                          </h4>
+
+                      <div className="min-w-0 flex-1">
+                        {/* Cabecera del ítem de lista: Código, Placa, Modelo y Etiquetas */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-black bg-[#0A1525] text-[#CCFF00] px-2 py-0.5 rounded-md">
+                            {servicio.codigo_servicio}
+                          </span>
+
                           <span className="font-mono text-xs font-black bg-slate-100 text-slate-800 border border-slate-300 px-2 py-0.5 rounded-md">
                             {servicio.vehiculo.placa}
                           </span>
+
+                          <h4 className="text-sm font-black text-[#0A1525] truncate">
+                            {servicio.vehiculo.marca} {servicio.vehiculo.modelo} ({servicio.vehiculo.anio})
+                          </h4>
+
+                          {servicio.es_flota ? (
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <Building2 className="w-3 h-3" />
+                              <span>Flota: {servicio.empresa_flota || 'Corporativa'}</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-blue-100 text-[#1E56B0] border border-blue-200 px-2 py-0.5 rounded-md">
+                              Particular
+                            </span>
+                          )}
+
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>PAGADO &amp; CONCILIADO</span>
+                          </span>
                         </div>
-                        <p className="text-xs text-slate-500 font-medium">
-                          Cliente: <span className="font-bold text-[#0A1525]">{servicio.cliente.nombre}</span> • Tel: {servicio.cliente.telefono}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Resumen Total Facturado */}
-                    <div className="text-left md:text-right">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Total Facturado
-                      </span>
-                      <div className="flex items-baseline md:justify-end gap-1">
-                        <span className="text-2xl font-black text-[#0A1525]">
-                          ${servicio.cotizacion.total_facturado_usd.toFixed(2)}
-                        </span>
-                        <span className="text-xs font-bold text-slate-500">USD</span>
-                      </div>
-                      <span className="text-[10px] text-purple-600 font-semibold block">
-                        Incluye 3% Garantía QA (${servicio.cotizacion.retencion_qa_3pct_usd.toFixed(2)})
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                        {/* Metadatos: Cliente, Duración, Especialista */}
+                        <div className="flex items-center gap-3 text-xs text-slate-500 font-medium mt-1.5 flex-wrap">
+                          <span>
+                            Cliente: <strong className="text-[#0A1525]">{servicio.cliente.nombre}</strong> ({servicio.cliente.telefono})
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {servicio.fecha_cierre} • {servicio.duracion_total_minutos} min en sitio
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Wrench className="w-3 h-3 text-slate-400" />
+                            {servicio.mecanico.nombre}
+                          </span>
+                        </div>
 
-                {/* Grid de 4 Pilares del Servicio: ¿Quién realizó? | ¿Quién aprobó? | Runner | Cotización */}
-                <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-white">
-                  {/* Pilar 1: ¿Quién lo realizó? */}
-                  <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
-                        ¿Quién lo realizó?
-                      </span>
-                      <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.2 rounded-md">
-                        {servicio.mecanico.credencial}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 pt-1">
-                      <div className="w-10 h-10 rounded-xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                        {servicio.mecanico.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-                      </div>
-                      <div className="min-w-0">
-                        <h5 className="text-xs font-bold text-[#0A1525] truncate">
-                          {servicio.mecanico.nombre}
-                        </h5>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {servicio.mecanico.especialidad}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Unidad:</span>
-                        <span className="font-semibold text-slate-700 truncate max-w-[130px]">{servicio.mecanico.unidad}</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-slate-400">Odómetro:</span>
-                        <span className="font-bold text-slate-800">
-                          {servicio.vehiculo.kilometraje_inicial.toLocaleString()} → {servicio.vehiculo.kilometraje_final.toLocaleString()} km
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pilar 2: ¿Quién aprobó el pago? */}
-                  <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                        ¿Quién aprobó?
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded-md">
-                        Conciliado
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 pt-1">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                        {servicio.operadora.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-                      </div>
-                      <div className="min-w-0">
-                        <h5 className="text-xs font-bold text-[#0A1525] truncate">
-                          {servicio.operadora.nombre}
-                        </h5>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          Torre de Despacho
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Método:</span>
-                        <span className="font-bold text-slate-800">{servicio.operadora.metodo_pago}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Referencia:</span>
-                        <span className="font-mono text-[10px] font-bold text-[#1E56B0]">{servicio.operadora.referencia_pago}</span>
-                      </div>
-                      {servicio.operadora.comprobante_url && (
-                        <button
-                          type="button"
-                          onClick={() => setModalFotoUrl({ url: servicio.operadora.comprobante_url!, titulo: 'Comprobante de Pago Validado' })}
-                          className="text-[10px] font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1 pt-0.5 cursor-pointer"
+                        {/* "Al tocar me de la descripción": Ranura interactiva con vista previa e indicación clara */}
+                        <div
+                          className="mt-2.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-100 rounded-xl px-3 py-2 text-xs text-slate-700 flex items-start gap-2 hover:border-blue-300 transition-colors group"
+                          title="Toca para ver la descripción técnica y desplegar el expediente"
                         >
-                          <Eye className="w-3 h-3" />
-                          <span>Ver Capture del Pago</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Pilar 3: Runner de Repuestos */}
-                  <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <Bike className="w-3.5 h-3.5 text-sky-600" />
-                        Logística Runner
-                      </span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
-                        servicio.runner ? 'text-sky-700 bg-sky-100/80' : 'text-slate-500 bg-slate-200'
-                      }`}>
-                        {servicio.runner ? 'Despachado' : 'Sin Runner'}
-                      </span>
-                    </div>
-
-                    {servicio.runner ? (
-                      <>
-                        <div className="flex items-center gap-2.5 pt-1">
-                          <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                            {servicio.runner.nombre[0]}
-                          </div>
-                          <div className="min-w-0">
-                            <h5 className="text-xs font-bold text-[#0A1525] truncate">
-                              Runner: {servicio.runner.nombre}
-                            </h5>
-                            <p className="text-[10px] text-slate-500 truncate">
-                              {servicio.runner.unidad}
+                          <Info className="w-4 h-4 text-[#1E56B0] shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-1 group-hover:line-clamp-none transition-all">
+                              <strong className="text-[#0A1525] font-bold">Trabajo:</strong>{' '}
+                              {servicio.diagnostico_y_trabajo.trabajo_realizado}
+                            </p>
+                            <p className="line-clamp-1 group-hover:line-clamp-none text-slate-500 text-[11px] mt-0.5">
+                              <strong className="text-slate-600 font-semibold">Falla reportada:</strong>{' '}
+                              {servicio.diagnostico_y_trabajo.falla_reportada}
                             </p>
                           </div>
+                          <span className="text-[10px] font-bold text-[#1E56B0] bg-white border border-blue-200 px-2 py-0.5 rounded-md shrink-0 self-center shadow-2xs">
+                            {isExpandido ? 'Colapsar ▲' : 'Tocar para ver ▼'}
+                          </span>
                         </div>
-
-                        <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400">PIN Entrega:</span>
-                            <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                              ✓ {servicio.runner.pin_validacion}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Proveedor:</span>
-                            <span className="font-semibold text-slate-700 truncate max-w-[120px]">{servicio.runner.repuestera}</span>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="py-4 text-center text-slate-400 text-xs">
-                        <p className="font-semibold text-slate-500">Repuestos del Especialista</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Suministrados desde el stock móvil o sin repuestos.</p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Pilar 4: Desglose de Cotización */}
-                  <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <Receipt className="w-3.5 h-3.5 text-amber-600" />
-                        Cotización &amp; Cierre
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleAcordeon(servicio.id)}
-                        className="text-[10px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <span>{isDesgloseOpen ? 'Ocultar' : 'Ver detalle'}</span>
-                        {isDesgloseOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      </button>
                     </div>
 
-                    <div className="text-[11px] space-y-1.5 pt-1 text-slate-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Mano de Obra:</span>
-                        <span className="font-bold text-[#0A1525]">${servicio.cotizacion.mano_de_obra_usd.toFixed(2)}</span>
+                    {/* Bloque Derecho: Total Facturado y Botones de Acción */}
+                    <div
+                      className="flex sm:items-center justify-between xl:justify-end gap-3 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Monto Total */}
+                      <div className="text-left xl:text-right pr-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Total Facturado
+                        </span>
+                        <div className="flex items-baseline xl:justify-end gap-1">
+                          <span className="text-xl font-black text-[#0A1525]">
+                            ${servicio.cotizacion.total_facturado_usd.toFixed(2)}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-500">USD</span>
+                        </div>
+                        <span className="text-[10px] text-purple-600 font-semibold block">
+                          QA Retenido: ${servicio.cotizacion.retencion_qa_3pct_usd.toFixed(2)}
+                        </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Repuestos ({servicio.cotizacion.repuestos.length} ítems):</span>
-                        <span className="font-bold text-[#0A1525]">${servicio.cotizacion.subtotal_repuestos_usd.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-purple-700 font-semibold border-t border-slate-200/60 pt-1">
-                        <span className="text-[10px]">Retención QA (3%):</span>
-                        <span className="font-mono text-[10px]">-${servicio.cotizacion.retencion_qa_3pct_usd.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-emerald-700 font-bold">
-                        <span className="text-[10px]">Neto Liquidado:</span>
-                        <span className="font-mono text-xs">${servicio.cotizacion.pago_neto_mecanico_usd.toFixed(2)}</span>
+
+                      {/* Botones de acción del ítem */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleCopiarRecibo(servicio)}
+                          className="h-8.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-95"
+                          title="Copiar comprobante oficial del servicio"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-slate-500" />
+                          <span className="hidden sm:inline">Recibo</span>
+                        </button>
+
+                        <Link
+                          href={`/historial/${servicio.vehiculo.placa}`}
+                          target="_blank"
+                          className="h-8.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-all shadow-2xs"
+                          title="Ver Pasaporte Técnico Inmutable"
+                        >
+                          <Award className="w-3.5 h-3.5 text-amber-600" />
+                          <span className="hidden sm:inline">Pasaporte</span>
+                          <ArrowUpRight className="w-3 h-3 text-slate-400" />
+                        </Link>
+
+                        {/* Botón "Ver Detalle" (Abre Modal Completo) */}
+                        <button
+                          type="button"
+                          onClick={() => setServicioSeleccionadoModal(servicio)}
+                          className="h-8.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#1E56B0] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 border border-blue-200"
+                          title="Ver expediente en modal flotante"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5 text-[#1E56B0]" />
+                          <span>Ver Detalle</span>
+                        </button>
+
+                        {/* Botón Desplegable Inline */}
+                        <button
+                          type="button"
+                          onClick={() => toggleDesplegar(servicio.id)}
+                          className={`h-8.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                            isExpandido
+                              ? 'bg-[#0A1525] text-[#CCFF00]'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                          }`}
+                          title={isExpandido ? 'Ocultar detalles' : 'Desplegar detalles completos'}
+                        >
+                          {isExpandido ? (
+                            <>
+                              <ChevronUp className="w-4 h-4 text-[#CCFF00]" />
+                              <span>Ocultar</span>
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="w-4 h-4 text-slate-600" />
+                              <span>Desplegar</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Desglose Extendido de Repuestos (Acordeón Opcional) */}
+                {/* EXPEDIENTE DESPLEGADO: 4 Pilares + Desglose + Diagnóstico + Evidencias */}
                 <AnimatePresence>
-                  {isDesgloseOpen && (
+                  {isExpandido && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-100 overflow-hidden"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden border-t border-slate-100 bg-white"
                     >
-                      <h6 className="text-xs font-black text-[#0A1525] uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                        <Receipt className="w-3.5 h-3.5 text-[#1E56B0]" />
-                        <span>Desglose de Repuestos e Insumos Facturados</span>
-                      </h6>
+                      {/* Grid de 4 Pilares del Servicio */}
+                      <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-white">
+                        {/* Pilar 1: ¿Quién lo realizó? */}
+                        <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                              <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
+                              ¿Quién lo realizó?
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.2 rounded-md">
+                              {servicio.mecanico.credencial}
+                            </span>
+                          </div>
 
-                      {servicio.cotizacion.repuestos.length === 0 ? (
-                        <p className="text-xs text-slate-500 italic">No se requirieron repuestos externos para este servicio.</p>
-                      ) : (
-                        <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden bg-white text-xs">
-                          {servicio.cotizacion.repuestos.map((rep, idx) => (
-                            <div key={idx} className="p-3 flex items-center justify-between">
-                              <div>
-                                <span className="font-bold text-[#0A1525]">{rep.cantidad}x {rep.nombre}</span>
-                                <span className="text-slate-400 text-[11px] ml-2">Marca: {rep.marca}</span>
-                                {rep.tienda && <span className="text-slate-400 text-[11px] ml-2">• Tienda: {rep.tienda}</span>}
-                              </div>
-                              <span className="font-mono font-bold text-[#0A1525]">
-                                ${(rep.cantidad * rep.precio_usd).toFixed(2)} USD
+                          <div className="flex items-center gap-2.5 pt-1">
+                            <div className="w-10 h-10 rounded-xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                              {servicio.mecanico.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                            </div>
+                            <div className="min-w-0">
+                              <h5 className="text-xs font-bold text-[#0A1525] truncate">
+                                {servicio.mecanico.nombre}
+                              </h5>
+                              <p className="text-[10px] text-slate-500 truncate">
+                                {servicio.mecanico.especialidad}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">Unidad:</span>
+                              <span className="font-semibold text-slate-700 truncate max-w-[130px]">{servicio.mecanico.unidad}</span>
+                            </div>
+                            <div className="flex items-center justify-between font-mono text-[10px]">
+                              <span className="text-slate-400">Odómetro:</span>
+                              <span className="font-bold text-slate-800">
+                                {servicio.vehiculo.kilometraje_inicial.toLocaleString()} → {servicio.vehiculo.kilometraje_final.toLocaleString()} km
                               </span>
                             </div>
-                          ))}
+                          </div>
                         </div>
-                      )}
+
+                        {/* Pilar 2: ¿Quién aprobó el pago? */}
+                        <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              ¿Quién aprobó?
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded-md">
+                              Conciliado
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2.5 pt-1">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                              {servicio.operadora.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                            </div>
+                            <div className="min-w-0">
+                              <h5 className="text-xs font-bold text-[#0A1525] truncate">
+                                {servicio.operadora.nombre}
+                              </h5>
+                              <p className="text-[10px] text-slate-500 truncate">
+                                Torre de Despacho
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">Método:</span>
+                              <span className="font-bold text-slate-800">{servicio.operadora.metodo_pago}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">Referencia:</span>
+                              <span className="font-mono text-[10px] font-bold text-[#1E56B0]">{servicio.operadora.referencia_pago}</span>
+                            </div>
+                            {servicio.operadora.comprobante_url && (
+                              <button
+                                type="button"
+                                onClick={() => setModalFotoUrl({ url: servicio.operadora.comprobante_url!, titulo: 'Comprobante de Pago Validado' })}
+                                className="text-[10px] font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1 pt-0.5 cursor-pointer"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Ver Capture del Pago</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Pilar 3: Runner de Repuestos */}
+                        <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                              <Bike className="w-3.5 h-3.5 text-sky-600" />
+                              Logística Runner
+                            </span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                              servicio.runner ? 'text-sky-700 bg-sky-100/80' : 'text-slate-500 bg-slate-200'
+                            }`}>
+                              {servicio.runner ? 'Despachado' : 'Sin Runner'}
+                            </span>
+                          </div>
+
+                          {servicio.runner ? (
+                            <>
+                              <div className="flex items-center gap-2.5 pt-1">
+                                <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                                  {servicio.runner.nombre[0]}
+                                </div>
+                                <div className="min-w-0">
+                                  <h5 className="text-xs font-bold text-[#0A1525] truncate">
+                                    Runner: {servicio.runner.nombre}
+                                  </h5>
+                                  <p className="text-[10px] text-slate-500 truncate">
+                                    {servicio.runner.unidad}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400">PIN Entrega:</span>
+                                  <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                    ✓ {servicio.runner.pin_validacion}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400">Proveedor:</span>
+                                  <span className="font-semibold text-slate-700 truncate max-w-[120px]">{servicio.runner.repuestera}</span>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="py-4 text-center text-slate-400 text-xs">
+                              <p className="font-semibold text-slate-500">Repuestos del Especialista</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Suministrados desde el stock móvil o sin repuestos.</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Pilar 4: Desglose de Cotización */}
+                        <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                              <Receipt className="w-3.5 h-3.5 text-amber-600" />
+                              Cotización &amp; Cierre
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleAcordeon(servicio.id)}
+                              className="text-[10px] font-bold text-[#1E56B0] hover:underline flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <span>{isDesgloseOpen ? 'Ocultar' : 'Ver detalle'}</span>
+                              {isDesgloseOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </button>
+                          </div>
+
+                          <div className="text-[11px] space-y-1.5 pt-1 text-slate-700">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">Mano de Obra:</span>
+                              <span className="font-bold text-[#0A1525]">${servicio.cotizacion.mano_de_obra_usd.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">Repuestos ({servicio.cotizacion.repuestos.length} ítems):</span>
+                              <span className="font-bold text-[#0A1525]">${servicio.cotizacion.subtotal_repuestos_usd.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-purple-700 font-semibold border-t border-slate-200/60 pt-1">
+                              <span className="text-[10px]">Retención QA (3%):</span>
+                              <span className="font-mono text-[10px]">-${servicio.cotizacion.retencion_qa_3pct_usd.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-emerald-700 font-bold">
+                              <span className="text-[10px]">Neto Liquidado:</span>
+                              <span className="font-mono text-xs">${servicio.cotizacion.pago_neto_mecanico_usd.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desglose Extendido de Repuestos (Acordeón Opcional) */}
+                      <AnimatePresence>
+                        {isDesgloseOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-100 overflow-hidden"
+                          >
+                            <h6 className="text-xs font-black text-[#0A1525] uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                              <Receipt className="w-3.5 h-3.5 text-[#1E56B0]" />
+                              <span>Desglose de Repuestos e Insumos Facturados</span>
+                            </h6>
+
+                            {servicio.cotizacion.repuestos.length === 0 ? (
+                              <p className="text-xs text-slate-500 italic">No se requirieron repuestos externos para este servicio.</p>
+                            ) : (
+                              <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden bg-white text-xs">
+                                {servicio.cotizacion.repuestos.map((rep, idx) => (
+                                  <div key={idx} className="p-3 flex items-center justify-between">
+                                    <div>
+                                      <span className="font-bold text-[#0A1525]">{rep.cantidad}x {rep.nombre}</span>
+                                      <span className="text-slate-400 text-[11px] ml-2">Marca: {rep.marca}</span>
+                                      {rep.tienda && <span className="text-slate-400 text-[11px] ml-2">• Tienda: {rep.tienda}</span>}
+                                    </div>
+                                    <span className="font-mono font-bold text-[#0A1525]">
+                                      ${(rep.cantidad * rep.precio_usd).toFixed(2)} USD
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Todo lo que se hizo: Diagnóstico, Checklist 25 Puntos y Evidencias Fotográficas */}
+                      <div className="p-5 sm:p-6 border-t border-slate-100 bg-slate-50/40">
+                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+                          {/* Trabajo Realizado y Falla */}
+                          <div className="flex-1 space-y-2">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                Falla Reportada Original
+                              </span>
+                              <p className="text-xs text-slate-700 font-medium mt-0.5">
+                                {servicio.diagnostico_y_trabajo.falla_reportada}
+                              </p>
+                            </div>
+
+                            <div className="pt-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                Trabajo Certificado Realizado
+                              </span>
+                              <p className="text-xs text-[#0A1525] font-semibold mt-0.5">
+                                {servicio.diagnostico_y_trabajo.trabajo_realizado}
+                              </p>
+                            </div>
+
+                            {/* Checklist 25 Puntos Integrado */}
+                            {servicio.diagnostico_y_trabajo.checklist_json && (
+                              <div className="pt-2">
+                                <HistorialChecklistButton
+                                  tipoServicio={servicio.diagnostico_y_trabajo.trabajo_realizado}
+                                  fecha={servicio.fecha_cierre}
+                                  kilometraje={servicio.vehiculo.kilometraje_final}
+                                  checklistJson={servicio.diagnostico_y_trabajo.checklist_json}
+                                  placa={servicio.vehiculo.placa}
+                                  modelo={`${servicio.vehiculo.marca} ${servicio.vehiculo.modelo}`}
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Galería de Evidencias Fotográficas Certificadas */}
+                          <div className="lg:w-80 space-y-2 shrink-0">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                              Evidencias Certificadas en Sitio
+                            </span>
+                            <div className="grid grid-cols-3 gap-2">
+                              {/* 1. Odómetro Final */}
+                              {servicio.diagnostico_y_trabajo.foto_odometro_url ? (
+                                <div
+                                  onClick={() =>
+                                    setModalFotoUrl({
+                                      url: servicio.diagnostico_y_trabajo.foto_odometro_url!,
+                                      titulo: `Odómetro Final Certificado (${servicio.vehiculo.kilometraje_final.toLocaleString()} km)`
+                                    })
+                                  }
+                                  className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all shadow-2xs"
+                                >
+                                  <img
+                                    src={servicio.diagnostico_y_trabajo.foto_odometro_url}
+                                    alt="Odómetro"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                  />
+                                  <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-0.5 px-1 text-[9px] text-[#CCFF00] font-black text-center truncate">
+                                    Odómetro
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="rounded-xl border border-dashed border-slate-200 aspect-square flex flex-col items-center justify-center text-slate-300 text-[9px] text-center p-1">
+                                  <ImageIcon className="w-4 h-4 mb-0.5" />
+                                  <span>Odómetro</span>
+                                </div>
+                              )}
+
+                              {/* 2. Repuesto Viejo */}
+                              {servicio.diagnostico_y_trabajo.foto_repuesto_viejo_url ? (
+                                <div
+                                  onClick={() =>
+                                    setModalFotoUrl({
+                                      url: servicio.diagnostico_y_trabajo.foto_repuesto_viejo_url!,
+                                      titulo: 'Repuesto Dañado / Sustituido'
+                                    })
+                                  }
+                                  className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all shadow-2xs"
+                                >
+                                  <img
+                                    src={servicio.diagnostico_y_trabajo.foto_repuesto_viejo_url}
+                                    alt="Repuesto Viejo"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                  />
+                                  <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-0.5 px-1 text-[9px] text-rose-400 font-bold text-center truncate">
+                                    Pieza Vieja
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="rounded-xl border border-dashed border-slate-200 aspect-square flex flex-col items-center justify-center text-slate-300 text-[9px] text-center p-1">
+                                  <ImageIcon className="w-4 h-4 mb-0.5" />
+                                  <span>Pieza Vieja</span>
+                                </div>
+                              )}
+
+                              {/* 3. Repuesto Nuevo */}
+                              {servicio.diagnostico_y_trabajo.foto_repuesto_nuevo_url ? (
+                                <div
+                                  onClick={() =>
+                                    setModalFotoUrl({
+                                      url: servicio.diagnostico_y_trabajo.foto_repuesto_nuevo_url!,
+                                      titulo: 'Repuesto Nuevo Instalado en Sitio'
+                                    })
+                                  }
+                                  className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all shadow-2xs"
+                                >
+                                  <img
+                                    src={servicio.diagnostico_y_trabajo.foto_repuesto_nuevo_url}
+                                    alt="Repuesto Nuevo"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                  />
+                                  <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-0.5 px-1 text-[9px] text-emerald-400 font-bold text-center truncate">
+                                    Pieza Nueva
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="rounded-xl border border-dashed border-slate-200 aspect-square flex flex-col items-center justify-center text-slate-300 text-[9px] text-center p-1">
+                                  <ImageIcon className="w-4 h-4 mb-0.5" />
+                                  <span>Pieza Nueva</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                {/* Todo lo que se hizo: Diagnóstico, Checklist 25 Puntos y Evidencias Fotográficas */}
-                <div className="p-5 sm:p-6 border-t border-slate-100 bg-slate-50/40">
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
-                    {/* Trabajo Realizado y Falla */}
-                    <div className="flex-1 space-y-2">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Falla Reportada Original
-                        </span>
-                        <p className="text-xs text-slate-700 font-medium mt-0.5">
-                          {servicio.diagnostico_y_trabajo.falla_reportada}
-                        </p>
-                      </div>
-
-                      <div className="pt-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Trabajo Certificado Realizado
-                        </span>
-                        <p className="text-xs text-[#0A1525] font-semibold mt-0.5">
-                          {servicio.diagnostico_y_trabajo.trabajo_realizado}
-                        </p>
-                      </div>
-
-                      {/* Checklist 25 Puntos Integrado */}
-                      {servicio.diagnostico_y_trabajo.checklist_json && (
-                        <div className="pt-2">
-                          <HistorialChecklistButton
-                            tipoServicio={servicio.diagnostico_y_trabajo.trabajo_realizado}
-                            fecha={servicio.fecha_cierre}
-                            kilometraje={servicio.vehiculo.kilometraje_final}
-                            checklistJson={servicio.diagnostico_y_trabajo.checklist_json}
-                            placa={servicio.vehiculo.placa}
-                            modelo={`${servicio.vehiculo.marca} ${servicio.vehiculo.modelo}`}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Galería de Evidencias Fotográficas Certificadas */}
-                    <div className="lg:w-80 space-y-2 shrink-0">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Evidencias Certificadas en Sitio
-                      </span>
-                      <div className="grid grid-cols-3 gap-2">
-                        {/* 1. Odómetro Final */}
-                        {servicio.diagnostico_y_trabajo.foto_odometro_url ? (
-                          <div
-                            onClick={() =>
-                              setModalFotoUrl({
-                                url: servicio.diagnostico_y_trabajo.foto_odometro_url!,
-                                titulo: `Odómetro Final Certificado (${servicio.vehiculo.kilometraje_final.toLocaleString()} km)`
-                              })
-                            }
-                            className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all shadow-2xs"
-                          >
-                            <img
-                              src={servicio.diagnostico_y_trabajo.foto_odometro_url}
-                              alt="Odómetro"
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                            />
-                            <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-0.5 px-1 text-[9px] text-[#CCFF00] font-black text-center truncate">
-                              Odómetro
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 aspect-square flex flex-col items-center justify-center text-slate-300 text-[9px] text-center p-1">
-                            <ImageIcon className="w-4 h-4 mb-0.5" />
-                            <span>Odómetro</span>
-                          </div>
-                        )}
-
-                        {/* 2. Repuesto Viejo */}
-                        {servicio.diagnostico_y_trabajo.foto_repuesto_viejo_url ? (
-                          <div
-                            onClick={() =>
-                              setModalFotoUrl({
-                                url: servicio.diagnostico_y_trabajo.foto_repuesto_viejo_url!,
-                                titulo: 'Repuesto Dañado / Sustituido'
-                              })
-                            }
-                            className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all shadow-2xs"
-                          >
-                            <img
-                              src={servicio.diagnostico_y_trabajo.foto_repuesto_viejo_url}
-                              alt="Repuesto Viejo"
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                            />
-                            <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-0.5 px-1 text-[9px] text-rose-400 font-bold text-center truncate">
-                              Pieza Vieja
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 aspect-square flex flex-col items-center justify-center text-slate-300 text-[9px] text-center p-1">
-                            <ImageIcon className="w-4 h-4 mb-0.5" />
-                            <span>Pieza Vieja</span>
-                          </div>
-                        )}
-
-                        {/* 3. Repuesto Nuevo */}
-                        {servicio.diagnostico_y_trabajo.foto_repuesto_nuevo_url ? (
-                          <div
-                            onClick={() =>
-                              setModalFotoUrl({
-                                url: servicio.diagnostico_y_trabajo.foto_repuesto_nuevo_url!,
-                                titulo: 'Repuesto Nuevo Instalado en Sitio'
-                              })
-                            }
-                            className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all shadow-2xs"
-                          >
-                            <img
-                              src={servicio.diagnostico_y_trabajo.foto_repuesto_nuevo_url}
-                              alt="Repuesto Nuevo"
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                            />
-                            <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-0.5 px-1 text-[9px] text-emerald-400 font-bold text-center truncate">
-                              Pieza Nueva
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 aspect-square flex flex-col items-center justify-center text-slate-300 text-[9px] text-center p-1">
-                            <ImageIcon className="w-4 h-4 mb-0.5" />
-                            <span>Pieza Nueva</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </motion.div>
             );
           })}
         </div>
       )}
+
+      {/* Modal de Detalle Completo del Expediente */}
+      <AnimatePresence>
+        {servicioSeleccionadoModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-6 max-w-4xl w-full border border-slate-200 shadow-2xl relative my-8 max-h-[90vh] flex flex-col"
+            >
+              {/* Header Modal */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center font-black shrink-0">
+                    <Car className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-black bg-[#0A1525] text-[#CCFF00] px-2 py-0.5 rounded-md">
+                        {servicioSeleccionadoModal.codigo_servicio}
+                      </span>
+                      <span className="font-mono text-xs font-black bg-slate-100 text-slate-800 border border-slate-300 px-2 py-0.5 rounded-md">
+                        {servicioSeleccionadoModal.vehiculo.placa}
+                      </span>
+                      <h3 className="text-base font-black text-[#0A1525]">
+                        {servicioSeleccionadoModal.vehiculo.marca} {servicioSeleccionadoModal.vehiculo.modelo} ({servicioSeleccionadoModal.vehiculo.anio})
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      Cliente: <strong className="text-[#0A1525]">{servicioSeleccionadoModal.cliente.nombre}</strong> • Tel: {servicioSeleccionadoModal.cliente.telefono}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopiarRecibo(servicioSeleccionadoModal)}
+                    className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copiar Recibo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setServicioSeleccionadoModal(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body Modal (Scrollable) */}
+              <div className="py-4 space-y-5 overflow-y-auto pr-1 flex-1">
+                {/* 4 Pilares */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Pilar 1: Mecánico */}
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
+                      Especialista
+                    </span>
+                    <h5 className="text-xs font-bold text-[#0A1525]">
+                      {servicioSeleccionadoModal.mecanico.nombre}
+                    </h5>
+                    <p className="text-[10px] text-slate-500">
+                      {servicioSeleccionadoModal.mecanico.especialidad}
+                    </p>
+                    <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600">
+                      <p>Unidad: {servicioSeleccionadoModal.mecanico.unidad}</p>
+                      <p className="font-mono text-[10px] mt-0.5">
+                        {servicioSeleccionadoModal.vehiculo.kilometraje_inicial.toLocaleString()} → {servicioSeleccionadoModal.vehiculo.kilometraje_final.toLocaleString()} km
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pilar 2: Operadora */}
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      Aprobó Pago
+                    </span>
+                    <h5 className="text-xs font-bold text-[#0A1525]">
+                      {servicioSeleccionadoModal.operadora.nombre}
+                    </h5>
+                    <p className="text-[10px] text-emerald-700 font-semibold">
+                      Conciliado ({servicioSeleccionadoModal.operadora.metodo_pago})
+                    </p>
+                    <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600">
+                      <p className="font-mono text-[10px]">Ref: {servicioSeleccionadoModal.operadora.referencia_pago}</p>
+                    </div>
+                  </div>
+
+                  {/* Pilar 3: Runner */}
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <Bike className="w-3.5 h-3.5 text-sky-600" />
+                      Runner
+                    </span>
+                    {servicioSeleccionadoModal.runner ? (
+                      <>
+                        <h5 className="text-xs font-bold text-[#0A1525]">
+                          {servicioSeleccionadoModal.runner.nombre}
+                        </h5>
+                        <p className="text-[10px] text-slate-500">
+                          {servicioSeleccionadoModal.runner.repuestera}
+                        </p>
+                        <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600">
+                          <p className="font-mono text-[10px] text-emerald-700 font-bold">PIN: ✓ {servicioSeleccionadoModal.runner.pin_validacion}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-slate-500 pt-1">Stock móvil / Sin Runner</p>
+                    )}
+                  </div>
+
+                  {/* Pilar 4: Cotización */}
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/60 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <Receipt className="w-3.5 h-3.5 text-amber-600" />
+                      Cierre Financiero
+                    </span>
+                    <div className="text-lg font-black text-[#0A1525]">
+                      ${servicioSeleccionadoModal.cotizacion.total_facturado_usd.toFixed(2)} USD
+                    </div>
+                    <div className="text-[11px] text-slate-600 space-y-0.5 pt-1 border-t border-slate-200/60">
+                      <p>Mano de obra: ${servicioSeleccionadoModal.cotizacion.mano_de_obra_usd.toFixed(2)}</p>
+                      <p>Repuestos: ${servicioSeleccionadoModal.cotizacion.subtotal_repuestos_usd.toFixed(2)}</p>
+                      <p className="text-emerald-700 font-bold">Neto Mecánico: ${servicioSeleccionadoModal.cotizacion.pago_neto_mecanico_usd.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Diagnóstico y Trabajo Certificado */}
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/60 space-y-3">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Falla Reportada
+                    </span>
+                    <p className="text-xs text-slate-700 font-medium mt-0.5">
+                      {servicioSeleccionadoModal.diagnostico_y_trabajo.falla_reportada}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Trabajo Certificado Realizado
+                    </span>
+                    <p className="text-xs text-[#0A1525] font-semibold mt-0.5">
+                      {servicioSeleccionadoModal.diagnostico_y_trabajo.trabajo_realizado}
+                    </p>
+                  </div>
+
+                  {servicioSeleccionadoModal.diagnostico_y_trabajo.checklist_json && (
+                    <div className="pt-2">
+                      <HistorialChecklistButton
+                        tipoServicio={servicioSeleccionadoModal.diagnostico_y_trabajo.trabajo_realizado}
+                        fecha={servicioSeleccionadoModal.fecha_cierre}
+                        kilometraje={servicioSeleccionadoModal.vehiculo.kilometraje_final}
+                        checklistJson={servicioSeleccionadoModal.diagnostico_y_trabajo.checklist_json}
+                        placa={servicioSeleccionadoModal.vehiculo.placa}
+                        modelo={`${servicioSeleccionadoModal.vehiculo.marca} ${servicioSeleccionadoModal.vehiculo.modelo}`}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Evidencias Fotográficas */}
+                <div>
+                  <span className="text-xs font-bold text-[#0A1525] uppercase tracking-wider block mb-2">
+                    Evidencias Fotográficas Certificadas
+                  </span>
+                  <div className="grid grid-cols-3 gap-3">
+                    {servicioSeleccionadoModal.diagnostico_y_trabajo.foto_odometro_url && (
+                      <div
+                        onClick={() =>
+                          setModalFotoUrl({
+                            url: servicioSeleccionadoModal.diagnostico_y_trabajo.foto_odometro_url!,
+                            titulo: 'Odómetro Final Certificado'
+                          })
+                        }
+                        className="rounded-2xl overflow-hidden border border-slate-200 aspect-video bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all relative group"
+                      >
+                        <img
+                          src={servicioSeleccionadoModal.diagnostico_y_trabajo.foto_odometro_url}
+                          alt="Odómetro"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-1 px-2 text-[10px] text-[#CCFF00] font-bold text-center">
+                          Odómetro Final
+                        </div>
+                      </div>
+                    )}
+
+                    {servicioSeleccionadoModal.diagnostico_y_trabajo.foto_repuesto_viejo_url && (
+                      <div
+                        onClick={() =>
+                          setModalFotoUrl({
+                            url: servicioSeleccionadoModal.diagnostico_y_trabajo.foto_repuesto_viejo_url!,
+                            titulo: 'Repuesto Dañado / Sustituido'
+                          })
+                        }
+                        className="rounded-2xl overflow-hidden border border-slate-200 aspect-video bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all relative group"
+                      >
+                        <img
+                          src={servicioSeleccionadoModal.diagnostico_y_trabajo.foto_repuesto_viejo_url}
+                          alt="Pieza Vieja"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-1 px-2 text-[10px] text-rose-400 font-bold text-center">
+                          Pieza Vieja Sustituida
+                        </div>
+                      </div>
+                    )}
+
+                    {servicioSeleccionadoModal.diagnostico_y_trabajo.foto_repuesto_nuevo_url && (
+                      <div
+                        onClick={() =>
+                          setModalFotoUrl({
+                            url: servicioSeleccionadoModal.diagnostico_y_trabajo.foto_repuesto_nuevo_url!,
+                            titulo: 'Repuesto Nuevo Instalado'
+                          })
+                        }
+                        className="rounded-2xl overflow-hidden border border-slate-200 aspect-video bg-slate-100 cursor-pointer hover:border-[#1E56B0] transition-all relative group"
+                      >
+                        <img
+                          src={servicioSeleccionadoModal.diagnostico_y_trabajo.foto_repuesto_nuevo_url}
+                          alt="Pieza Nueva"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-[#0A1525]/80 py-1 px-2 text-[10px] text-emerald-400 font-bold text-center">
+                          Pieza Nueva Instalada
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Modal */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between shrink-0">
+                <Link
+                  href={`/historial/${servicioSeleccionadoModal.vehiculo.placa}`}
+                  target="_blank"
+                  className="h-10 px-4 rounded-xl bg-[#0A1525] hover:bg-slate-800 text-[#CCFF00] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+                >
+                  <Award className="w-4 h-4 text-[#CCFF00]" />
+                  <span>Pasaporte Técnico Inmutable</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-70" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setServicioSeleccionadoModal(null)}
+                  className="h-10 px-5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Modal de Zoom de Fotografías / Evidencias / Comprobante */}
       <AnimatePresence>

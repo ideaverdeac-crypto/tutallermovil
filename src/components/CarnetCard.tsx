@@ -27,8 +27,8 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
   const idOficial = codigoLimpio.startsWith('#')
     ? codigoLimpio
     : codigoLimpio.startsWith('TTM-')
-    ? `#${codigoLimpio}`
-    : `#TTM-${codigoLimpio}`;
+      ? `#${codigoLimpio}`
+      : `#TTM-${codigoLimpio}`;
 
   const qrUrl = `https://tutallermovil.vercel.app/carnet/${encodeURIComponent(codigo)}`;
 
@@ -52,7 +52,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
   return (
     // 1. Fondo de la página: Gris muy claro (#F8FAFC) modo claro puro
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col justify-center items-center p-4 sm:p-6 py-8 sm:py-12 selection:bg-[#CCFF00] selection:text-[#0A1525]">
-      
+
       {/* Botones Superiores de Navegación */}
       <div className="w-full max-w-md flex items-center justify-between mb-4 px-1">
         <Link
@@ -109,7 +109,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
 
         {/* Cuerpo de la Tarjeta en Fondo Blanco */}
         <div className="px-6 pb-6 pt-1 space-y-5 bg-white relative z-10 -mt-6">
-          
+
           {/* 3. Identidad (Texto Oscuro) */}
           <div className="space-y-1">
             <div className="flex items-center gap-2">
