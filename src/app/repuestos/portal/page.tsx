@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
+import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
 
 interface Repuesto {
   id: string;
@@ -463,6 +464,12 @@ export default function PortalRepuestosPage() {
 
           {/* Acciones del Header */}
           <div className="flex items-center gap-2.5 self-end sm:self-auto">
+            <BotonSoporteWhatsApp
+              modo="header"
+              mensaje="Hola, soy proveedor de repuestos de TuTallerMóvil y necesito asistencia"
+              className="hidden md:inline-flex"
+            />
+
             <Link
               href="/repuestos/pedidos"
               className="h-10 px-3.5 rounded-xl border border-[#1E56B0]/20 bg-[#1E56B0]/10 hover:bg-[#1E56B0]/15 text-xs font-bold text-[#1E56B0] flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -1231,6 +1238,12 @@ export default function PortalRepuestosPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Botón Flotante Soporte WhatsApp */}
+      <BotonSoporteWhatsApp
+        modo="fab"
+        mensaje="Hola, soy proveedor de repuestos de TuTallerMóvil y necesito asistencia"
+      />
 
       {/* Onboarding Modal de Bienvenida para Portal de Repuestos */}
       <OnboardingModal

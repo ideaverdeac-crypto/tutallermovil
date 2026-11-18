@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import { SolicitarExpedienteModal } from '@/components/SolicitarExpedienteModal';
+import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
 
 interface VehiculoGaraje {
   id: string;
@@ -387,6 +388,12 @@ export default function ClienteDashboardPage() {
 
           {/* Acciones de Cabecera */}
           <div className="flex items-center gap-3">
+            <BotonSoporteWhatsApp 
+              modo="header" 
+              mensaje="Hola, necesito ayuda con mi garaje o servicio en TuTallerMóvil"
+              className="hidden sm:inline-flex"
+            />
+
             <button
               type="button"
               onClick={() => setModalSolicitarOpen(true)}
@@ -996,6 +1003,12 @@ export default function ClienteDashboardPage() {
           }}
         />
       )}
+
+      {/* Botón Flotante Soporte WhatsApp */}
+      <BotonSoporteWhatsApp 
+        modo="fab"
+        mensaje="Hola, necesito ayuda con mi garaje o servicio en TuTallerMóvil"
+      />
 
     </div>
   );

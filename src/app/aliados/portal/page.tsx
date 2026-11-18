@@ -10,6 +10,7 @@ import {
   notificarNuevoServicio,
   reproducirSonidoNuevoServicio
 } from '@/lib/notificaciones';
+import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
 import {
   Star,
   Wrench,
@@ -690,6 +691,11 @@ export default function PortalAliadosPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <BotonSoporteWhatsApp
+              modo="header"
+              mensaje="Hola, soy mecánico aliado de TuTallerMóvil y necesito soporte de la Torre de Despacho"
+              className="hidden sm:inline-flex"
+            />
             <button
               type="button"
               onClick={() => cargarOrdenes(true)}
@@ -1826,6 +1832,12 @@ export default function PortalAliadosPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Botón Flotante Soporte WhatsApp */}
+      <BotonSoporteWhatsApp
+        modo="fab"
+        mensaje="Hola, soy mecánico aliado de TuTallerMóvil y necesito soporte de la Torre de Despacho"
+      />
 
     </div>
   );

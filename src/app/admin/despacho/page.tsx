@@ -55,11 +55,13 @@ import {
   Layers,
   PackageCheck,
   MessageCircle,
+  MessageSquare,
   Receipt,
   Lock,
   Truck,
   Building2
 } from 'lucide-react';
+import BandejaWhatsAppSheet from '@/components/BandejaWhatsAppSheet';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -556,6 +558,8 @@ export default function TableroDespachoPage() {
 
   // Estados de Modales y Paneles Tácticos
   const [modalCotizadorOpen, setModalCotizadorOpen] = useState(false);
+  const [modalWhatsAppOpen, setModalWhatsAppOpen] = useState(false);
+  const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
   const [modalCrearServicioManualOpen, setModalCrearServicioManualOpen] = useState(false);
   const [modalOperadorasOpen, setModalOperadorasOpen] = useState(false);
   const [modalAsignarOpen, setModalAsignarOpen] = useState(false);
@@ -1947,6 +1951,24 @@ export default function TableroDespachoPage() {
                 </Link>
               </>
             )}
+
+            {/* Botón Bandeja WhatsApp Central */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setModalWhatsAppOpen(true)}
+              className="relative h-10 px-3.5 sm:px-4 text-xs font-black bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border border-emerald-600/30"
+              title="Bandeja de Entrada de WhatsApp Central"
+            >
+              <MessageSquare className="w-4 h-4 text-white" />
+              <span>Mensajes</span>
+              {unreadWhatsAppCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs">
+                  {unreadWhatsAppCount}
+                </span>
+              )}
+            </motion.button>
 
             {/* Botón Nuevo Servicio Manual (Llamada Telefónica) */}
             <motion.button
@@ -4307,6 +4329,13 @@ export default function TableroDespachoPage() {
           setTimeout(() => setToastPagoExitoso(null), 4000);
         }}
         operadora={miOperadora}
+      />
+
+      {/* Bandeja de Entrada de WhatsApp Web UX 2027 */}
+      <BandejaWhatsAppSheet
+        isOpen={modalWhatsAppOpen}
+        onClose={() => setModalWhatsAppOpen(false)}
+        onUnreadCountChange={setUnreadWhatsAppCount}
       />
 
     </div>

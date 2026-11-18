@@ -26,6 +26,7 @@ import {
   Zap
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
+import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
 
 const heroContainerVariants = {
   hidden: { opacity: 0 },
@@ -128,6 +129,9 @@ export default function Home() {
 
           {/* Acceso Clientes ('Ingresar' o 'Mi Garaje') y Staff / Aliados */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Botón Soporte WhatsApp en Header */}
+            <BotonSoporteWhatsApp modo="header" className="hidden md:inline-flex" />
+
             {/* Si NO hay sesión: Botón Secundario 'Ingresar' */}
             {!session ? (
               <Link
@@ -716,6 +720,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Botón Flotante (FAB) Soporte WhatsApp */}
+      <BotonSoporteWhatsApp modo="fab" />
 
       {/* Modal Dialog de Solicitud de Mecánico */}
       <SolicitarMecanicoModal
