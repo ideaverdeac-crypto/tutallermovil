@@ -167,6 +167,7 @@ export interface OperadoraPresencia {
   email: string;
   iniciales: string;
   avatarColor: string;
+  fotoUrl?: string;
   onlineAt: string;
 }
 
@@ -578,11 +579,13 @@ export default function TableroDespachoPage() {
     email: string;
     iniciales: string;
     avatarColor: string;
+    fotoUrl?: string;
   }>({
     nombre: 'Ana Pérez',
     email: 'ana.despacho@tutallermovil.com',
     iniciales: 'AP',
-    avatarColor: 'bg-indigo-600'
+    avatarColor: 'bg-indigo-600',
+    fotoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'
   });
 
   const [esDuenio, setEsDuenio] = useState<boolean>(false);
@@ -594,14 +597,7 @@ export default function TableroDespachoPage() {
       email: 'ana.despacho@tutallermovil.com',
       iniciales: 'AP',
       avatarColor: 'bg-indigo-600',
-      onlineAt: '2026-11-17T12:00:00.000Z'
-    },
-    {
-      id: 'carlos.despacho@tutallermovil.com',
-      nombre: 'Carlos Martínez',
-      email: 'carlos.despacho@tutallermovil.com',
-      iniciales: 'CM',
-      avatarColor: 'bg-[#1E56B0]',
+      fotoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
       onlineAt: '2026-11-17T12:00:00.000Z'
     }
   ]);
@@ -1104,13 +1100,19 @@ export default function TableroDespachoPage() {
         const email = decodeURIComponent(match[2]).toLowerCase();
         let nombre = email.split('@')[0].replace(/[._-]/g, ' ');
         nombre = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+        let fotoUrl = email.includes('carlos')
+          ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
+          : 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80';
 
         try {
           const raw = localStorage.getItem('ttm_operadoras_credenciales');
           if (raw) {
             const ops = JSON.parse(raw);
             const found = ops.find((o: any) => o.email.toLowerCase() === email);
-            if (found) nombre = found.nombre;
+            if (found) {
+              nombre = found.nombre;
+              if (found.fotoUrl) fotoUrl = found.fotoUrl;
+            }
           }
         } catch (e) { }
 
@@ -1119,7 +1121,7 @@ export default function TableroDespachoPage() {
         const colors = ['bg-indigo-600', 'bg-blue-600', 'bg-purple-600', 'bg-emerald-600', 'bg-amber-600'];
         const avatarColor = colors[Math.abs(email.length) % colors.length];
 
-        setMiOperadora({ nombre, email, iniciales, avatarColor });
+        setMiOperadora({ nombre, email, iniciales, avatarColor, fotoUrl });
       }
 
       const estaRegistrado = typeof document !== 'undefined' && Boolean(
@@ -1200,12 +1202,16 @@ export default function TableroDespachoPage() {
           const presencias = state[key] as any[];
           if (presencias && presencias.length > 0) {
             const p = presencias[0];
+            const fallbackFoto = (p.email || key).toLowerCase().includes('carlos')
+              ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
+              : 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80';
             online.push({
               id: key,
               nombre: p.nombre || key,
               email: p.email || key,
               iniciales: p.iniciales || 'OP',
               avatarColor: p.avatarColor || 'bg-indigo-600',
+              fotoUrl: p.fotoUrl || fallbackFoto,
               onlineAt: p.onlineAt || new Date().toISOString()
             });
           }
@@ -1256,6 +1262,7 @@ export default function TableroDespachoPage() {
             email: miOperadora.email,
             iniciales: miOperadora.iniciales,
             avatarColor: miOperadora.avatarColor,
+            fotoUrl: miOperadora.fotoUrl,
             onlineAt: new Date().toISOString()
           });
         }
@@ -2073,19 +2080,30 @@ export default function TableroDespachoPage() {
               </Tooltip>
             </div>
 
-            {/* Barra de Operadoras Conectadas (Figma / Notion Style) */}
-            <div className="hidden lg:flex items-center -space-x-2 mr-1">
-              {operadorasConectadas.map((op, idx) => (
-                <div
-                  key={op.email || idx}
-                  className={`relative w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-black shadow-xs ${op.avatarColor || 'bg-blue-600'
-                    }`}
-                  title={`${op.nombre} (${op.email}) • En línea`}
-                >
-                  <span>{op.iniciales || 'OP'}</span>
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-                </div>
-              ))}
+            {/* Barra de Operadoras Conectadas (Figma / Notion Style con Foto Oficial) */}
+            <div className="flex items-center -space-x-2 mr-1">
+              {operadorasConectadas.map((op, idx) => {
+                const fotoParaMostrar =
+                  op.fotoUrl ||
+                  (op.email?.toLowerCase().includes('carlos')
+                    ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
+                    : 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80');
+
+                return (
+                  <div
+                    key={op.email || idx}
+                    className="relative w-8.5 h-8.5 rounded-full border-2 border-white shadow-xs overflow-visible bg-slate-200 flex items-center justify-center shrink-0 cursor-pointer"
+                    title={`${op.nombre} (${op.email}) • Operadora en línea`}
+                  >
+                    <img
+                      src={fotoParaMostrar}
+                      alt={op.nombre}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                  </div>
+                );
+              })}
               <div className="pl-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">
                 {operadorasConectadas.length}{' '}
                 {operadorasConectadas.length === 1 ? 'operadora' : 'operadoras'}
