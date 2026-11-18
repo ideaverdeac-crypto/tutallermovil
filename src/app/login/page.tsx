@@ -231,19 +231,7 @@ function LoginForm() {
           if (perfil.codigo_aliado) codigoParaCookie = perfil.codigo_aliado;
         } else if (authData?.user?.user_metadata?.rol) {
           rolDeducido = authData.user.user_metadata.rol;
-          codigoParaCookie = authData.user.user_metadata.codigo_aliado || '#TTM-0842';
-        } else {
-          // Deducción por convención si es cuenta demo o sin perfil en tabla
-          if (emailFinal.includes('runner') || emailFinal.includes('diego') || emailFinal.includes('luis')) {
-            rolDeducido = 'RUNNER';
-            codigoParaCookie = '#RUN-101';
-          } else if (emailFinal.includes('repuesto') || emailFinal.includes('autopartes') || emailFinal.includes('tienda')) {
-            rolDeducido = 'REPUESTOS';
-            codigoParaCookie = '#REP-505';
-          } else {
-            rolDeducido = 'MECANICO';
-            codigoParaCookie = '#TTM-0842';
-          }
+          codigoParaCookie = authData.user.user_metadata.codigo_aliado || '';
         }
 
         if (authError && !authData?.user) {
@@ -289,23 +277,11 @@ function LoginForm() {
             console.warn('[LOGIN CÓDIGO] Aviso signInWithPassword:', signInError.message);
           }
         } else {
-          // 2.3 Fallbacks para códigos preconfigurados del ecosistema de prueba
-          if (codigoBuscado === '#TTM-0842' || codigoBuscado.startsWith('#TTM-')) {
-            rolDeducido = 'MECANICO';
-            emailFinal = 'carlos.mendoza@tutallermovil.com';
-          } else if (codigoBuscado === '#RUN-101' || codigoBuscado.startsWith('#RUN-')) {
-            rolDeducido = 'RUNNER';
-            emailFinal = 'luis.perez@tutallermovil.com';
-          } else if (codigoBuscado === '#REP-505' || codigoBuscado.startsWith('#REP-')) {
-            rolDeducido = 'REPUESTOS';
-            emailFinal = 'ventas@autoparteschacao.com';
-          } else {
-            setErrorMensaje(
-              `No encontramos ningún aliado registrado con el código "${codigoBuscado}". Verifica tu código o inicia sesión con tu correo.`
-            );
-            setCargando(false);
-            return;
-          }
+          setErrorMensaje(
+            `No encontramos ningún aliado registrado con el código "${codigoBuscado}". Verifica tu código o inicia sesión con tu correo.`
+          );
+          setCargando(false);
+          return;
         }
       }
 
@@ -571,7 +547,7 @@ function LoginForm() {
                   required
                   value={aliadoCodigo}
                   onChange={(e) => setAliadoCodigo(e.target.value)}
-                  placeholder="ej. #TTM-0842 o aliado@tutallermovil.com"
+                  placeholder="ej. #TTM-1020 o aliado@tutallermovil.com"
                   className="w-full h-12 px-3.5 text-xs font-semibold bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[#1E56B0] focus:bg-white rounded-xl outline-hidden transition-all text-[#0A1525] placeholder:text-slate-400"
                 />
               </div>
@@ -627,50 +603,6 @@ function LoginForm() {
                   <span>¿Aún no tienes código de aliado?</span>
                   <span className="underline underline-offset-2">Regístrate aquí →</span>
                 </Link>
-              </div>
-
-              {/* Atajos Rápidos de Prueba para Aliados */}
-              <div className="pt-3 border-t border-slate-100 space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block text-center">
-                  Seleccionar Credencial de Prueba (PIN: 1234)
-                </span>
-                <div className="grid grid-cols-3 gap-1.5 text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAliadoCodigo('#TTM-0842');
-                      setAliadoPin('1234');
-                    }}
-                    className="p-2 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    <span className="font-mono font-black text-xs text-[#1E56B0] block">#TTM-0842</span>
-                    <span className="text-[10px] text-slate-500 font-bold block">Mecánico</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAliadoCodigo('#RUN-101');
-                      setAliadoPin('1234');
-                    }}
-                    className="p-2 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    <span className="font-mono font-black text-xs text-sky-700 block">#RUN-101</span>
-                    <span className="text-[10px] text-slate-500 font-bold block">Runner</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAliadoCodigo('#REP-505');
-                      setAliadoPin('1234');
-                    }}
-                    className="p-2 rounded-xl border border-slate-200 bg-[#F8FAFC] hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    <span className="font-mono font-black text-xs text-amber-700 block">#REP-505</span>
-                    <span className="text-[10px] text-slate-500 font-bold block">Repuestos</span>
-                  </button>
-                </div>
               </div>
             </motion.form>
           )}

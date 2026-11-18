@@ -62,8 +62,8 @@ export default function RunnerPortalPage() {
   const [toastExito, setToastExito] = useState<string | null>(null);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
   const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
-  const [codigoAliado, setCodigoAliado] = useState<string>('#RUN-101');
-  const [nombreRunner, setNombreRunner] = useState<string>('Luis Pérez');
+  const [codigoAliado, setCodigoAliado] = useState<string>('');
+  const [nombreRunner, setNombreRunner] = useState<string>('Runner Oficial');
 
   // Cargar órdenes en REPUESTOS_EN_RUTA de Supabase
   const cargarOrdenesRunner = async () => {
@@ -89,7 +89,7 @@ export default function RunnerPortalPage() {
             'Pastillas de Freno Delanteras (Bosch)',
             'Líquido de Frenos DOT 4'
           ],
-          mecanico_nombre: 'Carlos Mendoza #TTM-0842',
+          mecanico_nombre: ord.mecanico_id || 'Especialista Asignado',
           mecanico_telefono: '+584121234567',
           distancia_km: '2.8 km',
           tiempo_estimado: '12 min'
@@ -457,7 +457,7 @@ export default function RunnerPortalPage() {
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0">
                                     <h4 className="text-base font-black text-[#0A1525] truncate">
-                                      {orden.mecanico_nombre || 'Carlos Mendoza #TTM-0842'}
+                                      {orden.mecanico_nombre || 'Especialista Asignado'}
                                     </h4>
                                     <p className="text-xs font-semibold text-slate-600 pt-0.5">
                                       {orden.vehiculo_modelo} • {orden.sector}

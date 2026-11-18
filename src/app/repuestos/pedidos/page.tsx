@@ -77,8 +77,8 @@ export default function PedidosProveedorPage() {
   const [validandoPIN, setValidandoPIN] = useState<boolean>(false);
   const [mostrarTutorial, setMostrarTutorial] = useState<boolean>(false);
   const [mostrarBotonTutorial, setMostrarBotonTutorial] = useState<boolean>(false);
-  const [codigoAliado, setCodigoAliado] = useState<string>('#REP-505');
-  const [nombreTienda, setNombreTienda] = useState<string>('AutoPartes Chacao');
+  const [codigoAliado, setCodigoAliado] = useState<string>('');
+  const [nombreTienda, setNombreTienda] = useState<string>('Proveedor de Repuestos');
 
   // Carga inicial y obtención de pedidos desde Supabase
   const cargarPedidos = async (esRefrescoManual = false) => {

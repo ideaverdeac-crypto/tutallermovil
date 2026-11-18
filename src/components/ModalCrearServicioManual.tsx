@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
@@ -64,19 +64,40 @@ const FALLAS_FRECUENTES = [
   'Revisión general pre-compra'
 ];
 
-const MECANICOS_ASIGNACION = [
-  { id: '', nombre: 'Dejar Disponible (Cualquier especialista en zona)' },
-  { id: '123e4567-e89b-12d3-a456-426614174000', nombre: 'Carlos Mendoza (#TTM-0842 • Senior OBD2)' },
-  { id: '223e4567-e89b-12d3-a456-426614174001', nombre: 'Alejandro Blanco (#TTM-0912 • Frenos y Ligera)' },
-  { id: '323e4567-e89b-12d3-a456-426614174002', nombre: 'Roberto Páez (#TTM-0341 • Electricidad & Baterías)' }
-];
-
 export default function ModalCrearServicioManual({
   isOpen,
   onClose,
   onOrdenCreada,
   operadora
 }: ModalCrearServicioManualProps) {
+  // Lista de mecánicos cargada dinámicamente desde Supabase
+  const [listaMecanicos, setListaMecanicos] = useState<{ id: string; nombre: string }[]>([
+    { id: '', nombre: 'Dejar Disponible (Cualquier especialista en zona)' }
+  ]);
+
+  useEffect(() => {
+    const cargarMecanicos = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('perfiles')
+          .select('id, nombre_completo, codigo_aliado, especialidad')
+          .eq('rol', 'MECANICO');
+
+        if (data && data.length > 0) {
+          setListaMecanicos([
+            { id: '', nombre: 'Dejar Disponible (Cualquier especialista en zona)' },
+            ...data.map((m) => ({
+              id: m.id,
+              nombre: `${m.nombre_completo || 'Mecánico'} (${m.codigo_aliado || ''} • ${m.especialidad || 'General'})`
+            }))
+          ]);
+        }
+      } catch (e) {}
+    };
+    cargarMecanicos();
+  }, []);
+
   // Canal de Recepción
   const [canal, setCanal] = useState<'LLAMADA' | 'RECURRENTE'>('LLAMADA');
 
@@ -157,7 +178,7 @@ export default function ModalCrearServicioManual({
         : sector;
 
       const estadoInicial = mecanicoAsignado ? 'EN_INSPECCION' : 'DISPONIBLE';
-      const mecanicoObj = MECANICOS_ASIGNACION.find((m) => m.id === mecanicoAsignado);
+      const mecanicoObj = listaMecanicos.find((m) => m.id === mecanicoAsignado);
 
       const nuevaFila = {
         cliente_nombre: nombre.trim(),
@@ -535,7 +556,7 @@ export default function ModalCrearServicioManual({
                   onChange={(e) => setMecanicoAsignado(e.target.value)}
                   className="w-full h-10 px-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E56B0] focus:outline-hidden text-[#0A1525]"
                 >
-                  {MECANICOS_ASIGNACION.map((m) => (
+                  {listaMecanicos.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nombre}
                     </option>
