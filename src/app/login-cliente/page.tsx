@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 import {
   Lock,
   Mail,
@@ -27,9 +28,22 @@ function LoginClienteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get('redirect');
+  const tabParam = searchParams.get('tab');
+  const errorParam = searchParams.get('error');
 
   // Pestaña: 'ingresar' | 'registrarse'
-  const [tabActiva, setTabActiva] = useState<'ingresar' | 'registrarse'>('ingresar');
+  const [tabActiva, setTabActiva] = useState<'ingresar' | 'registrarse'>(
+    tabParam === 'registrarse' ? 'registrarse' : 'ingresar'
+  );
+
+  useEffect(() => {
+    if (tabParam === 'registrarse') {
+      setTabActiva('registrarse');
+    }
+    if (errorParam === 'oauth') {
+      setErrorMsg('No se pudo completar la autenticación con Google. Por favor intenta de nuevo.');
+    }
+  }, [tabParam, errorParam]);
 
   // Campos de formulario
   const [email, setEmail] = useState('');
@@ -293,6 +307,25 @@ function LoginClienteContent() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* 1. Botón de Google OAuth */}
+            <div>
+              <GoogleAuthButton
+                redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/auth/callback${redirectParam ? `?next=${encodeURIComponent(redirectParam)}` : ''}` : undefined}
+                texto="Continuar con Google"
+                onError={(msg) => setErrorMsg(msg)}
+              />
+
+              {/* 2. Separador Visual */}
+              <div className="relative my-4 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative px-3 bg-white text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  o usa tu correo
+                </div>
+              </div>
+            </div>
 
             {/* Formulario Dinámico según Pestaña */}
             <form onSubmit={tabActiva === 'ingresar' ? handleIngresar : handleRegistrarse} className="space-y-3.5">

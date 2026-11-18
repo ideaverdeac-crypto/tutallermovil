@@ -27,6 +27,7 @@ import {
   MapPin,
   Car
 } from 'lucide-react';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 const CONFIG_ROLES: Record<string, {
   rol: 'MECANICO' | 'RUNNER' | 'REPUESTOS';
@@ -296,6 +297,24 @@ function RegistroRolContent() {
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
                     {config.subtitulo}
                   </p>
+                </div>
+              </div>
+
+              {/* Botón de Google OAuth para Aliados */}
+              <div className="pt-1">
+                <GoogleAuthButton
+                  redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(config.portalRuta)}` : undefined}
+                  texto="Continuar con Google"
+                  onError={(msg) => setErrorMsg(msg)}
+                />
+
+                <div className="relative my-4 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative px-3 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    o llena tus datos
+                  </div>
                 </div>
               </div>
 
