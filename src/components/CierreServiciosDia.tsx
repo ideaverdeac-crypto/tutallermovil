@@ -32,9 +32,9 @@ import {
   Sparkles,
   Award,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Copy
 } from 'lucide-react';
-import { generarLinkWhatsApp } from '@/lib/utils';
 import { HistorialChecklistButton } from '@/components/HistorialChecklistModal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -567,31 +567,29 @@ export default function CierreServiciosDia({
     doc.save(`TTM-Cierre-Diario-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // Reenviar recibo oficial vía WhatsApp
-  const handleReenviarReciboWA = (servicio: ServicioFinalizadoDia) => {
-    const telefono = servicio.cliente.telefono || '0414-2314194';
+  // Copiar recibo oficial al portapapeles
+  const handleCopiarRecibo = (servicio: ServicioFinalizadoDia) => {
     const linkPasaporte = `https://tutallermovil.vercel.app/historial/${servicio.vehiculo.placa}`;
-    const mensaje = `🔧 *TUTALLERMÓVIL • COMPROBANTE OFICIAL DE SERVICIO FINALIZADO*
+    const mensaje = `TUTALLERMÓVIL • COMPROBANTE OFICIAL DE SERVICIO FINALIZADO
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-🚗 *Vehículo:* ${servicio.vehiculo.marca} ${servicio.vehiculo.modelo} (${servicio.vehiculo.anio})
-📋 *Placa Certificada:* ${servicio.vehiculo.placa}
-🔢 *Expediente:* ${servicio.codigo_servicio}
-⏱ *Finalizado:* ${servicio.fecha_cierre} (${servicio.duracion_total_minutos} min)
+Vehículo: ${servicio.vehiculo.marca} ${servicio.vehiculo.modelo} (${servicio.vehiculo.anio})
+Placa Certificada: ${servicio.vehiculo.placa}
+Expediente: ${servicio.codigo_servicio}
+Finalizado: ${servicio.fecha_cierre} (${servicio.duracion_total_minutos} min)
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-👨‍🔧 *Especialista:* ${servicio.mecanico.nombre} (${servicio.mecanico.credencial})
-🛵 *Runner Logístico:* ${servicio.runner ? servicio.runner.nombre + ' (' + servicio.runner.unidad + ')' : 'Entrega directa en sitio'}
-👩‍💼 *Aprobado y Conciliado por:* ${servicio.operadora.nombre}
-💳 *Pago:* ${servicio.operadora.metodo_pago} (Ref: ${servicio.operadora.referencia_pago})
+Especialista: ${servicio.mecanico.nombre} (${servicio.mecanico.credencial})
+Runner Logístico: ${servicio.runner ? servicio.runner.nombre + ' (' + servicio.runner.unidad + ')' : 'Entrega directa en sitio'}
+Aprobado y Conciliado por: ${servicio.operadora.nombre}
+Pago: ${servicio.operadora.metodo_pago} (Ref: ${servicio.operadora.referencia_pago})
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 *Total Facturado:* $${servicio.cotizacion.total_facturado_usd.toFixed(2)} USD
-🛡️ *Garantía TTM Activa:* 30 días o 1,000 km protegidos por Fondo QA
+Total Facturado: $${servicio.cotizacion.total_facturado_usd.toFixed(2)} USD
+Garantía TTM Activa: 30 días o 1,000 km protegidos por Fondo QA
 
-📲 *Consulta tu Pasaporte Técnico Inmutable:*
-${linkPasaporte}
+Consulta tu Pasaporte Técnico Inmutable:
+${linkPasaporte}`;
 
-¡Gracias por confiar en TuTallerMóvil! Tu historial vehicular ya está actualizado en la nube.`;
-
-    window.open(generarLinkWhatsApp(telefono, mensaje), '_blank');
+    navigator.clipboard.writeText(mensaje);
+    alert('✓ Comprobante oficial copiado al portapapeles');
   };
 
   return (
@@ -816,12 +814,12 @@ ${linkPasaporte}
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleReenviarReciboWA(servicio)}
-                        className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                        title="Reenviar comprobante oficial por WhatsApp al cliente"
+                        onClick={() => handleCopiarRecibo(servicio)}
+                        className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                        title="Copiar comprobante oficial del servicio"
                       >
-                        <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="hidden sm:inline">Reenviar Recibo</span>
+                        <Copy className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="hidden sm:inline">Copiar Recibo</span>
                       </button>
 
                       <Link

@@ -79,7 +79,7 @@ const SLIDES_POR_ROL: Record<UserRole, SlideContent[]> = {
       titulo: 'Cotiza en Segundos con Catálogo Oficial',
       descripcion:
         'Busca piezas originales en las casas de repuestos de Caracas. Aplica la regla P0 de exoneración ($40) y exporta cotizaciones formales en PDF con un solo clic.',
-      resaltado: 'Generador automático de PDF A4 y prellenado de WhatsApp',
+      resaltado: 'Generador automático de PDF A4 y cotizaciones oficiales',
       icono: Calculator
     },
     {

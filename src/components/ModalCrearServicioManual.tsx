@@ -5,11 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
 import { notificarNuevoServicioOperadora } from '@/lib/notificaciones';
-import { generarLinkWhatsApp } from '@/lib/utils';
 import {
   X,
   Phone,
-  MessageCircle,
   Car,
   User,
   MapPin,
@@ -80,7 +78,7 @@ export default function ModalCrearServicioManual({
   operadora
 }: ModalCrearServicioManualProps) {
   // Canal de Recepción
-  const [canal, setCanal] = useState<'WHATSAPP' | 'LLAMADA' | 'RECURRENTE'>('WHATSAPP');
+  const [canal, setCanal] = useState<'LLAMADA' | 'RECURRENTE'>('LLAMADA');
 
   // Datos del Cliente
   const [nombre, setNombre] = useState('');
@@ -220,7 +218,7 @@ export default function ModalCrearServicioManual({
         monto: parseFloat(tarifaBase)
       });
 
-      // 3. Preparar Pantalla de Éxito y Acción Rápida de WhatsApp
+      // 3. Preparar Pantalla de Éxito
       setOrdenCreadaExito({
         id: ordenId,
         cliente: nombre.trim(),
@@ -239,28 +237,6 @@ export default function ModalCrearServicioManual({
     }
   };
 
-  const generarMensajeConfirmacionWhatsApp = () => {
-    if (!ordenCreadaExito) return '';
-    const idCorto = ordenCreadaExito.id.slice(0, 8);
-    const linkSeguimiento = `https://tutallermovil.vercel.app/historial/${encodeURIComponent(placa || 'PLACA')}?desde=despacho`;
-
-    return `¡Hola ${ordenCreadaExito.cliente}! 👋 Te escribe ${operadora.nombre} de *TuTallerMóvil Caracas* 🚗🔧.\n\nConfirmamos la recepción de tu solicitud de mecánico para tu *${ordenCreadaExito.vehiculo}* en *${ordenCreadaExito.sector}*.\n\n📌 *Orden de Servicio:* #${idCorto}\n⏱️ *Estatus:* Mecánico en ruta / en asignación prioritaria.\n🔍 *Rastreo en vivo:* ${linkSeguimiento}\n\nAnte cualquier duda puedes responder directamente a este mensaje. ¡Estamos contigo en la vía!`;
-  };
-
-  const handleCopiarMensaje = () => {
-    const texto = generarMensajeConfirmacionWhatsApp();
-    navigator.clipboard.writeText(texto);
-    setMensajeCopiado(true);
-    setTimeout(() => setMensajeCopiado(false), 3000);
-  };
-
-  const handleAbrirWhatsApp = () => {
-    if (!ordenCreadaExito) return;
-    const texto = generarMensajeConfirmacionWhatsApp();
-    const link = generarLinkWhatsApp(ordenCreadaExito.telefono, texto);
-    window.open(link, '_blank');
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A1525]/80 backdrop-blur-xs overflow-y-auto">
       <motion.div
@@ -273,11 +249,7 @@ export default function ModalCrearServicioManual({
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#0A1525] via-slate-900 to-[#1E56B0] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shadow-md shrink-0">
-              {canal === 'WHATSAPP' ? (
-                <MessageCircle className="w-5 h-5 text-[#0A1525]" />
-              ) : (
-                <Phone className="w-5 h-5 text-[#0A1525]" />
-              )}
+              <Phone className="w-5 h-5 text-[#0A1525]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -289,7 +261,7 @@ export default function ModalCrearServicioManual({
                 </span>
               </div>
               <p className="text-xs text-slate-300">
-                Atención directa por Llamada o WhatsApp • Operadora: <strong>{operadora.nombre}</strong>
+                Atención directa por Llamada • Operadora: <strong>{operadora.nombre}</strong>
               </p>
             </div>
           </div>
@@ -302,9 +274,7 @@ export default function ModalCrearServicioManual({
           </button>
         </div>
 
-        {/* ======================================================== */}
-        {/* PANTALLA DE ÉXITO INMEDIATO CON WHATSAPP                   */}
-        {/* ======================================================== */}
+        {/* PANTALLA DE ÉXITO INMEDIATO */}
         {ordenCreadaExito ? (
           <div className="p-6 sm:p-8 space-y-6 text-center overflow-y-auto">
             <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner border border-emerald-200">
@@ -316,58 +286,18 @@ export default function ModalCrearServicioManual({
                 ¡Servicio Despachado al Tablero!
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-                La orden fue registrada exitosamente en <strong>{ordenCreadaExito.sector}</strong> y ya está visible en el Kanban para los mecánicos.
+                La orden fue registrada exitosamente en <strong>{ordenCreadaExito.sector}</strong> para <strong>{ordenCreadaExito.cliente}</strong> ({ordenCreadaExito.vehiculo}) y ya está visible en el Kanban para los mecánicos.
               </p>
               <div className="inline-block px-3 py-1 bg-slate-100 rounded-xl font-mono text-xs font-bold text-slate-700 border border-slate-200">
                 ID: #{ordenCreadaExito.id.slice(0, 8)}
               </div>
             </div>
 
-            {/* Tarjeta de Confirmación para Enviar al Cliente */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <MessageCircle className="w-4 h-4 text-emerald-600" />
-                  <span>Mensaje listo para el cliente (WhatsApp):</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopiarMensaje}
-                  className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  {mensajeCopiado ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-600">Copiado</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copiar</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-700 font-mono whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
-                {generarMensajeConfirmacionWhatsApp()}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleAbrirWhatsApp}
-                className="h-12 rounded-2xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
-              >
-                <MessageCircle className="w-5 h-5" />
-                <span>Abrir WhatsApp del Cliente</span>
-              </button>
-
+            <div className="pt-2">
               <button
                 type="button"
                 onClick={handleCerrar}
-                className="h-12 rounded-2xl bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+                className="w-full h-12 rounded-2xl bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
               >
                 <span>Ver en Tablero Kanban</span>
               </button>
@@ -390,20 +320,7 @@ export default function ModalCrearServicioManual({
               <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Canal de Recepción
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCanal('WHATSAPP')}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
-                    canal === 'WHATSAPP'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>WhatsApp</span>
-                </button>
-
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setCanal('LLAMADA')}
@@ -414,7 +331,7 @@ export default function ModalCrearServicioManual({
                   }`}
                 >
                   <Phone className="w-3.5 h-3.5 text-[#1E56B0]" />
-                  <span>Llamada</span>
+                  <span>Llamada Telefónica</span>
                 </button>
 
                 <button
@@ -453,7 +370,7 @@ export default function ModalCrearServicioManual({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600">WhatsApp / Teléfono *</label>
+                  <label className="text-[11px] font-bold text-slate-600">Teléfono Móvil *</label>
                   <input
                     type="tel"
                     required
@@ -583,7 +500,7 @@ export default function ModalCrearServicioManual({
                 rows={2}
                 value={falla}
                 onChange={(e) => setFalla(e.target.value)}
-                placeholder="Describe el síntoma o motivo del servicio reportado por llamada/WhatsApp..."
+                placeholder="Describe el síntoma o motivo del servicio reportado por el cliente..."
                 className="w-full p-3 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:border-[#1E56B0] focus:outline-hidden resize-none"
               />
             </div>

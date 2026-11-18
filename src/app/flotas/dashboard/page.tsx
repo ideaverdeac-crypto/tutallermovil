@@ -1519,7 +1519,7 @@ export default function FlotasDashboardPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-extrabold text-[#0A1525]">Teléfono / WhatsApp</label>
+                    <label className="font-extrabold text-[#0A1525]">Teléfono Móvil</label>
                     <input
                       type="text"
                       value={formEmpresa.telefono}

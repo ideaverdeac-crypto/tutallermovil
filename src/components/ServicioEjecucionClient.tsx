@@ -41,8 +41,6 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import FloatingSupportButton from '@/components/ui/floating-support-button';
-import { generarLinkWhatsApp } from '@/lib/utils';
 
 interface ServicioEjecucionClientProps {
   id: string;
@@ -650,19 +648,6 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
               title={`Llamar al cliente (${clienteTelefono})`}
             >
               <Phone className="w-4 h-4 stroke-[2.5]" />
-            </a>
-
-            <a
-              href={generarLinkWhatsApp(
-                clienteTelefono || '0414-2314194',
-                `Hola ${clienteNombre || 'estimado cliente'}, soy tu mecánico de TuTallerMóvil, ya voy en camino a atender tu servicio.`
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-11 h-11 rounded-2xl bg-[#25D366] hover:bg-[#1ebd59] text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
-              title={`Contactar al cliente por WhatsApp (${clienteTelefono || '0414-2314194'})`}
-            >
-              <MessageCircle className="w-5 h-5 stroke-[2.5]" />
             </a>
           </div>
         </div>
@@ -1599,12 +1584,6 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Floating Support Button */}
-      <FloatingSupportButton
-        className="bottom-6"
-        mensajePersonalizado={`Hola, soy especialista de TuTallerMóvil y necesito apoyo técnico con la orden #${id.slice(0, 8)}.`}
-      />
 
       {/* Toast Flotante de Errores y Alertas */}
       <AnimatePresence>

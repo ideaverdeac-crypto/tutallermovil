@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
-import { generarLinkWhatsApp } from '@/lib/utils';
 import {
   ClipboardCheck,
   X,
@@ -168,13 +167,6 @@ export function SolicitarExpedienteModal({
     setErrorMsg('');
   };
 
-  const linkWhatsAppConfirmacion = ordenCreada
-    ? generarLinkWhatsApp(
-        '584142314194',
-        `Hola TuTallerMóvil, acabo de solicitar la Auditoría de 25 Puntos para mi ${vehiculo.marca} ${vehiculo.modelo} [${vehiculo.placa}]. Orden #${ordenCreada.codigo}. Estoy en ${sector}.`
-      )
-    : '#';
-
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -301,7 +293,7 @@ export function SolicitarExpedienteModal({
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#0A1525] flex items-center gap-1">
                     <Phone className="w-3.5 h-3.5 text-[#1E56B0]" />
-                    <span>Teléfono de Contacto (WhatsApp) *</span>
+                    <span>Teléfono Móvil de Contacto *</span>
                   </label>
                   <input
                     type="tel"
@@ -470,19 +462,9 @@ export function SolicitarExpedienteModal({
 
               {/* Botones de acción */}
               <div className="space-y-2 pt-2">
-                <a
-                  href={linkWhatsAppConfirmacion}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full h-12 bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-xs sm:text-sm rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <MessageCircle className="w-4 h-4 text-white" />
-                  <span>Confirmar Visita por WhatsApp</span>
-                </a>
-
                 <Link
                   href={`/cliente/servicio/${ordenCreada.id}`}
-                  className="w-full h-11 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 transition-all shadow-sm"
+                  className="w-full h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 transition-all shadow-sm"
                 >
                   <span>Ver Estado en Tiempo Real</span>
                   <ChevronRight className="w-4 h-4 text-[#CCFF00]" />

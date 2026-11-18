@@ -52,7 +52,6 @@ import {
 } from 'lucide-react';
 import { cerrarSesion } from '@/lib/auth';
 import OnboardingModal from '@/components/ui/onboarding-modal';
-import FloatingSupportButton from '@/components/ui/floating-support-button';
 
 type EstadoMecanico = 'DISPONIBLE' | 'EN_SERVICIO' | 'INACTIVO';
 
@@ -1510,12 +1509,6 @@ export default function PortalAliadosPage() {
             localStorage.setItem('onboarding_seen_mecanico', 'true');
           }
         }}
-      />
-
-      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
-      <FloatingSupportButton
-        className="bottom-20 sm:bottom-6"
-        mensajePersonalizado="Hola, soy especialista de TuTallerMóvil y necesito soporte técnico en mi portal."
       />
 
       {/* Toast Flotante de Notificaciones */}

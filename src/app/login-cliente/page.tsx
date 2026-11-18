@@ -374,11 +374,11 @@ function LoginClienteContent() {
                 </div>
               </div>
 
-              {/* Si es registro: Teléfono / WhatsApp */}
+              {/* Si es registro: Teléfono Móvil */}
               {tabActiva === 'registrarse' && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Teléfono / WhatsApp <span className="text-slate-400 font-normal">(Opcional)</span>
+                    Teléfono Móvil <span className="text-slate-400 font-normal">(Opcional)</span>
                   </label>
                   <div className="relative">
                     <Smartphone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />

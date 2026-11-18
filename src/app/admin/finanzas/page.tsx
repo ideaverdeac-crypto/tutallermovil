@@ -51,7 +51,6 @@ import { cerrarSesion } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/client';
 import { obtenerBitacoraOperaciones, type RegistroBitacora } from '@/lib/audit';
 import OnboardingModal from '@/components/ui/onboarding-modal';
-import FloatingSupportButton from '@/components/ui/floating-support-button';
 import CredencialesOperadorasModal from '@/components/CredencialesOperadorasModal';
 
 export interface CredencialOperadora {
@@ -671,7 +670,7 @@ export default function FinanzasAdminPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Solo el Dueño/Director puede emitir, suspender o revocar accesos a la cabina de despacho táctico. Crea claves seguras y envíalas directamente por WhatsApp con un solo clic.
+                Solo el Dueño/Director puede emitir, suspender o revocar accesos a la cabina de despacho táctico. Crea credenciales seguras y compártelas directamente con un solo clic.
               </p>
             </div>
           </div>
@@ -1111,9 +1110,6 @@ export default function FinanzasAdminPage() {
           }
         }}
       />
-
-      {/* Botón Flotante de Soporte Técnico (WhatsApp FAB) */}
-      <FloatingSupportButton mensajePersonalizado="Hola, soy administrador de TuTallerMóvil y requiero soporte técnico con el módulo de Finanzas." />
 
     </div>
   );

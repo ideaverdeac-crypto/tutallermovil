@@ -211,7 +211,7 @@ export default function TerminosYCondicionesPage() {
 
               <div className="space-y-3 text-sm text-slate-700 pl-2">
                 <p>
-                  <strong>Finalidad Única de los Datos:</strong> La información suministrada por el usuario (nombre, número de WhatsApp, placa, marca, modelo, año, serial VIN, kilometraje y ubicación GPS) se utiliza exclusivamente para:
+                  <strong>Finalidad Única de los Datos:</strong> La información suministrada por el usuario (nombre, número telefónico, placa, marca, modelo, año, serial VIN, kilometraje y ubicación GPS) se utiliza exclusivamente para:
                 </p>
                 <ul className="list-disc pl-6 space-y-1.5 text-slate-700 text-xs sm:text-sm">
                   <li><strong>(a)</strong> Coordinar la asistencia mecánica en el cuadrante solicitado;</li>
@@ -414,7 +414,7 @@ export default function TerminosYCondicionesPage() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-600 leading-relaxed">
-                        Agendamiento vía web/WhatsApp, verificación por Carnet QR, aprobación de presupuestos y consulta de Historial Médico anual ($5 promo / $10).
+                        Agendamiento vía web y despacho central, verificación por Carnet QR, aprobación de presupuestos y consulta de Historial Médico anual ($5 promo / $10).
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 font-medium leading-relaxed">
                         Sus datos personales y vehiculares <strong>jamás son vendidos ni divulgados a terceros</strong>; custodia personal de su PIN de acceso al historial.

@@ -60,7 +60,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { activarSuscripcion } from '@/app/actions/suscripcion';
-import { generarLinkWhatsApp } from '@/lib/utils';
 
 export interface RepuestoDetallado {
   id: string;
@@ -275,8 +274,7 @@ const MECANICO_INFO = {
   serviciosCompletados: 124,
   ranking: 'Top 5% Caracas',
   foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-  telefono: '+58 412 123 4567',
-  whatsapp: '584121234567'
+  telefono: '+58 412 123 4567'
 };
 
 const RUNNER_INFO = {
@@ -285,8 +283,7 @@ const RUNNER_INFO = {
   rol: 'Runner Logístico TTM Express',
   moto: 'Yamaha DT 175 • Placa: AA4K21X',
   foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-  telefono: '+58 414 789 0123',
-  whatsapp: '584147890123'
+  telefono: '+58 414 789 0123'
 };
 
 const FOTOS_EVIDENCIAS_DEMO = [
@@ -1146,19 +1143,13 @@ export function ClienteServicioClient({ id }: { id: string }) {
             </div>
           </Link>
 
-          {/* Botón de Soporte WhatsApp para contactar a la Operadora */}
+          {/* Botón de Asistencia Telefónica con la Operadora */}
           <a
-            href={generarLinkWhatsApp(
-              '04142314194',
-              `Hola, soy ${orden.cliente_nombre || 'cliente'} de TuTallerMóvil. Requiero asistencia de la operadora para mi servicio #${id.slice(0, 8)}.`
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="h-9 px-3.5 rounded-full bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-xs font-black flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
-            title="Contactar a la operadora de despacho por WhatsApp"
+            href="tel:04142314194"
+            className="h-9 px-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#0A1525] border border-slate-300 text-xs font-black flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="Llamar a la operadora de despacho"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <MessageCircle className="w-3.5 h-3.5" />
+            <Phone className="w-3.5 h-3.5 text-[#1E56B0]" />
             <span>Operadora</span>
           </a>
 
@@ -1623,22 +1614,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     </a>
                   </div>
 
-                  {/* Acciones del Mecánico: WhatsApp Directo y Carnet QR Oficial */}
+                  {/* Acciones del Mecánico: Carnet QR Oficial */}
                   <div className="space-y-2 relative z-10">
-                    <a
-                      href={generarLinkWhatsApp(
-                        MECANICO_INFO.telefono,
-                        `Hola ${MECANICO_INFO.nombre}, soy ${orden.cliente_nombre || 'tu cliente'}, estoy esperando en la dirección ${orden.sector || 'del servicio'}.`
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full h-11 bg-[#25D366] hover:bg-[#20ba5a] text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-[#25D366]/20 transition-all cursor-pointer active:scale-95 border border-white/10"
-                      title="Contactar al mecánico vía WhatsApp"
-                    >
-                      <MessageCircle className="w-4 h-4 stroke-[2.5]" />
-                      <span>Contactar a mi Mecánico</span>
-                    </a>
-
                     {/* Botón Gigante en Verde Lima: Verificar Carnet QR */}
                     <button
                       type="button"
@@ -1686,13 +1663,12 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     </div>
 
                     <a
-                      href={`https://wa.me/${RUNNER_INFO.whatsapp}?text=Hola%20Marcos,%20te%20escribo%20del%20servicio%20${orden.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
+                      href={`tel:${RUNNER_INFO.telefono}`}
+                      className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
+                      title="Llamar al Runner"
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>WhatsApp</span>
+                      <Phone className="w-3.5 h-3.5 text-[#1E56B0]" />
+                      <span>Llamar</span>
                     </a>
                   </div>
 
@@ -2235,23 +2211,13 @@ export function ClienteServicioClient({ id }: { id: string }) {
           ) : (
             /* Estado en curso (Inspección, Runner o Reparación) */
             <div className="flex items-center gap-2 w-full">
-              <a
-                href={`https://wa.me/${MECANICO_INFO.whatsapp}?text=Hola%20Carlos,%20quisiera%20consultar%20el%20avance%20de%20mi%20servicio%20${orden.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 h-14 bg-[#0A1525] hover:bg-slate-800 text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
-              >
-                <MessageCircle className="w-4 h-4 text-[#CCFF00]" />
-                <span>Chat con {MECANICO_INFO.nombre.split(' ')[0]}</span>
-              </a>
-
               <button
                 type="button"
                 onClick={() => setModalCarnetOpen(true)}
-                className="h-14 px-4 bg-[#F8FAFC] hover:bg-slate-100 border border-[#CBD5E1] text-[#0A1525] font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                className="flex-1 h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
               >
-                <QrCode className="w-4 h-4 text-[#1E56B0]" />
-                <span>Carnet</span>
+                <QrCode className="w-5 h-5 text-[#0A1525]" />
+                <span>Verificar Carnet QR del Mecánico</span>
               </button>
             </div>
           )}

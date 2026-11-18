@@ -274,17 +274,17 @@ export default function CredencialesOperadorasModal({
     }
   };
 
-  const copiarCredencialesWhatsApp = (op: CredencialOperadora) => {
-    const texto = `👋 *¡Hola ${op.nombre}!*
-Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han sido emitidas por la Dirección:
+  const copiarCredenciales = (op: CredencialOperadora) => {
+    const texto = `¡Hola ${op.nombre}!
+Tus credenciales oficiales para la cabina de despacho en TuTallerMóvil han sido emitidas por la Dirección:
 
-🔗 *Portal de Acceso:* https://tutallermovil.vercel.app/login
-📧 *Correo:* \`${op.email}\`
-🔑 *Contraseña:* \`${op.passwordTemporal}\`
-🕒 *Turno Asignado:* ${op.turno}
+Portal de Acceso: https://tutallermovil.vercel.app/login
+Correo: ${op.email}
+Contraseña: ${op.passwordTemporal}
+Turno Asignado: ${op.turno}
 
-⚠️ *Instrucciones:*
-1. Ingresa a la URL e inicia sesión en la pestaña *Staff (Operadoras & Dueños)*.
+Instrucciones:
+1. Ingresa a la URL e inicia sesión en la pestaña Staff (Operadoras & Dueños).
 2. Mantén tu sesión activa durante tu turno para atender el tablero táctico.
 3. Ante cualquier consulta, contacta al administrador de turno.`;
 
@@ -547,10 +547,10 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
                       </select>
                     </div>
 
-                    {/* WhatsApp / Teléfono (Opcional) */}
+                    {/* Teléfono Móvil (Opcional) */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Teléfono / WhatsApp <span className="text-slate-400 font-normal">(Opcional)</span>
+                        Teléfono Móvil <span className="text-slate-400 font-normal">(Opcional)</span>
                       </label>
                       <div className="relative">
                         <Smartphone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -701,12 +701,12 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
                             <span>Editar</span>
                           </button>
 
-                          {/* Copiar para WhatsApp */}
+                          {/* Copiar Credenciales */}
                           <button
                             type="button"
-                            onClick={() => copiarCredencialesWhatsApp(op)}
-                            className="h-8 px-2.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-[11px] font-black text-emerald-800 flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Copiar credenciales formateadas para enviar por WhatsApp"
+                            onClick={() => copiarCredenciales(op)}
+                            className="h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-black text-slate-800 flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Copiar credenciales formateadas"
                           >
                             {copiadoId === op.id ? (
                               <>
@@ -715,8 +715,8 @@ Tus credenciales oficiales para la cabina de despacho en *TuTallerMóvil* han si
                               </>
                             ) : (
                               <>
-                                <Copy className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>WhatsApp</span>
+                                <Copy className="w-3.5 h-3.5 text-slate-600" />
+                                <span>Copiar</span>
                               </>
                             )}
                           </button>

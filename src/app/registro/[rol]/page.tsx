@@ -672,7 +672,7 @@ function RegistroRolContent() {
                   />
                 </div>
 
-                {/* Cédula de Identidad y WhatsApp */}
+                {/* Cédula de Identidad y Teléfono Móvil */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-[#0A1525] flex items-center gap-1.5">
@@ -704,7 +704,7 @@ function RegistroRolContent() {
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-[#0A1525] flex items-center gap-1.5">
                       <Phone className="w-3.5 h-3.5 text-[#1E56B0]" />
-                      <span>WhatsApp de Contacto *</span>
+                      <span>Teléfono Móvil de Contacto *</span>
                     </label>
                     <input
                       type="tel"
