@@ -516,17 +516,19 @@ export default function TerminosYCondicionesPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <Link
                   href="/login-cliente?tab=registrarse"
-                  className="h-10 px-4 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                  className="h-10 px-4 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                 >
+                  <Car className="w-3.5 h-3.5 text-[#0A1525]" />
                   <span>Registrarme como Cliente</span>
                 </Link>
                 <Link
                   href="/registro"
-                  className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all cursor-pointer"
+                  className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                 >
+                  <Wrench className="w-3.5 h-3.5 text-slate-200" />
                   <span>Registro Aliados</span>
                 </Link>
               </div>
