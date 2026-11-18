@@ -7,7 +7,6 @@ import {
   Wrench,
   Bike,
   Store,
-  Car,
   ArrowRight,
   ShieldCheck,
   Sparkles,
@@ -54,19 +53,6 @@ const ROLES_REGISTRO = [
     tagBg: 'bg-blue-50 text-blue-800 border-blue-200',
     prefijoCodigo: '#REP-',
     ruta: '/registro/repuestos'
-  },
-  {
-    id: 'cliente',
-    titulo: 'Soy Propietario / Cliente',
-    subtitulo: 'Dueño de vehículo particular',
-    descripcion: 'Registra tus carros, consulta su historial médico inmutable en la nube y pide asistencia mecánica en sitio.',
-    icono: Car,
-    colorIcono: 'text-[#0A1525]',
-    bgIcono: 'bg-[#CCFF00]',
-    tag: 'Pasaporte Vehicular Gratuito',
-    tagBg: 'bg-slate-100 text-slate-800 border-slate-200',
-    prefijoCodigo: 'CLIENTE',
-    ruta: '/login-cliente?tab=registrarse'
   }
 ];
 
@@ -131,8 +117,8 @@ export default function RegistroHubPage() {
           </p>
         </div>
 
-        {/* Bento Grid con 4 Tarjetas Interactivas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Bento Grid con 3 Tarjetas de Aliados */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto w-full">
           {ROLES_REGISTRO.map((item, index) => {
             const Icon = item.icono;
 
@@ -183,6 +169,19 @@ export default function RegistroHubPage() {
               </motion.div>
             );
           })}
+        </div>
+
+        {/* Acceso para Clientes Particulares */}
+        <div className="mt-10 text-center">
+          <p className="text-xs text-slate-500 font-medium">
+            ¿Eres propietario y buscas servicio mecánico o gestionar tus autos?{' '}
+            <Link
+              href="/login-cliente"
+              className="font-bold text-[#1E56B0] hover:text-[#0A1525] underline underline-offset-2 transition-colors ml-1"
+            >
+              Ingresa a Mi Garaje Digital aquí →
+            </Link>
+          </p>
         </div>
 
       </main>
