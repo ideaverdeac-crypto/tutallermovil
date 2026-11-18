@@ -732,11 +732,11 @@ export function SolicitarMecanicoModal({
                       </div>
                     </div>
 
-                    {/* Nota de tarifa gancho */}
+                    {/* Nota de garantía y tarifa de diagnóstico */}
                     <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-2.5">
                       <Sparkles className="w-4 h-4 text-[#1E56B0] shrink-0 mt-0.5" />
                       <p className="text-[11px] text-slate-600 leading-snug">
-                        <strong className="text-[#0A1525]">Garantía TTM:</strong> Diagnóstico inicial $15 USD. Ganancia para el aliado: <span className="font-bold text-[#1E56B0]">$30.00 USD</span>. Sin costos ocultos.
+                        <strong className="text-[#0A1525]">Garantía TTM:</strong> Diagnóstico inicial $15 USD. Si la cotización es mayor a $40 el diagnóstico es gratis. Sin costos ocultos.
                       </p>
                     </div>
 
