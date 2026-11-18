@@ -22,12 +22,26 @@ interface SolicitarMecanicoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccessToast?: (msg: string) => void;
+  initialVehiculo?: {
+    marca?: string;
+    modelo?: string;
+    anio?: string | number;
+    placa?: string;
+    falla?: string;
+  };
+  initialCliente?: {
+    nombre?: string;
+    email?: string;
+    telefono?: string;
+  };
 }
 
 export function SolicitarMecanicoModal({
   open,
   onOpenChange,
-  onSuccessToast
+  onSuccessToast,
+  initialVehiculo,
+  initialCliente
 }: SolicitarMecanicoModalProps) {
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -38,6 +52,23 @@ export function SolicitarMecanicoModal({
   const [sector, setSector] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  React.useEffect(() => {
+    if (open) {
+      if (initialVehiculo?.marca) setMarca(initialVehiculo.marca);
+      if (initialVehiculo?.modelo) {
+        const modConPlaca = initialVehiculo.placa
+          ? `${initialVehiculo.modelo} [${initialVehiculo.placa}]`
+          : initialVehiculo.modelo;
+        setModelo(modConPlaca);
+      }
+      if (initialVehiculo?.anio) setAnio(String(initialVehiculo.anio));
+      if (initialVehiculo?.falla) setFalla(initialVehiculo.falla);
+
+      if (initialCliente?.nombre) setNombre(initialCliente.nombre);
+      if (initialCliente?.email) setEmail(initialCliente.email);
+    }
+  }, [open, initialVehiculo, initialCliente]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

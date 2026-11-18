@@ -26,6 +26,7 @@ import {
   X
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
+import { SolicitarExpedienteModal } from '@/components/SolicitarExpedienteModal';
 
 interface VehiculoGaraje {
   id: string;
@@ -37,7 +38,7 @@ interface VehiculoGaraje {
   kilometraje: number;
   ultimoServicio?: string;
   tipoUltimoServicio?: string;
-  estadoSalud: 'optimo' | 'atencion';
+  estadoSalud: 'optimo' | 'atencion' | 'pendiente';
   fotoUrl?: string;
   checklist25?: {
     puntos_ok: number;
@@ -48,7 +49,7 @@ interface VehiculoGaraje {
     electrico: string;
     piezas_requeridas?: string;
     items?: Record<string, string>;
-  };
+  } | null;
 }
 
 const VEHICULOS_DEFAULT: VehiculoGaraje[] = [
@@ -150,6 +151,7 @@ export default function ClienteDashboardPage() {
   // Modales
   const [modalSolicitarOpen, setModalSolicitarOpen] = useState(false);
   const [modalChecklistOpen, setModalChecklistOpen] = useState(false);
+  const [modalExpedienteOpen, setModalExpedienteOpen] = useState(false);
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<VehiculoGaraje | null>(null);
 
   // Modal para registrar un nuevo vehículo en el Garaje
@@ -210,26 +212,26 @@ export default function ClienteDashboardPage() {
         if (vehiculosData && vehiculosData.length > 0) {
           vehiculosData.forEach((v: any) => {
             const placa = (v.placa || 'PLACA').toUpperCase().trim();
+            const tieneChecklist = Boolean(v.checklist_json || v.checklist25);
+            const km = typeof v.kilometraje === 'number' ? v.kilometraje : 0;
+
             mapaVehiculos.set(placa, {
               id: v.id,
               marca: v.marca || 'Vehículo',
               modelo: v.modelo || 'Automóvil',
-              anio: v.anio ?? v.año ?? 2019,
+              anio: v.anio ?? v.año ?? 2020,
               placa: placa,
               color: v.color || 'No especificado',
-              kilometraje: v.kilometraje || 80000,
-              ultimoServicio: v.updated_at ? new Date(v.updated_at).toLocaleDateString('es-VE') : 'Reciente',
-              tipoUltimoServicio: 'Inspección TTM Protocol 2027',
-              estadoSalud: 'optimo',
+              kilometraje: km,
+              ultimoServicio: tieneChecklist && v.updated_at
+                ? new Date(v.updated_at).toLocaleDateString('es-VE')
+                : 'Sin servicios aún',
+              tipoUltimoServicio: tieneChecklist
+                ? 'Inspección Certificada TTM'
+                : 'Registro inicial en Mi Garaje',
+              estadoSalud: tieneChecklist ? 'optimo' : 'pendiente',
               fotoUrl: v.foto_url || 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80',
-              checklist25: {
-                puntos_ok: 25,
-                puntos_cambio: 0,
-                frenos: 'ok',
-                aceite: 'ok',
-                suspension: 'ok',
-                electrico: 'ok'
-              }
+              checklist25: v.checklist_json || v.checklist25 || null
             });
           });
         }
@@ -314,21 +316,14 @@ export default function ClienteDashboardPage() {
       id: `veh_${Date.now()}`,
       marca: nuevoMarca.trim(),
       modelo: nuevoModelo.trim(),
-      anio: nuevoAnio.trim() || '2020',
+      anio: nuevoAnio.trim() || '2022',
       placa: nuevoPlaca.trim().toUpperCase(),
-      kilometraje: 50000,
-      ultimoServicio: 'Registrado hoy',
-      tipoUltimoServicio: 'Alta en Mi Garaje TuTallerMóvil',
-      estadoSalud: 'optimo',
+      kilometraje: 0,
+      ultimoServicio: 'Sin servicios aún',
+      tipoUltimoServicio: 'Registro inicial en Mi Garaje',
+      estadoSalud: 'pendiente',
       fotoUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
-      checklist25: {
-        puntos_ok: 25,
-        puntos_cambio: 0,
-        frenos: 'ok',
-        aceite: 'ok',
-        suspension: 'ok',
-        electrico: 'ok'
-      }
+      checklist25: null
     };
 
     const nuevaLista = [nuevo, ...vehiculos];
@@ -344,8 +339,9 @@ export default function ClienteDashboardPage() {
       await supabase.from('vehiculos').insert([{
         marca: nuevo.marca,
         modelo: nuevo.modelo,
-        anio: parseInt(String(nuevo.anio), 10) || 2020,
+        anio: parseInt(String(nuevo.anio), 10) || 2022,
         placa: nuevo.placa,
+        kilometraje: 0,
         cliente_email: usuario.email,
         cliente_telefono: usuario.telefono,
         cliente_nombre: usuario.nombre
@@ -518,105 +514,179 @@ export default function ClienteDashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {vehiculos.map((v) => (
-                <div
-                  key={v.id}
-                  className="bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between space-y-4 group"
-                >
-                <div>
-                  {/* Fila Superior: Foto / Silueta y Placa Venezolana */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1 min-w-0">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        {v.marca} • {v.anio}
-                      </span>
-                      <h3 className="text-lg font-black text-[#0A1525] truncate">
-                        {v.modelo}
-                      </h3>
-                      {v.color && (
-                        <p className="text-xs text-slate-500 font-medium">
-                          Color: {v.color}
+              {vehiculos.map((v) => {
+                const esNuevoVehiculo = v.kilometraje === 0 || !v.checklist25 || v.estadoSalud === 'pendiente';
+
+                return (
+                  <div
+                    key={v.id}
+                    className="bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between space-y-4 group"
+                  >
+                    <div>
+                      {/* Fila Superior: Foto / Silueta y Placa Venezolana */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1 min-w-0">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            {v.marca} • {v.anio}
+                          </span>
+                          <h3 className="text-lg font-black text-[#0A1525] truncate">
+                            {v.modelo}
+                          </h3>
+                          {v.color && (
+                            <p className="text-xs text-slate-500 font-medium">
+                              Color: {v.color}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Matrícula Venezolana */}
+                        <div className="w-32 bg-white border-2 border-[#0A1525] rounded-xl p-1.5 text-center shadow-xs shrink-0">
+                          <span className="text-[8px] font-black text-slate-400 block tracking-widest leading-none">
+                            VENEZUELA
+                          </span>
+                          <span className="font-mono text-base font-black text-[#0A1525] tracking-wider leading-tight">
+                            {v.placa}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Ficha Rápida: Kilometraje y Estado */}
+                      <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
+                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-2.5">
+                          <Gauge className="w-4 h-4 text-[#1E56B0]" />
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold block">Odómetro</span>
+                            <span className="font-mono font-black text-[#0A1525]">
+                              {v.kilometraje === 0 ? '0 KM' : `${v.kilometraje.toLocaleString()} KM`}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={`p-3 rounded-2xl border flex items-center gap-2.5 ${
+                          esNuevoVehiculo
+                            ? 'bg-amber-50/70 border-amber-200 text-amber-900'
+                            : 'bg-emerald-50/60 border-emerald-100 text-emerald-900'
+                        }`}>
+                          {esNuevoVehiculo ? (
+                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <span className={`text-[10px] font-semibold block ${
+                              esNuevoVehiculo ? 'text-amber-700' : 'text-emerald-700'
+                            }`}>
+                              Pasaporte
+                            </span>
+                            <span className="font-bold text-xs truncate block">
+                              {esNuevoVehiculo ? 'Sin Certificar' : '100% Certificado'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Último Servicio / Diagnóstico */}
+                      <div className="mt-3 p-3 bg-[#F8FAFC] rounded-2xl border border-slate-200/80 text-xs space-y-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <span className="font-bold text-[#0A1525] flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-[#1E56B0]" />
+                            <span>Último Servicio:</span>
+                          </span>
+                          <span>{v.ultimoServicio || 'Sin servicios aún'}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 font-medium truncate">
+                          {esNuevoVehiculo
+                            ? 'Vehículo registrado en Garaje • Sin intervenciones previas'
+                            : v.tipoUltimoServicio}
                         </p>
-                      )}
-                    </div>
-
-                    {/* Matrícula Venezolana */}
-                    <div className="w-32 bg-white border-2 border-[#0A1525] rounded-xl p-1.5 text-center shadow-xs shrink-0">
-                      <span className="text-[8px] font-black text-slate-400 block tracking-widest leading-none">
-                        VENEZUELA
-                      </span>
-                      <span className="font-mono text-base font-black text-[#0A1525] tracking-wider leading-tight">
-                        {v.placa}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Ficha Rápida: Kilometraje y Estado */}
-                  <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-2.5">
-                      <Gauge className="w-4 h-4 text-[#1E56B0]" />
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-semibold block">Odómetro</span>
-                        <span className="font-mono font-black text-[#0A1525]">
-                          {v.kilometraje.toLocaleString()} KM
-                        </span>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100 flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <div>
-                        <span className="text-[10px] text-emerald-700 font-semibold block">Pasaporte</span>
-                        <span className="font-bold text-emerald-900">
-                          100% Certificado
-                        </span>
+                    {/* Acciones de la Tarjeta */}
+                    {esNuevoVehiculo ? (
+                      /* ACCIONES PARA VEHÍCULO NUEVO (HISTORIAL EN CERO) */
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVehiculoSeleccionado(v);
+                              setModalSolicitarOpen(true);
+                            }}
+                            className="h-11 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <Wrench className="w-3.5 h-3.5 text-[#CCFF00]" />
+                            <span className="truncate">Pide tu primer servicio</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVehiculoSeleccionado(v);
+                              setModalExpedienteOpen(true);
+                            }}
+                            className="h-11 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 border border-[#0A1525]/10"
+                          >
+                            <ClipboardCheck className="w-3.5 h-3.5 text-[#0A1525]" />
+                            <span className="truncate">Abrir Expediente ($5)</span>
+                          </button>
+                        </div>
+
+                        <div className="text-center pt-1">
+                          <Link
+                            href={`/historial/${v.placa}?garaje=true`}
+                            className="text-[11px] font-bold text-slate-500 hover:text-[#1E56B0] inline-flex items-center gap-1 transition-colors"
+                          >
+                            <span>Ver Ficha e Historial en Cero</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* ACCIONES PARA VEHÍCULO CON HISTORIAL DOCUMENTADO */
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link
+                            href={`/historial/${v.placa}?garaje=true`}
+                            className="h-11 rounded-xl bg-slate-100 hover:bg-[#0A1525] text-slate-700 hover:text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer group/btn"
+                          >
+                            <ClipboardCheck className="w-3.5 h-3.5 text-[#1E56B0] group-hover/btn:text-[#CCFF00]" />
+                            <span>Ver Historial</span>
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVehiculoSeleccionado(v);
+                              setModalChecklistOpen(true);
+                            }}
+                            className="h-11 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center gap-1.5 border border-emerald-200 transition-colors cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Checklist 25 Pts</span>
+                          </button>
+                        </div>
+
+                        <div className="text-center pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVehiculoSeleccionado(v);
+                              setModalSolicitarOpen(true);
+                            }}
+                            className="text-[11px] font-bold text-slate-500 hover:text-[#1E56B0] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Wrench className="w-3 h-3 text-[#1E56B0]" />
+                            <span>Solicitar Nuevo Servicio para este Carro</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
-
-                  {/* Último Servicio / Diagnóstico */}
-                  <div className="mt-3 p-3 bg-[#F8FAFC] rounded-2xl border border-slate-200/80 text-xs space-y-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-500">
-                      <span className="font-bold text-[#0A1525] flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#1E56B0]" />
-                        <span>Último Servicio:</span>
-                      </span>
-                      <span>{v.ultimoServicio}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 font-medium truncate">
-                      {v.tipoUltimoServicio}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Acciones de la Tarjeta */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                  {/* Botón: Ver Historial Completo (Sin Paywall) */}
-                  <Link
-                    href={`/historial/${v.placa}?garaje=true`}
-                    className="h-11 rounded-xl bg-slate-100 hover:bg-[#0A1525] text-slate-700 hover:text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer group/btn"
-                  >
-                    <ClipboardCheck className="w-3.5 h-3.5 text-[#1E56B0] group-hover/btn:text-[#CCFF00]" />
-                    <span>Ver Historial</span>
-                  </Link>
-
-                  {/* Botón: Ver Diagnóstico 25 Puntos In-Page */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVehiculoSeleccionado(v);
-                      setModalChecklistOpen(true);
-                    }}
-                    className="h-11 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center gap-1.5 border border-emerald-200 transition-colors cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Checklist 25 Pts</span>
-                  </button>
-                </div>
-
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
         )}
       </div>
 
@@ -654,53 +724,93 @@ export default function ClienteDashboardPage() {
                 </div>
               </div>
 
-              {/* Bento Resumen */}
-              <div className="grid grid-cols-2 gap-2 text-center text-xs shrink-0">
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Puntos Evaluados</span>
-                  <span className="text-base font-mono font-black text-[#0A1525]">25 / 25 Total</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
-                  <span className="text-[10px] text-emerald-700 font-bold uppercase block">Estado General</span>
-                  <span className="text-base font-mono font-black text-emerald-800">
-                    {vehiculoSeleccionado.checklist25?.puntos_ok ?? 22} OK • {vehiculoSeleccionado.checklist25?.puntos_cambio ?? 3} Atención
-                  </span>
-                </div>
-              </div>
+              {!vehiculoSeleccionado.checklist25 ? (
+                <div className="text-center py-6 px-2 space-y-4 flex-1 flex flex-col justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+                    <AlertTriangle className="w-7 h-7 text-amber-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base font-black text-[#0A1525]">
+                      Auditoría de 25 Puntos Pendiente
+                    </h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                      Este vehículo aún no cuenta con un Expediente Técnico Certificado. Solicita la visita de un mecánico certificado por tan solo <strong>$5.00 USD</strong> para auditar fluidos, frenos, suspensión y escáner.
+                    </p>
+                  </div>
 
-              {/* Lista Rápida de Sistemas Vitales */}
-              <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-                <div className="p-3 rounded-2xl border border-slate-200 bg-white space-y-2 text-xs">
-                  <div className="flex items-center justify-between font-bold">
-                    <span className="text-slate-800">1. Fluidos y Aceite de Motor</span>
-                    <span className="text-emerald-700 font-black flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> OK
-                    </span>
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs space-y-2">
+                    <span className="font-bold text-[#0A1525] block">Sistemas a certificar:</span>
+                    <div className="grid grid-cols-2 gap-1.5 text-[11px] text-slate-600 font-medium">
+                      <span>• Nivel de 7 fluidos vitales</span>
+                      <span>• Pastillas y discos de freno</span>
+                      <span>• Suspensión y tren delantero</span>
+                      <span>• Escáner OBD-II y alternador</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between font-bold pt-2 border-t border-slate-100">
-                    <span className="text-slate-800">2. Sistema de Frenos</span>
-                    <span className="text-amber-700 font-black flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Servicio Realizado
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between font-bold pt-2 border-t border-slate-100">
-                    <span className="text-slate-800">3. Suspensión y Tren Delantero</span>
-                    <span className="text-emerald-700 font-black flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> OK
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between font-bold pt-2 border-t border-slate-100">
-                    <span className="text-slate-800">4. Sistema Eléctrico & Batería</span>
-                    <span className="text-emerald-700 font-black flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> OK
-                    </span>
-                  </div>
-                </div>
 
-                <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-900 leading-relaxed">
-                  <span className="font-bold">Acceso Pro Garantizado:</span> Al estar registrado en Mi Garaje, nunca pagarás paywalls para consultar el historial de tus carros.
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalChecklistOpen(false);
+                      setModalExpedienteOpen(true);
+                    }}
+                    className="w-full h-12 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs sm:text-sm rounded-2xl shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 active:scale-95 transition-all"
+                  >
+                    <ClipboardCheck className="w-4 h-4 text-[#0A1525]" />
+                    <span>Solicitar Expediente Técnico ($5 USD)</span>
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Bento Resumen */}
+                  <div className="grid grid-cols-2 gap-2 text-center text-xs shrink-0">
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Puntos Evaluados</span>
+                      <span className="text-base font-mono font-black text-[#0A1525]">25 / 25 Total</span>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+                      <span className="text-[10px] text-emerald-700 font-bold uppercase block">Estado General</span>
+                      <span className="text-base font-mono font-black text-emerald-800">
+                        {vehiculoSeleccionado.checklist25?.puntos_ok ?? 22} OK • {vehiculoSeleccionado.checklist25?.puntos_cambio ?? 3} Atención
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lista Rápida de Sistemas Vitales */}
+                  <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                    <div className="p-3 rounded-2xl border border-slate-200 bg-white space-y-2 text-xs">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="text-slate-800">1. Fluidos y Aceite de Motor</span>
+                        <span className="text-emerald-700 font-black flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> OK
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between font-bold pt-2 border-t border-slate-100">
+                        <span className="text-slate-800">2. Sistema de Frenos</span>
+                        <span className="text-amber-700 font-black flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Servicio Realizado
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between font-bold pt-2 border-t border-slate-100">
+                        <span className="text-slate-800">3. Suspensión y Tren Delantero</span>
+                        <span className="text-emerald-700 font-black flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> OK
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between font-bold pt-2 border-t border-slate-100">
+                        <span className="text-slate-800">4. Sistema Eléctrico & Batería</span>
+                        <span className="text-emerald-700 font-black flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> OK
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-900 leading-relaxed">
+                      <span className="font-bold">Acceso Pro Garantizado:</span> Al estar registrado en Mi Garaje, nunca pagarás paywalls para consultar el historial de tus carros.
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Footer con Enlace a Vista Detallada */}
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 shrink-0">
@@ -825,7 +935,45 @@ export default function ClienteDashboardPage() {
       <SolicitarMecanicoModal
         open={modalSolicitarOpen}
         onOpenChange={setModalSolicitarOpen}
+        initialVehiculo={
+          vehiculoSeleccionado
+            ? {
+                marca: vehiculoSeleccionado.marca,
+                modelo: vehiculoSeleccionado.modelo,
+                anio: vehiculoSeleccionado.anio,
+                placa: vehiculoSeleccionado.placa
+              }
+            : undefined
+        }
+        initialCliente={{
+          nombre: usuario.nombre,
+          email: usuario.email,
+          telefono: usuario.telefono
+        }}
       />
+
+      {/* Modal de Expediente Técnico de 25 Puntos ($5 USD) */}
+      {vehiculoSeleccionado && (
+        <SolicitarExpedienteModal
+          open={modalExpedienteOpen}
+          onOpenChange={setModalExpedienteOpen}
+          vehiculo={{
+            marca: vehiculoSeleccionado.marca,
+            modelo: vehiculoSeleccionado.modelo,
+            anio: vehiculoSeleccionado.anio,
+            placa: vehiculoSeleccionado.placa,
+            color: vehiculoSeleccionado.color
+          }}
+          cliente={{
+            nombre: usuario.nombre,
+            email: usuario.email,
+            telefono: usuario.telefono
+          }}
+          onSuccess={() => {
+            // Actualizar estado del vehículo si se desea
+          }}
+        />
+      )}
 
     </div>
   );

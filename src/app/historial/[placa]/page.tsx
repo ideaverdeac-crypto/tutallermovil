@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { ReportarPagoButton } from '@/components/ReportarPagoButton';
 import { HistorialChecklistButton } from '@/components/HistorialChecklistModal';
+import { HistorialAccionesCliente } from '@/components/HistorialAccionesCliente';
 import {
   Lock,
   CheckCircle2,
@@ -16,13 +17,68 @@ import {
   DollarSign,
   ShieldCheck,
   FileCheck,
-  ClipboardCheck
+  ClipboardCheck,
+  Car
 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ placa: string }>;
   searchParams?: Promise<{ garaje?: string }>;
 }
+
+const DEMO_SERVICIOS = [
+  {
+    id: 'mock-1',
+    fecha: '2026-11-17',
+    kilometraje: 85400,
+    tipo_servicio: 'Reemplazo de Pastillas de Freno y Rectificación Certificada',
+    costo: 75.00,
+    detalles: 'Pastillas Cerámicas Akebono, rectificación de discos y purga con fluido DOT-4',
+    checklist_json: {
+      total_puntos: 25,
+      puntos_ok: 22,
+      puntos_cambio: 3,
+      frenos: 'requiere_cambio',
+      aceite: 'ok',
+      suspension: 'ok',
+      electrico: 'ok'
+    }
+  },
+  {
+    id: 'mock-2',
+    fecha: '2026-08-14',
+    kilometraje: 80000,
+    tipo_servicio: 'Mantenimiento Mayor de 80.000 KM & Diagnóstico Computarizado',
+    costo: 185.00,
+    detalles: 'Kit de Tiempo, Aceite 5W-30 Sintético, Filtros y Bujías Iridium',
+    checklist_json: {
+      total_puntos: 25,
+      puntos_ok: 25,
+      puntos_cambio: 0,
+      frenos: 'ok',
+      aceite: 'ok',
+      suspension: 'ok',
+      electrico: 'ok'
+    }
+  },
+  {
+    id: 'mock-3',
+    fecha: '2026-04-22',
+    kilometraje: 76500,
+    tipo_servicio: 'Diagnóstico Escáner OBD-II y Calibración de Sensores ABS',
+    costo: 45.00,
+    detalles: 'Calibración cuerpo de aceleración y sensor ABS delantero',
+    checklist_json: {
+      total_puntos: 25,
+      puntos_ok: 24,
+      puntos_cambio: 1,
+      frenos: 'ok',
+      aceite: 'ok',
+      suspension: 'ok',
+      electrico: 'requiere_cambio'
+    }
+  }
+];
 
 export const instant = false;
 
@@ -126,60 +182,12 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
     if (srvByPlaca && srvByPlaca.length > 0) servicios = srvByPlaca;
   }
 
-  // Si no hay servicios cargados por RLS o vacíos, proveer estructura descriptiva para la vista
-  const listaServicios = servicios.length > 0 ? servicios : [
-    {
-      id: 'mock-1',
-      fecha: '2026-11-17',
-      kilometraje: 85400,
-      tipo_servicio: 'Reemplazo de Pastillas de Freno y Rectificación Certificada',
-      costo: 75.00,
-      detalles: 'Pastillas Cerámicas Akebono, rectificación de discos y purga con fluido DOT-4',
-      checklist_json: {
-        total_puntos: 25,
-        puntos_ok: 22,
-        puntos_cambio: 3,
-        frenos: 'requiere_cambio',
-        aceite: 'ok',
-        suspension: 'ok',
-        electrico: 'ok'
-      }
-    },
-    {
-      id: 'mock-2',
-      fecha: '2026-08-14',
-      kilometraje: 80000,
-      tipo_servicio: 'Mantenimiento Mayor de 80.000 KM & Diagnóstico Computarizado',
-      costo: 185.00,
-      detalles: 'Kit de Tiempo, Aceite 5W-30 Sintético, Filtros y Bujías Iridium',
-      checklist_json: {
-        total_puntos: 25,
-        puntos_ok: 25,
-        puntos_cambio: 0,
-        frenos: 'ok',
-        aceite: 'ok',
-        suspension: 'ok',
-        electrico: 'ok'
-      }
-    },
-    {
-      id: 'mock-3',
-      fecha: '2026-04-22',
-      kilometraje: 76500,
-      tipo_servicio: 'Diagnóstico Escáner OBD-II y Calibración de Sensores ABS',
-      costo: 45.00,
-      detalles: 'Calibración cuerpo de aceleración y sensor ABS delantero',
-      checklist_json: {
-        total_puntos: 25,
-        puntos_ok: 24,
-        puntos_cambio: 1,
-        frenos: 'ok',
-        aceite: 'ok',
-        suspension: 'ok',
-        electrico: 'requiere_cambio'
-      }
-    }
-  ];
+  // Solo la placa oficial de demostración pública (AB123CD) mantiene servicios demo en caso de estar vacía
+  // Todos los demás vehículos registrados por clientes inician estrictamente en cero (historial vacío)
+  const esPlacaDemo = placa.toUpperCase() === 'AB123CD';
+  const listaServicios = servicios.length > 0
+    ? servicios
+    : (esPlacaDemo ? DEMO_SERVICIOS : []);
 
   // 5. Verificar suscripción o si el usuario está autenticado / proviene de Mi Garaje (Salto de Paywall)
   const { data: authData } = await supabase.auth.getUser();
@@ -310,220 +318,249 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
         </section>
 
         {/* Encabezado de la Línea de Tiempo */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[#0A1525]">
               Historial de Servicios
             </h2>
             <p className="text-sm text-slate-500">
-              Cronología certificada de mantenimientos y diagnósticos realizados.
+              {listaServicios.length === 0
+                ? 'Expediente técnico digital y registro de intervenciones mecánicas.'
+                : 'Cronología certificada de mantenimientos y diagnósticos realizados.'}
             </p>
           </div>
 
-          {/* Botón Descargar Certificado PDF (Solo si tiene suscripción activa) */}
-          {tieneSuscripcionActiva && (
-            <button
-              type="button"
-              className="h-11 px-4 bg-[#1E56B0] hover:bg-[#16448c] text-white text-sm font-bold rounded-xl transition-colors shadow-sm inline-flex items-center gap-2 cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Descargar Certificado PDF</span>
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {/* Si tiene servicios y suscripción activa: Descargar Certificado PDF */}
+            {tieneSuscripcionActiva && listaServicios.length > 0 && (
+              <button
+                type="button"
+                className="h-11 px-4 bg-[#1E56B0] hover:bg-[#16448c] text-white text-sm font-bold rounded-xl transition-colors shadow-sm inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Descargar Certificado PDF</span>
+              </button>
+            )}
+
+            {/* Acciones para solicitar nuevo servicio o expediente */}
+            <HistorialAccionesCliente
+              vehiculo={{ marca, modelo, anio, placa, color }}
+              cliente={{
+                nombre: vehiculo.cliente_nombre || '',
+                email: vehiculo.cliente_email || '',
+                telefono: vehiculo.cliente_telefono || ''
+              }}
+              esHistorialVacio={false}
+            />
+          </div>
         </div>
 
-        {/* Contenedor del Historial: Lógica del Paywall */}
-        <div className="relative">
-          
-          {/* Línea de Tiempo (Timeline) */}
-          <div
-            className={`space-y-4 ${
-              tieneSuscripcionActiva
-                ? ''
-                : 'filter blur-md select-none pointer-events-none opacity-40'
-            }`}
-          >
-            {listaServicios.map((srv, idx) => {
-              const km = srv.kilometraje ?? srv.km ?? 0;
-              const costo = Number(srv.costo ?? srv.precio ?? srv.monto ?? 0).toFixed(2);
-              const tipo = srv.tipo_servicio ?? srv.servicio ?? srv.descripcion ?? 'Servicio Técnico TuTallerMóvil';
-              const fechaStr = srv.fecha ? String(srv.fecha).split('T')[0] : 'Reciente';
+        {/* Contenedor del Historial: Lógica de Vehículo Nuevo (Cero) vs Historial Existente */}
+        {listaServicios.length === 0 ? (
+          /* ESTADO VEHÍCULO NUEVO / HISTORIAL EN CERO */
+          <HistorialAccionesCliente
+            vehiculo={{ marca, modelo, anio, placa, color }}
+            cliente={{
+              nombre: vehiculo.cliente_nombre || '',
+              email: vehiculo.cliente_email || '',
+              telefono: vehiculo.cliente_telefono || ''
+            }}
+            esHistorialVacio={true}
+          />
+        ) : (
+          /* CONTENEDOR CON SERVICIOS REGISTRADOS Y PAYWALL SI NO TIENE SUSCRIPCIÓN */
+          <div className="relative">
+            
+            {/* Línea de Tiempo (Timeline) */}
+            <div
+              className={`space-y-4 ${
+                tieneSuscripcionActiva
+                  ? ''
+                  : 'filter blur-md select-none pointer-events-none opacity-40'
+              }`}
+            >
+              {listaServicios.map((srv, idx) => {
+                const km = srv.kilometraje ?? srv.km ?? 0;
+                const costo = Number(srv.costo ?? srv.precio ?? srv.monto ?? 0).toFixed(2);
+                const tipo = srv.tipo_servicio ?? srv.servicio ?? srv.descripcion ?? 'Servicio Técnico TuTallerMóvil';
+                const fechaStr = srv.fecha ? String(srv.fecha).split('T')[0] : 'Reciente';
 
-              return (
-                <div
-                  key={srv.id || idx}
-                  className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl p-5 sm:p-6 transition-all hover:bg-white"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shrink-0">
-                        <Wrench className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-base sm:text-lg text-[#0A1525]">
-                          {tipo}
-                        </h4>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
-                          <span className="inline-flex items-center gap-1 font-medium">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                            {fechaStr}
-                          </span>
-                          <span>•</span>
-                          <span className="inline-flex items-center gap-1 font-semibold text-[#1E56B0]">
-                            <Gauge className="w-3.5 h-3.5 text-[#1E56B0]" />
-                            {km.toLocaleString()} KM
-                          </span>
+                return (
+                  <div
+                    key={srv.id || idx}
+                    className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl p-5 sm:p-6 transition-all hover:bg-white"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shrink-0">
+                          <Wrench className="w-5 h-5" />
                         </div>
+                        <div>
+                          <h4 className="font-bold text-base sm:text-lg text-[#0A1525]">
+                            {tipo}
+                          </h4>
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                            <span className="inline-flex items-center gap-1 font-medium">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              {fechaStr}
+                            </span>
+                            <span>•</span>
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#1E56B0]">
+                              <Gauge className="w-3.5 h-3.5 text-[#1E56B0]" />
+                              {km.toLocaleString()} KM
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-left sm:text-right">
+                        <span className="font-extrabold text-lg text-[#0A1525]">
+                          ${costo} USD
+                        </span>
+                        <p className="text-[11px] text-emerald-700 font-semibold flex items-center sm:justify-end gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Garantía Certificada
+                        </p>
                       </div>
                     </div>
 
-                    <div className="text-left sm:text-right">
-                      <span className="font-extrabold text-lg text-[#0A1525]">
-                        ${costo} USD
+                    {/* Detalles / Repuestos */}
+                    <div className="text-xs sm:text-sm text-slate-600 bg-white p-3 rounded-xl border border-[#CBD5E1]/60">
+                      <span className="font-semibold text-slate-700">Trabajos e insumos: </span>
+                      {srv.detalles || 'Revisión técnica computarizada y mantenimiento preventivo por especialista certificado TTM.'}
+                    </div>
+
+                    {/* Checklist Certificado 25 Puntos Visualmente Organizado */}
+                    {(srv.checklist_json || srv.diagnostico_json) && (() => {
+                      const chk = srv.checklist_json || srv.diagnostico_json;
+                      const itemsOk = chk.puntos_ok ?? 22;
+                      const itemsTotal = chk.total_puntos ?? 25;
+
+                      return (
+                        <div className="mt-3 p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between text-xs font-bold text-[#0A1525]">
+                            <span className="flex items-center gap-1.5">
+                              <ClipboardCheck className="w-4 h-4 text-[#1E56B0]" />
+                              <span>Checklist de Inspección Certificado (25 Puntos)</span>
+                            </span>
+                            <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black border border-emerald-200">
+                              {itemsOk}/{itemsTotal} Puntos Óptimos
+                            </span>
+                          </div>
+
+                          {/* Grid de 4 Cuadrantes Clave */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-semibold">
+                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${chk.aceite === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                              <span className="truncate">Fluidos: {chk.aceite === 'ok' ? 'OK' : 'Atención'}</span>
+                            </div>
+
+                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${chk.frenos === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                              <span className="truncate">Frenos: {chk.frenos === 'ok' ? 'OK' : 'Cambio'}</span>
+                            </div>
+
+                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${chk.suspension === 'ok' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                              <span className="truncate">Suspensión: {chk.suspension === 'ok' ? 'OK' : 'Atención'}</span>
+                            </div>
+
+                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="truncate">Eléctrico: OK</span>
+                            </div>
+                          </div>
+
+                          {/* Botón para Abrir Modal Interactivo con los 25 Puntos Completos */}
+                          <HistorialChecklistButton
+                            tipoServicio={tipo}
+                            fecha={fechaStr}
+                            kilometraje={km}
+                            checklistJson={chk}
+                            placa={placa}
+                            modelo={modelo}
+                          />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tarjeta de Conversión (Paywall Flotante sobre el Blur) si NO tiene suscripción activa */}
+            {!tieneSuscripcionActiva && (
+              <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4 z-20">
+                <div className="w-full max-w-xl bg-white border-2 border-[#1E56B0] rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                  {/* Franja superior estética */}
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#1E56B0] via-[#0A1525] to-[#CCFF00]" />
+
+                  {/* Badge de Bloqueo */}
+                  <div className="flex items-center justify-center mb-4">
+                    <span className="inline-flex items-center gap-2 bg-[#0A1525] text-white px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide shadow-sm">
+                      <Lock className="w-3.5 h-3.5 text-[#CCFF00]" />
+                      <span>EXPEDIENTE TÉCNICO PROTEGIDO</span>
+                    </span>
+                  </div>
+
+                  {/* Título */}
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-center text-[#0A1525] tracking-tight leading-tight mb-2">
+                    Activa el Pasaporte Técnico en la Nube
+                  </h3>
+
+                  {/* Oferta de Precio */}
+                  <div className="text-center my-4">
+                    <div className="inline-flex items-baseline justify-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] px-5 py-2.5 rounded-xl">
+                      <span className="text-lg text-slate-400 line-through font-semibold">
+                        $10.00
                       </span>
-                      <p className="text-[11px] text-emerald-700 font-semibold flex items-center sm:justify-end gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        Garantía Certificada
-                      </p>
+                      <span className="text-3xl sm:text-4xl font-black text-[#0A1525] tracking-tight">
+                        $5.00
+                      </span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#1E56B0]">
+                        USD / año
+                      </span>
+                    </div>
+                    <p className="text-xs text-emerald-700 font-bold mt-1.5">
+                      ⚡ 50% OFF por activación inmediata
+                    </p>
+                  </div>
+
+                  {/* Descripción */}
+                  <p className="text-sm sm:text-base text-slate-600 text-center mb-6 max-w-md mx-auto leading-relaxed">
+                    Accede al historial completo, fotos de reparaciones y descarga el certificado PDF para venta.
+                  </p>
+
+                  {/* Beneficios directos */}
+                  <div className="space-y-2.5 mb-7 bg-[#F8FAFC] border border-[#CBD5E1] p-4 rounded-xl text-xs sm:text-sm text-slate-700">
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Certificado oficial en PDF listo para traspaso o venta de vehículo.</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Registro inmutable de kilometraje real certificado por mecánicos TTM.</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Galería fotográfica de repuestos cambiados y facturas respaldadas.</span>
                     </div>
                   </div>
 
-                  {/* Detalles / Repuestos */}
-                  <div className="text-xs sm:text-sm text-slate-600 bg-white p-3 rounded-xl border border-[#CBD5E1]/60">
-                    <span className="font-semibold text-slate-700">Trabajos e insumos: </span>
-                    {srv.detalles || 'Revisión técnica computarizada y mantenimiento preventivo por especialista certificado TTM.'}
+                  {/* Botón CTA Grande Verde Lima (Componente Cliente con Server Action) */}
+                  <ReportarPagoButton vehiculoId={vehiculo.id} placa={placa} />
+
+                  <div className="mt-4 flex items-center justify-center gap-4 text-[11px] text-slate-400 font-medium">
+                    <span>Zelle • Pago Móvil • Banesco Panamá</span>
+                    <span>•</span>
+                    <span>Activación en &lt; 5 min</span>
                   </div>
-
-                  {/* Checklist Certificado 25 Puntos Visualmente Organizado */}
-                  {(srv.checklist_json || srv.diagnostico_json) && (() => {
-                    const chk = srv.checklist_json || srv.diagnostico_json;
-                    const itemsOk = chk.puntos_ok ?? 22;
-                    const itemsTotal = chk.total_puntos ?? 25;
-
-                    return (
-                      <div className="mt-3 p-3 bg-white rounded-xl border border-slate-200 space-y-2">
-                        <div className="flex items-center justify-between text-xs font-bold text-[#0A1525]">
-                          <span className="flex items-center gap-1.5">
-                            <ClipboardCheck className="w-4 h-4 text-[#1E56B0]" />
-                            <span>Checklist de Inspección Certificado (25 Puntos)</span>
-                          </span>
-                          <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black border border-emerald-200">
-                            {itemsOk}/{itemsTotal} Puntos Óptimos
-                          </span>
-                        </div>
-
-                        {/* Grid de 4 Cuadrantes Clave */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-semibold">
-                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${chk.aceite === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                            <span className="truncate">Fluidos: {chk.aceite === 'ok' ? 'OK' : 'Atención'}</span>
-                          </div>
-
-                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${chk.frenos === 'ok' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                            <span className="truncate">Frenos: {chk.frenos === 'ok' ? 'OK' : 'Cambio'}</span>
-                          </div>
-
-                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${chk.suspension === 'ok' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                            <span className="truncate">Suspensión: {chk.suspension === 'ok' ? 'OK' : 'Atención'}</span>
-                          </div>
-
-                          <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                            <span className="truncate">Eléctrico: OK</span>
-                          </div>
-                        </div>
-
-                        {/* Botón para Abrir Modal Interactivo con los 25 Puntos Completos */}
-                        <HistorialChecklistButton
-                          tipoServicio={tipo}
-                          fecha={fechaStr}
-                          kilometraje={km}
-                          checklistJson={chk}
-                          placa={placa}
-                          modelo={modelo}
-                        />
-                      </div>
-                    );
-                  })()}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Tarjeta de Conversión (Paywall Flotante sobre el Blur) si NO tiene suscripción activa */}
-          {!tieneSuscripcionActiva && (
-            <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4 z-20">
-              <div className="w-full max-w-xl bg-white border-2 border-[#1E56B0] rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-                {/* Franja superior estética */}
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#1E56B0] via-[#0A1525] to-[#CCFF00]" />
-
-                {/* Badge de Bloqueo */}
-                <div className="flex items-center justify-center mb-4">
-                  <span className="inline-flex items-center gap-2 bg-[#0A1525] text-white px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide shadow-sm">
-                    <Lock className="w-3.5 h-3.5 text-[#CCFF00]" />
-                    <span>EXPEDIENTE TÉCNICO PROTEGIDO</span>
-                  </span>
-                </div>
-
-                {/* Título */}
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-center text-[#0A1525] tracking-tight leading-tight mb-2">
-                  Activa el Pasaporte Técnico en la Nube
-                </h3>
-
-                {/* Oferta de Precio */}
-                <div className="text-center my-4">
-                  <div className="inline-flex items-baseline justify-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] px-5 py-2.5 rounded-xl">
-                    <span className="text-lg text-slate-400 line-through font-semibold">
-                      $10.00
-                    </span>
-                    <span className="text-3xl sm:text-4xl font-black text-[#0A1525] tracking-tight">
-                      $5.00
-                    </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#1E56B0]">
-                      USD / año
-                    </span>
-                  </div>
-                  <p className="text-xs text-emerald-700 font-bold mt-1.5">
-                    ⚡ 50% OFF por activación inmediata
-                  </p>
-                </div>
-
-                {/* Descripción */}
-                <p className="text-sm sm:text-base text-slate-600 text-center mb-6 max-w-md mx-auto leading-relaxed">
-                  Accede al historial completo, fotos de reparaciones y descarga el certificado PDF para venta.
-                </p>
-
-                {/* Beneficios directos */}
-                <div className="space-y-2.5 mb-7 bg-[#F8FAFC] border border-[#CBD5E1] p-4 rounded-xl text-xs sm:text-sm text-slate-700">
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Certificado oficial en PDF listo para traspaso o venta de vehículo.</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Registro inmutable de kilometraje real certificado por mecánicos TTM.</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Galería fotográfica de repuestos cambiados y facturas respaldadas.</span>
-                  </div>
-                </div>
-
-                {/* Botón CTA Grande Verde Lima (Componente Cliente con Server Action) */}
-                <ReportarPagoButton vehiculoId={vehiculo.id} placa={placa} />
-
-                <div className="mt-4 flex items-center justify-center gap-4 text-[11px] text-slate-400 font-medium">
-                  <span>Zelle • Pago Móvil • Banesco Panamá</span>
-                  <span>•</span>
-                  <span>Activación en &lt; 5 min</span>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-        </div>
+          </div>
+        )}
 
       </main>
 
