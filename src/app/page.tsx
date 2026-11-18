@@ -270,7 +270,7 @@ export default function Home() {
             </motion.div>
 
             {/* Columna Derecha: Composición de Fotos de Mecánicos + Mockup de Smartphone con Credencial Digital */}
-            <div className="lg:col-span-6 relative flex items-center justify-center min-h-[540px] sm:min-h-[590px] lg:min-h-[630px] w-full py-6">
+            <div className="lg:col-span-6 relative flex items-center justify-center min-h-[600px] sm:min-h-[650px] lg:min-h-[680px] w-full py-6">
 
               {/* === CAPA TRASERA: Varias Imágenes Reales de Mecánicos en Taller y Campo === */}
               {/* Foto 1: Especialista en frenos y tren delantero (Arriba Derecha) */}
@@ -279,7 +279,7 @@ export default function Home() {
                 animate={{ opacity: 1, x: 0, y: 0, rotate: 3 }}
                 transition={{ duration: 0.7, delay: 0.1 }}
                 whileHover={{ rotate: 0, scale: 1.03 }}
-                className="absolute top-2 right-0 sm:right-2 w-48 sm:w-60 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
+                className="absolute top-4 right-0 sm:right-2 w-48 sm:w-60 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
                 title="Mantenimiento de Frenos y Suspensión TuTallerMóvil"
               >
                 <img
@@ -300,7 +300,7 @@ export default function Home() {
                 animate={{ opacity: 1, x: 0, y: 0, rotate: -4 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
                 whileHover={{ rotate: 0, scale: 1.03 }}
-                className="absolute bottom-2 left-0 sm:left-2 w-48 sm:w-56 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
+                className="absolute bottom-6 left-0 sm:left-2 w-48 sm:w-56 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
                 title="Diagnóstico Electrónico OBD2"
               >
                 <img
@@ -321,7 +321,7 @@ export default function Home() {
                 animate={{ opacity: 1, scale: 1, rotate: -6 }}
                 transition={{ duration: 0.7, delay: 0.3 }}
                 whileHover={{ rotate: 0, scale: 1.04 }}
-                className="hidden sm:block absolute -top-4 left-6 w-36 aspect-square rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer opacity-90"
+                className="hidden sm:block absolute top-2 left-4 w-36 aspect-square rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer opacity-90"
                 title="Inspección de 25 Puntos de Seguridad"
               >
                 <img
@@ -335,7 +335,7 @@ export default function Home() {
                 </div>
               </motion.div>
 
-              {/* === CAPA FRONTAL: EL MOCKUP DEL TELÉFONO CON LA CREDENCIAL DIGITAL === */}
+              {/* === CAPA FRONTAL: EL MOCKUP DEL TELÉFONO EN PROPORCIÓN REAL (19.5:9) === */}
               <motion.div
                 initial={{ opacity: 0, y: 30, scale: 0.95 }}
                 animate={{
@@ -353,53 +353,57 @@ export default function Home() {
                   }
                 }}
                 whileHover={{ scale: 1.02 }}
-                className="w-[285px] sm:w-[315px] bg-[#0A1525] p-2.5 sm:p-3 rounded-[46px] sm:rounded-[50px] shadow-[0_25px_60px_-15px_rgba(10,21,37,0.4),0_12px_24px_-8px_rgba(0,0,0,0.18)] border-[3.5px] border-slate-700/80 ring-1 ring-slate-800/80 relative z-20 will-change-transform select-none"
+                className="w-[280px] sm:w-[305px] h-[580px] sm:h-[630px] bg-[#0A1525] p-2.5 sm:p-3 rounded-[48px] sm:rounded-[54px] shadow-[0_25px_60px_-15px_rgba(10,21,37,0.4),0_12px_24px_-8px_rgba(0,0,0,0.18)] border-[3.5px] border-slate-700/80 ring-1 ring-slate-800/80 relative z-20 will-change-transform select-none flex flex-col justify-between"
               >
                 {/* Botones Físicos Laterales del Smartphone */}
-                <div className="absolute -left-[5px] top-24 w-[3px] h-9 bg-slate-600 rounded-l-md" />
-                <div className="absolute -left-[5px] top-36 w-[3px] h-9 bg-slate-600 rounded-l-md" />
-                <div className="absolute -right-[5px] top-28 w-[3px] h-12 bg-slate-600 rounded-r-md" />
+                <div className="absolute -left-[5px] top-28 w-[3px] h-9 bg-slate-600 rounded-l-md" />
+                <div className="absolute -left-[5px] top-40 w-[3px] h-9 bg-slate-600 rounded-l-md" />
+                <div className="absolute -right-[5px] top-32 w-[3px] h-12 bg-slate-600 rounded-r-md" />
 
                 {/* Brillo / Reflejo sutil de cristal en la esquina superior derecha */}
                 <div className="absolute top-3 right-6 w-20 h-10 bg-gradient-to-b from-white/10 to-transparent rounded-full -rotate-45 pointer-events-none z-30" />
 
-                {/* Pantalla del Teléfono (Fondo Blanco Limpio / Credencial Digital) */}
-                <div className="bg-white rounded-[38px] sm:rounded-[42px] overflow-hidden border border-slate-200/90 flex flex-col relative text-[#0A1525] shadow-inner">
+                {/* Pantalla del Teléfono (Fondo Blanco Limpio / Proporción Vertical Real) */}
+                <div className="bg-white rounded-[40px] sm:rounded-[44px] overflow-hidden border border-slate-200/90 flex-1 flex flex-col justify-between relative text-[#0A1525] shadow-inner">
                   
-                  {/* Barra de Estado con Dynamic Island (iOS Style) */}
-                  <div className="pt-2.5 px-5 pb-1 flex items-center justify-between bg-white text-[11px] font-bold text-slate-800">
-                    <span className="font-semibold tracking-tight">9:41</span>
-                    {/* Dynamic Island */}
-                    <div className="w-20 h-4 bg-slate-950 rounded-full flex items-center justify-center px-2 gap-1.5 shadow-inner">
-                      <div className="w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-700" />
-                      <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                  {/* Zona Superior: Barra de Estado & Dynamic Island */}
+                  <div>
+                    {/* Barra de Estado con Dynamic Island (iOS Style) */}
+                    <div className="pt-2.5 px-5 pb-1 flex items-center justify-between bg-white text-[11px] font-bold text-slate-800">
+                      <span className="font-semibold tracking-tight">9:41</span>
+                      {/* Dynamic Island */}
+                      <div className="w-20 h-4 bg-slate-950 rounded-full flex items-center justify-center px-2 gap-1.5 shadow-inner">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-700" />
+                        <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px]">
+                        <span className="text-[9px] font-black">5G</span>
+                        <div className="w-4 h-2 border border-slate-800 rounded-xs p-[0.5px] flex items-center">
+                          <div className="w-full h-full bg-slate-800 rounded-2xs" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <span className="text-[9px] font-black">5G</span>
-                      <div className="w-4 h-2 border border-slate-800 rounded-xs p-[0.5px] flex items-center">
-                        <div className="w-full h-full bg-slate-800 rounded-2xs" />
+
+                    {/* Encabezado del Carnet Oficial */}
+                    <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50">
+                      <div className="flex items-center gap-1.5">
+                        <img src="/icon.svg" alt="TuTallerMóvil" className="h-[28px] w-auto object-contain" />
+                        <div className="leading-tight">
+                          <p className="text-[9px] font-black tracking-wider uppercase text-[#0A1525]">CREDENCIAL</p>
+                          <p className="text-[8px] font-bold text-[#1E56B0]">OFICIAL TTM</p>
+                        </div>
+                      </div>
+                      <div className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                        <span>VERIFICADO</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Encabezado del Carnet Oficial */}
-                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50">
-                    <div className="flex items-center gap-1.5">
-                      <img src="/icon.svg" alt="TuTallerMóvil" className="h-[28px] w-auto object-contain" />
-                      <div className="leading-tight">
-                        <p className="text-[9px] font-black tracking-wider uppercase text-[#0A1525]">CREDENCIAL</p>
-                        <p className="text-[8px] font-bold text-[#1E56B0]">OFICIAL TTM</p>
-                      </div>
-                    </div>
-                    <div className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full shadow-2xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                      <span>VERIFICADO</span>
-                    </div>
-                  </div>
-
-                  {/* Tarjeta del Mecánico con Foto Real y Checkmark */}
-                  <div className="p-3 sm:p-3.5 space-y-2.5">
-                    <div className="flex items-center gap-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl p-2.5 shadow-2xs">
+                  {/* Zona Central: Tarjeta del Mecánico + QR Code Antifraude */}
+                  <div className="p-3 sm:p-4 space-y-3.5 flex-1 flex flex-col justify-center">
+                    {/* Tarjeta del Mecánico con Foto Real y Checkmark */}
+                    <div className="flex items-center gap-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl p-3 shadow-2xs">
                       <div className="relative shrink-0">
                         <img
                           src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=240&q=80"
@@ -434,44 +438,46 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* QR Code Dinámico con Generación Criptográfica Real */}
-                    <div className="bg-white border-2 border-slate-200/90 rounded-2xl p-2.5 flex items-center gap-3 shadow-xs">
-                      <div className="bg-[#0A1525] p-1.5 rounded-xl shrink-0 flex items-center justify-center shadow-xs">
+                    {/* Píldoras de Especialidad Técnica */}
+                    <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold text-slate-600">
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">Inyección OBD2</span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">Frenos ABS</span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">Tren Delantero</span>
+                    </div>
+
+                    {/* QR Code Dinámico con Generación Criptográfica Real (Pase Digital Prominente) */}
+                    <div className="bg-white border-2 border-slate-200/90 rounded-2xl p-3 flex flex-col items-center text-center shadow-xs space-y-2">
+                      <div className="bg-[#0A1525] p-2 rounded-xl flex items-center justify-center shadow-sm">
                         <QRCodeSVG
                           value="https://tutallermovil.vercel.app/carnet/CAR-8492"
-                          size={62}
+                          size={96}
                           level="M"
                           fgColor="#CCFF00"
                           bgColor="#0A1525"
                         />
                       </div>
-                      <div className="min-w-0 flex-1 text-left">
-                        <p className="text-[10px] font-black uppercase text-[#0A1525] tracking-wide flex items-center gap-1">
-                          <QrCode className="w-3.5 h-3.5 text-[#1E56B0]" /> QR Antifraude
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-black uppercase text-[#0A1525] tracking-wide flex items-center justify-center gap-1">
+                          <QrCode className="w-3.5 h-3.5 text-[#1E56B0]" /> QR Antifraude Oficial
                         </p>
-                        <p className="text-[9px] text-slate-500 leading-tight mt-0.5">
-                          Escanea para verificar la identidad antes de autorizar acceso.
+                        <p className="text-[9px] text-slate-500 leading-tight max-w-[210px] mx-auto">
+                          Escanea para verificar identidad y póliza de garantía antes de autorizar acceso.
                         </p>
-                        <span className="inline-block mt-1 text-[8px] font-mono text-[#1E56B0] font-black bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60">
+                        <span className="inline-block mt-1 text-[8px] font-mono text-[#1E56B0] font-black bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
                           HASH: 7855-TTM-VERIFIED
                         </span>
                       </div>
                     </div>
-
-                    {/* Botón Dentro del Teléfono para Ver Credencial */}
-                    <Link
-                      href="/carnet/CAR-8492"
-                      className="w-full py-2.5 px-3 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 border border-[#0A1525]/15"
-                    >
-                      <ShieldCheck className="w-4 h-4 text-[#0A1525]" />
-                      <span>Validar Credencial Oficial</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#0A1525]" />
-                    </Link>
                   </div>
 
-                  {/* Barra de Inicio (Home Indicator de iOS) */}
-                  <div className="py-2 flex justify-center bg-slate-50 border-t border-slate-100">
-                    <div className="w-24 h-1 bg-slate-400 rounded-full" />
+                  {/* Zona Inferior: Seguridad & Home Bar de iOS */}
+                  <div className="pb-1.5 bg-slate-50 border-t border-slate-100 text-center">
+                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider py-1">
+                      Protocolo TuTallerMóvil • Seguridad Inmutable
+                    </p>
+                    <div className="py-1 flex justify-center">
+                      <div className="w-24 h-1 bg-slate-400 rounded-full" />
+                    </div>
                   </div>
                 </div>
               </motion.div>
