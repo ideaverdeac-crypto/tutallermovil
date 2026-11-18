@@ -137,7 +137,7 @@ export default function TerminosYCondicionesPage() {
       {/* Contenedor Principal con Menú Lateral e Información Detallada */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Columna Izquierda: Índice Rápido Flotante */}
           <aside className="lg:col-span-4 sticky top-28 space-y-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
@@ -151,29 +151,16 @@ export default function TerminosYCondicionesPage() {
                     key={sec.id}
                     href={`#${sec.id}`}
                     onClick={() => setSeccionActiva(sec.id)}
-                    className={`block px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                      seccionActiva === sec.id
-                        ? 'bg-[#0A1525] text-white shadow-xs'
-                        : 'text-slate-600 hover:text-[#0A1525] hover:bg-slate-100'
-                    }`}
+                    className={`block px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${seccionActiva === sec.id
+                      ? 'bg-[#0A1525] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-[#0A1525] hover:bg-slate-100'
+                      }`}
                   >
                     <span className="font-mono text-[#CCFF00] mr-2">{sec.num}.</span>
                     <span>{sec.titulo}</span>
                   </a>
                 ))}
               </nav>
-
-              <div className="mt-6 pt-5 border-t border-slate-100">
-                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                  <div className="flex items-center gap-2 font-bold mb-1">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Aceptación Obligatoria</span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-amber-800">
-                    El registro de usuarios o aliados en TuTallerMóvil exige la aceptación irrevocable de estas condiciones. No es posible crear una cuenta sin consentir estos términos.
-                  </p>
-                </div>
-              </div>
             </div>
 
             {/* Tarjeta de Titularidad */}
@@ -186,7 +173,7 @@ export default function TerminosYCondicionesPage() {
 
           {/* Columna Derecha: Contenido Íntegro y Estructurado */}
           <article className="lg:col-span-8 space-y-8 bg-white rounded-3xl border border-slate-200 p-6 sm:p-10 shadow-sm leading-relaxed">
-            
+
             {/* Preámbulo Legal */}
             <div className="border-b border-slate-200 pb-6">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 text-sm leading-relaxed">

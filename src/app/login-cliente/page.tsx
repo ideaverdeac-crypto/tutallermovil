@@ -92,7 +92,7 @@ function LoginClienteContent() {
           return;
         }
 
-        setErrorMsg(error.message === 'Invalid login credentials' 
+        setErrorMsg(error.message === 'Invalid login credentials'
           ? 'Correo o contraseña incorrectos. Verifica tus datos o crea una cuenta nueva.'
           : error.message);
         return;
@@ -213,7 +213,7 @@ function LoginClienteContent() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col justify-between font-sans selection:bg-[#CCFF00] selection:text-[#0A1525]">
-      
+
       {/* Header Minimalista */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -263,11 +263,10 @@ function LoginClienteContent() {
                   setErrorMsg(null);
                   setExitoMsg(null);
                 }}
-                className={`py-2.5 rounded-xl transition-all cursor-pointer ${
-                  tabActiva === 'ingresar'
-                    ? 'bg-white text-[#0A1525] shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
+                className={`py-2.5 rounded-xl transition-all cursor-pointer ${tabActiva === 'ingresar'
+                  ? 'bg-white text-[#0A1525] shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+                  }`}
               >
                 Ingresar
               </button>
@@ -279,11 +278,10 @@ function LoginClienteContent() {
                   setErrorMsg(null);
                   setExitoMsg(null);
                 }}
-                className={`py-2.5 rounded-xl transition-all cursor-pointer ${
-                  tabActiva === 'registrarse'
-                    ? 'bg-white text-[#0A1525] shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
+                className={`py-2.5 rounded-xl transition-all cursor-pointer ${tabActiva === 'registrarse'
+                  ? 'bg-white text-[#0A1525] shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+                  }`}
               >
                 Crear Cuenta
               </button>
@@ -337,7 +335,7 @@ function LoginClienteContent() {
 
             {/* Formulario Dinámico según Pestaña */}
             <form onSubmit={tabActiva === 'ingresar' ? handleIngresar : handleRegistrarse} className="space-y-3.5">
-              
+
               {/* Si es registro: Nombre y Apellido */}
               {tabActiva === 'registrarse' && (
                 <div>
@@ -463,11 +461,6 @@ function LoginClienteContent() {
                       de TuTallerMóvil. <span className="text-rose-500 font-bold">*</span>
                     </span>
                   </label>
-                  {!aceptaTerminos && (
-                    <p className="mt-1 text-[10px] text-amber-700 font-medium pl-1 flex items-center gap-1">
-                      <span>⚠️ Es obligatorio aceptar la normativa legal para poder registrarse.</span>
-                    </p>
-                  )}
                 </div>
               )}
 
@@ -475,11 +468,10 @@ function LoginClienteContent() {
               <button
                 type="submit"
                 disabled={cargando || (tabActiva === 'registrarse' && !aceptaTerminos)}
-                className={`w-full mt-2 py-3.5 rounded-2xl text-xs font-black tracking-wide flex items-center justify-center gap-2 transition-all shadow-md ${
-                  tabActiva === 'registrarse' && !aceptaTerminos
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                    : 'bg-[#0A1525] hover:bg-[#1E56B0] text-white cursor-pointer hover:shadow-lg'
-                } disabled:opacity-60`}
+                className={`w-full mt-2 py-3.5 rounded-2xl text-xs font-black tracking-wide flex items-center justify-center gap-2 transition-all shadow-md ${tabActiva === 'registrarse' && !aceptaTerminos
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                  : 'bg-[#0A1525] hover:bg-[#1E56B0] text-white cursor-pointer hover:shadow-lg'
+                  } disabled:opacity-60`}
               >
                 {cargando ? (
                   <span>Procesando...</span>

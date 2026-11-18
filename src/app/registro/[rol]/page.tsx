@@ -1166,11 +1166,6 @@ function RegistroRolContent() {
                       de TuTallerMóvil en Caracas, Venezuela. <span className="text-rose-500 font-bold">*</span>
                     </span>
                   </label>
-                  {!aceptaTerminos && (
-                    <p className="mt-1.5 text-[11px] text-amber-700 font-medium pl-1 flex items-center gap-1.5">
-                      <span>⚠️ Es obligatorio aceptar la normativa de la plataforma para recibir el Código de Aliado y acceder a servicios.</span>
-                    </p>
-                  )}
                 </div>
 
                 {/* Botones de Navegación del Paso 2 */}
