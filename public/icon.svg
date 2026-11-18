@@ -7,8 +7,7 @@
             .ttm-text { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         </style>
     </defs>
-    <!-- Fondo blanco corporativo oficial (White Background 100%) -->
-    <rect x="-40" y="-40" width="865" height="440" rx="56" fill="#FFFFFF"/>
+
     
     <g transform="matrix(1,0,0,1,-3757.415746,-376.301657)">
         <!-- Emblema Gráfico Superior Izquierdo - Verde Lima Oficial -->

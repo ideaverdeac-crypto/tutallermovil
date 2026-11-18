@@ -457,9 +457,8 @@ function MecanicoAvatarSquircle({
   return (
     <div
       onClick={onClick}
-      className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-300/80 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 overflow-visible ${
-        onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
-      } ${className}`}
+      className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-300/80 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 overflow-visible ${onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
+        } ${className}`}
     >
       {/* Fotografía Oficial del Mecánico en el Círculo */}
       <img
@@ -749,11 +748,11 @@ export default function TableroDespachoPage() {
       },
       runner: runnerNombre
         ? {
-            nombre: runnerNombre,
-            unidad: 'Moto Bera SBR Negra (Placa AB987CD)',
-            pin_validacion: String(Math.floor(1000 + Math.random() * 9000)),
-            repuestera: 'AutoPartes Chacao'
-          }
+          nombre: runnerNombre,
+          unidad: 'Moto Bera SBR Negra (Placa AB987CD)',
+          pin_validacion: String(Math.floor(1000 + Math.random() * 9000)),
+          repuestera: 'AutoPartes Chacao'
+        }
         : null,
       cotizacion: {
         mano_de_obra_usd: +(totalFacturado * 0.4).toFixed(2),
@@ -792,7 +791,7 @@ export default function TableroDespachoPage() {
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem('ttm_servicios_dia_finalizados', JSON.stringify(actualizados));
-        } catch (e) {}
+        } catch (e) { }
       }
       return actualizados;
     });
@@ -2237,20 +2236,18 @@ export default function TableroDespachoPage() {
             <button
               type="button"
               onClick={() => setVistaActiva('kanban')}
-              className={`h-11 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 cursor-pointer ${
-                vistaActiva === 'kanban'
-                  ? 'bg-[#0A1525] text-white shadow-sm'
-                  : 'text-slate-700 hover:text-[#0A1525] hover:bg-white/50'
-              }`}
+              className={`h-11 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 cursor-pointer ${vistaActiva === 'kanban'
+                ? 'bg-[#0A1525] text-white shadow-sm'
+                : 'text-slate-700 hover:text-[#0A1525] hover:bg-white/50'
+                }`}
             >
               <Kanban className="w-4 h-4 text-[#CCFF00]" />
               <span>Tablero Activo (Flujo en Vivo)</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-black ${
-                  vistaActiva === 'kanban'
-                    ? 'bg-white/20 text-[#CCFF00]'
-                    : 'bg-slate-300/80 text-slate-800'
-                }`}
+                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-black ${vistaActiva === 'kanban'
+                  ? 'bg-white/20 text-[#CCFF00]'
+                  : 'bg-slate-300/80 text-slate-800'
+                  }`}
               >
                 {ordenes.filter((o) => o.estado !== 'PAGADO').length}
               </span>
@@ -2259,20 +2256,18 @@ export default function TableroDespachoPage() {
             <button
               type="button"
               onClick={() => setVistaActiva('servicios_dia')}
-              className={`h-11 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 cursor-pointer ${
-                vistaActiva === 'servicios_dia'
-                  ? 'bg-[#0A1525] text-white shadow-sm'
-                  : 'text-slate-700 hover:text-[#0A1525] hover:bg-white/50'
-              }`}
+              className={`h-11 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 cursor-pointer ${vistaActiva === 'servicios_dia'
+                ? 'bg-[#0A1525] text-white shadow-sm'
+                : 'text-slate-700 hover:text-[#0A1525] hover:bg-white/50'
+                }`}
             >
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Servicios del Día (Cierre &amp; Expedientes)</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-black ${
-                  vistaActiva === 'servicios_dia'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-emerald-100 text-emerald-900'
-                }`}
+                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-black ${vistaActiva === 'servicios_dia'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-emerald-100 text-emerald-900'
+                  }`}
               >
                 {serviciosDia.length}
               </span>
@@ -2301,314 +2296,327 @@ export default function TableroDespachoPage() {
           <div className="flex-1 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
             <div className="flex gap-6 snap-x snap-mandatory items-start min-w-max pb-2">
 
-            {COLUMNAS.map((columna) => {
-              const ordenesDeColumna = ordenes.filter((o) =>
-                columna.estadosValidos.includes(o.estado)
-              );
-              const isDragOver = dragOverColId === columna.id;
+              {COLUMNAS.map((columna) => {
+                const ordenesDeColumna = ordenes.filter((o) =>
+                  columna.estadosValidos.includes(o.estado)
+                );
+                const isDragOver = dragOverColId === columna.id;
 
-              return (
-                <div
-                  key={columna.id}
-                  onDragOver={(e) => handleDragOverColumn(e, columna.id)}
-                  onDragLeave={handleDragLeaveColumn}
-                  onDrop={(e) => handleDropOnColumn(e, columna.id)}
-                  className={`min-w-[320px] w-[320px] shrink-0 snap-center rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)] transition-all duration-200 ${isDragOver
-                    ? `${columna.colorDragOver} border-2 border-dashed`
-                    : 'bg-slate-50/80 border border-[#E2E8F0]'
-                    }`}
-                >
-                  {/* Cabecera Sticky Glassmorphism */}
-                  <div className="sticky top-0 z-10 backdrop-blur-md bg-white/85 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${columna.colorDot}`}></span>
-                      <h2 className="text-xs font-black uppercase tracking-wider text-[#0A1525]">
-                        {columna.titulo}
-                      </h2>
-                    </div>
-                    <span className="font-mono text-xs font-black bg-[#E2E8F0] text-[#0A1525] px-2.5 py-0.5 rounded-full">
-                      {ordenesDeColumna.length}
-                    </span>
-                  </div>
-
-                  {/* Zona de Drop/Tarjetas */}
-                  <div className="p-3 space-y-3 overflow-y-auto flex-1 min-h-[320px]">
-                    {/* Indicador visual al arrastrar encima */}
-                    {isDragOver && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="p-3 text-center rounded-xl bg-blue-100/60 border-2 border-dashed border-[#1E56B0] text-xs font-extrabold text-[#1E56B0]"
-                      >
-                        Soltar aquí para mover a {columna.titulo}
-                      </motion.div>
-                    )}
-
-                    {ordenesDeColumna.length === 0 ? (
-                      <div className="p-8 text-center border-2 border-dashed border-[#CBD5E1]/80 rounded-2xl bg-white/60 text-xs text-[#475569] font-medium flex flex-col items-center justify-center gap-2.5 h-48 select-none">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100/90 border border-slate-200 flex items-center justify-center text-slate-400 shadow-2xs">
-                          {columna.id === 'LEAD_NUEVO' ? (
-                            <Ghost className="w-6 h-6 stroke-[1.8] text-slate-400" />
-                          ) : (
-                            <Inbox className="w-6 h-6 stroke-[1.8] text-slate-400" />
-                          )}
-                        </div>
-                        <div className="space-y-0.5 text-center">
-                          <p className="text-xs font-black text-[#0A1525]">
-                            {columna.id === 'LEAD_NUEVO'
-                              ? 'Esperando nuevos leads...'
-                              : 'Todo al día'}
-                          </p>
-                          <p className="text-[11px] text-[#475569] font-medium max-w-[200px]">
-                            {columna.textoVacio || 'Sin órdenes en esta etapa por ahora'}
-                          </p>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-mono font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
-                          Arrastra tarjetas aquí
-                        </span>
+                return (
+                  <div
+                    key={columna.id}
+                    onDragOver={(e) => handleDragOverColumn(e, columna.id)}
+                    onDragLeave={handleDragLeaveColumn}
+                    onDrop={(e) => handleDropOnColumn(e, columna.id)}
+                    className={`min-w-[320px] w-[320px] shrink-0 snap-center rounded-3xl flex flex-col shadow-xs overflow-hidden max-h-[calc(100vh-210px)] transition-all duration-200 ${isDragOver
+                      ? `${columna.colorDragOver} border-2 border-dashed`
+                      : 'bg-slate-50/80 border border-[#E2E8F0]'
+                      }`}
+                  >
+                    {/* Cabecera Sticky Glassmorphism */}
+                    <div className="sticky top-0 z-10 backdrop-blur-md bg-white/85 border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${columna.colorDot}`}></span>
+                        <h2 className="text-xs font-black uppercase tracking-wider text-[#0A1525]">
+                          {columna.titulo}
+                        </h2>
                       </div>
-                    ) : (
-                      ordenesDeColumna.map((orden) => {
-                        const vehiculo =
-                          [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
-                            .filter(Boolean)
-                            .join(' ') || orden.vehiculo_modelo;
-                        const isUpdating = actualizandoId === orden.id;
-                        const isBeingDragged = draggedCardId === orden.id;
-                        const estaBloqueadaPorOtra = Boolean(
-                          orden.bloqueado_por && orden.bloqueado_por !== miOperadora.nombre
-                        );
-                        const esFlota = Boolean(
-                          orden.es_flota === true ||
-                          orden.cliente_nombre?.toLowerCase().includes('flota') ||
-                          orden.cliente_nombre?.toLowerCase().includes('logística') ||
-                          orden.falla_reportada?.includes('[FLOTA') ||
-                          orden.empresa_flota
-                        );
+                      <span className="font-mono text-xs font-black bg-[#E2E8F0] text-[#0A1525] px-2.5 py-0.5 rounded-full">
+                        {ordenesDeColumna.length}
+                      </span>
+                    </div>
 
-                        return (
-                          <motion.div
-                            key={orden.id}
-                            layout
-                            draggable={!isUpdating && !estaBloqueadaPorOtra}
-                            onDragStart={(e: any) => handleDragStart(e, orden.id)}
-                            onDragEnd={handleDragEnd}
-                            whileHover={{ scale: isBeingDragged || estaBloqueadaPorOtra ? 1 : 1.02, y: isBeingDragged || estaBloqueadaPorOtra ? 0 : -2 }}
-                            transition={{ duration: 0.2 }}
-                            className={`rounded-2xl p-3.5 transition-all relative flex flex-col justify-between gap-2.5 select-none group ${estaBloqueadaPorOtra
-                              ? 'border-rose-200 bg-rose-50/20 cursor-not-allowed opacity-90'
-                              : isBeingDragged
-                                ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
-                                : esFlota
-                                  ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg cursor-grab active:cursor-grabbing'
-                                  : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing'
-                              }`}
-                          >
-                            {/* 0. Banner Distintivo Flota Corporativa B2B (Resalta la tarjeta de color diferente) */}
-                            {esFlota && (
-                              <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#0A1525] text-white shadow-2xs border border-blue-400/30">
-                                <div className="flex items-center gap-1.5 text-[10px] font-black tracking-wide text-[#CCFF00] uppercase truncate">
-                                  <Truck className="w-3.5 h-3.5 text-[#CCFF00] shrink-0" />
-                                  <span className="truncate">{orden.empresa_flota || 'Flota Corporativa B2B'}</span>
-                                </div>
-                                <span className="text-[9px] font-mono text-white font-extrabold px-1.5 py-0.5 rounded bg-[#1E56B0] shrink-0 shadow-2xs">
-                                  PRIORIDAD B2B
-                                </span>
-                              </div>
+                    {/* Zona de Drop/Tarjetas */}
+                    <div className="p-3 space-y-3 overflow-y-auto flex-1 min-h-[320px]">
+                      {/* Indicador visual al arrastrar encima */}
+                      {isDragOver && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="p-3 text-center rounded-xl bg-blue-100/60 border-2 border-dashed border-[#1E56B0] text-xs font-extrabold text-[#1E56B0]"
+                        >
+                          Soltar aquí para mover a {columna.titulo}
+                        </motion.div>
+                      )}
+
+                      {ordenesDeColumna.length === 0 ? (
+                        <div className="p-8 text-center border-2 border-dashed border-[#CBD5E1]/80 rounded-2xl bg-white/60 text-xs text-[#475569] font-medium flex flex-col items-center justify-center gap-2.5 h-48 select-none">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100/90 border border-slate-200 flex items-center justify-center text-slate-400 shadow-2xs">
+                            {columna.id === 'LEAD_NUEVO' ? (
+                              <Ghost className="w-6 h-6 stroke-[1.8] text-slate-400" />
+                            ) : (
+                              <Inbox className="w-6 h-6 stroke-[1.8] text-slate-400" />
                             )}
-
-                            {/* 1. Barra Superior: Hora de Solicitud (HH:MM AM/PM) y Cronómetro Animado SLA */}
-                            <div className="flex items-center justify-between bg-[#F8FAFC] border border-[#E2E8F0] px-2.5 py-1.5 rounded-xl text-xs transition-colors">
-                              <div className="flex items-center gap-1.5 text-slate-500 font-semibold text-[11px]">
-                                <Clock className="w-3 h-3 text-slate-400" />
-                                <span>Solicitud:</span>
-                                <span className="font-mono font-bold text-[#0A1525]">
-                                  {formatearHoraCreacion(orden.created_at)}
-                                </span>
-                              </div>
-
-                              <CronometroSLA createdAt={orden.created_at} />
-                            </div>
-
-                            {/* Banner de Bloqueo de Tarjeta (Card Locking) */}
-                            {orden.bloqueado_por && (
-                              <div
-                                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all ${estaBloqueadaPorOtra
-                                  ? 'bg-rose-100/90 text-rose-800 border border-rose-300 shadow-2xs'
-                                  : 'bg-amber-100/90 text-amber-800 border border-amber-300 shadow-2xs'
-                                  }`}
-                              >
-                                <Lock className="w-3.5 h-3.5 shrink-0" />
-                                <span className="truncate">
-                                  {estaBloqueadaPorOtra
-                                    ? `Editando: ${orden.bloqueado_por}`
-                                    : 'En edición por ti'}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* 2. Grip Icon, Vehículo en negrita y Nombre del Cliente */}
-                            <div className="flex items-start justify-between gap-2 pt-0.5">
-                              <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                                <GripVertical className="w-4 h-4 text-slate-300 shrink-0 mt-0.5 hover:text-[#0A1525]" />
-                                <div className="space-y-0.5 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug truncate">
-                                      {vehiculo}
-                                    </h3>
-                                    {esFlota && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black bg-blue-100 text-[#1E56B0] border border-blue-200 shrink-0">
-                                        FLOTA
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1">
-                                    {esFlota && <Building2 className="w-3 h-3 text-[#1E56B0] shrink-0" />}
-                                    <span>{orden.cliente_nombre || 'Cliente Particular'}</span>
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Medio: Falla Reportada (truncada) */}
-                            <p className="text-xs text-[#475569] line-clamp-2 leading-relaxed pl-5">
-                              {orden.falla_reportada}
+                          </div>
+                          <div className="space-y-0.5 text-center">
+                            <p className="text-xs font-black text-[#0A1525]">
+                              {columna.id === 'LEAD_NUEVO'
+                                ? 'Esperando nuevos leads...'
+                                : 'Todo al día'}
                             </p>
+                            <p className="text-[11px] text-[#475569] font-medium max-w-[200px]">
+                              {columna.textoVacio || 'Sin órdenes en esta etapa por ahora'}
+                            </p>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                            Arrastra tarjetas aquí
+                          </span>
+                        </div>
+                      ) : (
+                        ordenesDeColumna.map((orden) => {
+                          const vehiculo =
+                            [orden.vehiculo_marca, orden.vehiculo_modelo, orden.vehiculo_anio]
+                              .filter(Boolean)
+                              .join(' ') || orden.vehiculo_modelo;
+                          const isUpdating = actualizandoId === orden.id;
+                          const isBeingDragged = draggedCardId === orden.id;
+                          const estaBloqueadaPorOtra = Boolean(
+                            orden.bloqueado_por && orden.bloqueado_por !== miOperadora.nombre
+                          );
+                          const esFlota = Boolean(
+                            orden.es_flota === true ||
+                            orden.cliente_nombre?.toLowerCase().includes('flota') ||
+                            orden.cliente_nombre?.toLowerCase().includes('logística') ||
+                            orden.falla_reportada?.includes('[FLOTA') ||
+                            orden.empresa_flota
+                          );
 
-                            {/* Datos complementarios según columna */}
-                            {columna.id === 'LEAD_NUEVO' && (
-                              <div className="pt-1 ml-5">
-                                <button
-                                  type="button"
-                                  disabled={estaBloqueadaPorOtra}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (estaBloqueadaPorOtra) return;
-                                    bloquearTarjeta(orden.id);
-                                    setOrdenParaRadar(orden);
-                                    setSheetRadarMecanicosOpen(true);
-                                  }}
-                                  className="w-full h-8 px-3 rounded-xl bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 border border-blue-200 transition-all cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                  <UserPlus className="w-3.5 h-3.5" />
-                                  <span>Asignar Mecánico</span>
-                                </button>
-                              </div>
-                            )}
-
-                            {/* En EN_INSPECCION: Avatar del Mecánico + Icono Redondo + WhatsApp Carnet + Botón Diagnóstico + Botón de Cotizar */}
-                            {columna.id === 'EN_INSPECCION' && (() => {
-                              const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
-                              return (
-                                <div className="space-y-2 ml-5">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <MecanicoAsignadoBadge
-                                      nombre={mecAsignado.nombre}
-                                      credencial={mecAsignado.credencial}
-                                      fotoUrl={mecAsignado.foto}
-                                      onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
-                                    />
-                                    <div
-                                      className="w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#1E56B0] flex items-center justify-center shrink-0 relative shadow-2xs transition-colors cursor-help"
-                                      title="Diagnóstico en curso • Mecánico en sitio realizando inspección"
-                                    >
-                                      <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
-                                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1E56B0] animate-pulse ring-2 ring-white" />
-                                    </div>
+                          return (
+                            <motion.div
+                              key={orden.id}
+                              layout
+                              draggable={!isUpdating && !estaBloqueadaPorOtra}
+                              onDragStart={(e: any) => handleDragStart(e, orden.id)}
+                              onDragEnd={handleDragEnd}
+                              whileHover={{ scale: isBeingDragged || estaBloqueadaPorOtra ? 1 : 1.02, y: isBeingDragged || estaBloqueadaPorOtra ? 0 : -2 }}
+                              transition={{ duration: 0.2 }}
+                              className={`rounded-2xl p-3.5 transition-all relative flex flex-col justify-between gap-2.5 select-none group ${estaBloqueadaPorOtra
+                                ? 'border-rose-200 bg-rose-50/20 cursor-not-allowed opacity-90'
+                                : isBeingDragged
+                                  ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
+                                  : esFlota
+                                    ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg cursor-grab active:cursor-grabbing'
+                                    : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing'
+                                }`}
+                            >
+                              {/* 0. Banner Distintivo Flota Corporativa B2B (Resalta la tarjeta de color diferente) */}
+                              {esFlota && (
+                                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#0A1525] text-white shadow-2xs border border-blue-400/30">
+                                  <div className="flex items-center gap-1.5 text-[10px] font-black tracking-wide text-[#CCFF00] uppercase truncate">
+                                    <Truck className="w-3.5 h-3.5 text-[#CCFF00] shrink-0" />
+                                    <span className="truncate">{orden.empresa_flota || 'Flota Corporativa B2B'}</span>
                                   </div>
-
-                                {/* Botón: Ver Diagnóstico de 25 Puntos */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOrdenParaDiagnostico(orden);
-                                    setModalDiagnosticoOpen(true);
-                                  }}
-                                  className="w-full h-8 px-2.5 rounded-xl bg-purple-50 hover:bg-purple-600 text-purple-800 hover:text-white border border-purple-200 text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                  title="Ver inspección certificada de 25 puntos con repuestos requeridos"
-                                >
-                                  <ClipboardCheck className="w-3.5 h-3.5" />
-                                  <span>Ver Diagnóstico (25 Puntos)</span>
-                                </button>
-
-                                {/* Botón: Enviar Carnet por WhatsApp */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEnviarCarnetWhatsApp(orden);
-                                  }}
-                                  className="w-full h-8 px-2.5 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                  title="Enviar carnet digital verificado del mecánico al WhatsApp del cliente"
-                                >
-                                  <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
-                                  <span>Enviar Carnet</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOrdenParaCotizar(orden);
-                                    setModalCotizadorOpen(true);
-                                  }}
-                                  className="w-full h-8 px-3 rounded-xl bg-[#1E56B0] hover:bg-[#0A1525] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                >
-                                  <FileText className="w-3.5 h-3.5 text-[#CCFF00]" />
-                                  <span>Cotizar y Enviar al Cliente</span>
-                                </button>
-                              </div>
-                            );
-                          })()}
-
-                            {/* En COTIZADO: Monto cotizado en grande + Esperando al cliente + Botón de Aprobación */}
-                            {columna.id === 'COTIZADO' && (
-                              <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 ml-5 space-y-2">
-                                <div className="flex items-baseline justify-between">
-                                  <div className="flex items-center gap-1.5 text-amber-900 text-xs font-extrabold">
-                                    <Hourglass className="w-3.5 h-3.5 text-amber-600 animate-spin" />
-                                    <span>Esperando al cliente...</span>
-                                  </div>
-                                  <span className="text-base font-black text-[#0A1525] font-mono">
-                                    ${typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0 ? (Number(orden.ganancia_estimada) * 1.5).toFixed(2) : '75.00'}{' '}
-                                    <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
+                                  <span className="text-[9px] font-mono text-white font-extrabold px-1.5 py-0.5 rounded bg-[#1E56B0] shrink-0 shadow-2xs">
+                                    PRIORIDAD B2B
                                   </span>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAprobarCliente(orden);
-                                  }}
-                                  className="w-full h-8 px-3 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-[#CCFF00]" />
-                                  <span>Marcar como Aprobado por el Cliente</span>
-                                </button>
+                              )}
+
+                              {/* 1. Barra Superior: Hora de Solicitud (HH:MM AM/PM) y Cronómetro Animado SLA */}
+                              <div className="flex items-center justify-between bg-[#F8FAFC] border border-[#E2E8F0] px-2.5 py-1.5 rounded-xl text-xs transition-colors">
+                                <div className="flex items-center gap-1.5 text-slate-500 font-semibold text-[11px]">
+                                  <Clock className="w-3 h-3 text-slate-400" />
+                                  <span>Solicitud:</span>
+                                  <span className="font-mono font-bold text-[#0A1525]">
+                                    {formatearHoraCreacion(orden.created_at)}
+                                  </span>
+                                </div>
+
+                                <CronometroSLA createdAt={orden.created_at} />
                               </div>
-                            )}
 
-                            {/* En REPUESTOS_EN_RUTA: Avatar del Mecánico Asignado + Gestión de Runner */}
-                            {columna.id === 'REPUESTOS_EN_RUTA' && (() => {
-                              const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
-                              return (
-                                <div className="space-y-1.5 ml-5">
-                                  <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                    <MecanicoAsignadoBadge
-                                      nombre={mecAsignado.nombre}
-                                      credencial={mecAsignado.credencial}
-                                      fotoUrl={mecAsignado.foto}
-                                      onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
-                                    />
+                              {/* Banner de Bloqueo de Tarjeta (Card Locking) */}
+                              {orden.bloqueado_por && (
+                                <div
+                                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all ${estaBloqueadaPorOtra
+                                    ? 'bg-rose-100/90 text-rose-800 border border-rose-300 shadow-2xs'
+                                    : 'bg-amber-100/90 text-amber-800 border border-amber-300 shadow-2xs'
+                                    }`}
+                                >
+                                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">
+                                    {estaBloqueadaPorOtra
+                                      ? `Editando: ${orden.bloqueado_por}`
+                                      : 'En edición por ti'}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* 2. Grip Icon, Vehículo en negrita y Nombre del Cliente */}
+                              <div className="flex items-start justify-between gap-2 pt-0.5">
+                                <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                                  <GripVertical className="w-4 h-4 text-slate-300 shrink-0 mt-0.5 hover:text-[#0A1525]" />
+                                  <div className="space-y-0.5 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <h3 className="text-sm font-black text-[#0A1525] tracking-tight leading-snug truncate">
+                                        {vehiculo}
+                                      </h3>
+                                      {esFlota && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black bg-blue-100 text-[#1E56B0] border border-blue-200 shrink-0">
+                                          FLOTA
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1">
+                                      {esFlota && <Building2 className="w-3 h-3 text-[#1E56B0] shrink-0" />}
+                                      <span>{orden.cliente_nombre || 'Cliente Particular'}</span>
+                                    </p>
                                   </div>
+                                </div>
+                              </div>
 
-                                  {runnersAsignados[orden.id] ? (
-                                    <div className="p-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs shadow-2xs">
-                                      <span className="font-extrabold text-emerald-800 flex items-center gap-1.5 text-xs">
-                                        <Check className="w-3.5 h-3.5 text-emerald-700 stroke-[3]" />
-                                        Runner: {runnersAsignados[orden.id]}
-                                      </span>
+                              {/* Medio: Falla Reportada (truncada) */}
+                              <p className="text-xs text-[#475569] line-clamp-2 leading-relaxed pl-5">
+                                {orden.falla_reportada}
+                              </p>
+
+                              {/* Datos complementarios según columna */}
+                              {columna.id === 'LEAD_NUEVO' && (
+                                <div className="pt-1 ml-5">
+                                  <button
+                                    type="button"
+                                    disabled={estaBloqueadaPorOtra}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (estaBloqueadaPorOtra) return;
+                                      bloquearTarjeta(orden.id);
+                                      setOrdenParaRadar(orden);
+                                      setSheetRadarMecanicosOpen(true);
+                                    }}
+                                    className="w-full h-8 px-3 rounded-xl bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 border border-blue-200 transition-all cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    <UserPlus className="w-3.5 h-3.5" />
+                                    <span>Asignar Mecánico</span>
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* En EN_INSPECCION: Avatar del Mecánico + Icono Redondo + WhatsApp Carnet + Botón Diagnóstico + Botón de Cotizar */}
+                              {columna.id === 'EN_INSPECCION' && (() => {
+                                const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                                return (
+                                  <div className="space-y-2 ml-5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <MecanicoAsignadoBadge
+                                        nombre={mecAsignado.nombre}
+                                        credencial={mecAsignado.credencial}
+                                        fotoUrl={mecAsignado.foto}
+                                        onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
+                                      />
+                                      <div
+                                        className="w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#1E56B0] flex items-center justify-center shrink-0 relative shadow-2xs transition-colors cursor-help"
+                                        title="Diagnóstico en curso • Mecánico en sitio realizando inspección"
+                                      >
+                                        <Wrench className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1E56B0] animate-pulse ring-2 ring-white" />
+                                      </div>
+                                    </div>
+
+                                    {/* Botón: Ver Diagnóstico de 25 Puntos */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOrdenParaDiagnostico(orden);
+                                        setModalDiagnosticoOpen(true);
+                                      }}
+                                      className="w-full h-8 px-2.5 rounded-xl bg-purple-50 hover:bg-purple-600 text-purple-800 hover:text-white border border-purple-200 text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                      title="Ver inspección certificada de 25 puntos con repuestos requeridos"
+                                    >
+                                      <ClipboardCheck className="w-3.5 h-3.5" />
+                                      <span>Ver Diagnóstico (25 Puntos)</span>
+                                    </button>
+
+                                    {/* Botón: Enviar Carnet por WhatsApp */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEnviarCarnetWhatsApp(orden);
+                                      }}
+                                      className="w-full h-8 px-2.5 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                      title="Enviar carnet digital verificado del mecánico al WhatsApp del cliente"
+                                    >
+                                      <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                                      <span>Enviar Carnet</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOrdenParaCotizar(orden);
+                                        setModalCotizadorOpen(true);
+                                      }}
+                                      className="w-full h-8 px-3 rounded-xl bg-[#1E56B0] hover:bg-[#0A1525] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                    >
+                                      <FileText className="w-3.5 h-3.5 text-[#CCFF00]" />
+                                      <span>Cotizar y Enviar al Cliente</span>
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* En COTIZADO: Monto cotizado en grande + Esperando al cliente + Botón de Aprobación */}
+                              {columna.id === 'COTIZADO' && (
+                                <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 ml-5 space-y-2">
+                                  <div className="flex items-baseline justify-between">
+                                    <div className="flex items-center gap-1.5 text-amber-900 text-xs font-extrabold">
+                                      <Hourglass className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                                      <span>Esperando al cliente...</span>
+                                    </div>
+                                    <span className="text-base font-black text-[#0A1525] font-mono">
+                                      ${typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0 ? (Number(orden.ganancia_estimada) * 1.5).toFixed(2) : '75.00'}{' '}
+                                      <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAprobarCliente(orden);
+                                    }}
+                                    className="w-full h-8 px-3 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-[#CCFF00]" />
+                                    <span>Marcar como Aprobado por el Cliente</span>
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* En REPUESTOS_EN_RUTA: Avatar del Mecánico Asignado + Gestión de Runner */}
+                              {columna.id === 'REPUESTOS_EN_RUTA' && (() => {
+                                const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                                return (
+                                  <div className="space-y-1.5 ml-5">
+                                    <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
+                                      <MecanicoAsignadoBadge
+                                        nombre={mecAsignado.nombre}
+                                        credencial={mecAsignado.credencial}
+                                        fotoUrl={mecAsignado.foto}
+                                        onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
+                                      />
+                                    </div>
+
+                                    {runnersAsignados[orden.id] ? (
+                                      <div className="p-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs shadow-2xs">
+                                        <span className="font-extrabold text-emerald-800 flex items-center gap-1.5 text-xs">
+                                          <Check className="w-3.5 h-3.5 text-emerald-700 stroke-[3]" />
+                                          Runner: {runnersAsignados[orden.id]}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOrdenParaRunner(orden);
+                                            setModalRunnerOpen(true);
+                                          }}
+                                          className="text-[10px] font-bold text-slate-400 hover:text-[#0A1525] underline ml-1 cursor-pointer"
+                                        >
+                                          Cambiar
+                                        </button>
+                                      </div>
+                                    ) : (
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -2616,239 +2624,226 @@ export default function TableroDespachoPage() {
                                           setOrdenParaRunner(orden);
                                           setModalRunnerOpen(true);
                                         }}
-                                        className="text-[10px] font-bold text-slate-400 hover:text-[#0A1525] underline ml-1 cursor-pointer"
+                                        className="w-full h-8 px-3 rounded-xl bg-sky-500 hover:bg-[#0A1525] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
                                       >
-                                        Cambiar
+                                        <Bike className="w-3.5 h-3.5" />
+                                        <span>Asignar Runner</span>
                                       </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOrdenParaRunner(orden);
-                                        setModalRunnerOpen(true);
-                                      }}
-                                      className="w-full h-8 px-3 rounded-xl bg-sky-500 hover:bg-[#0A1525] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                    >
-                                      <Bike className="w-3.5 h-3.5" />
-                                      <span>Asignar Runner</span>
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })()}
+                                    )}
+                                  </div>
+                                );
+                              })()}
 
-                            {/* En EN_EJECUCION: Avatar del Mecánico Asignado + Estado de Instalación + Ver Checklist */}
-                            {columna.id === 'EN_EJECUCION' && (() => {
-                              const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
-                              return (
-                                <div className="space-y-2 ml-5">
-                                  <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
-                                    <MecanicoAsignadoBadge
-                                      nombre={mecAsignado.nombre}
-                                      credencial={mecAsignado.credencial}
-                                      fotoUrl={mecAsignado.foto}
-                                      onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
-                                    />
-                                    <span className="text-[10px] font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse" />
-                                      En Ejecución
+                              {/* En EN_EJECUCION: Avatar del Mecánico Asignado + Estado de Instalación + Ver Checklist */}
+                              {columna.id === 'EN_EJECUCION' && (() => {
+                                const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                                return (
+                                  <div className="space-y-2 ml-5">
+                                    <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
+                                      <MecanicoAsignadoBadge
+                                        nombre={mecAsignado.nombre}
+                                        credencial={mecAsignado.credencial}
+                                        fotoUrl={mecAsignado.foto}
+                                        onClick={() => { setOrdenParaEvidencia(orden); setModalMecanicoDetalleOpen(true); }}
+                                      />
+                                      <span className="text-[10px] font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse" />
+                                        En Ejecución
+                                      </span>
+                                    </div>
+                                    <div className="pt-0.5">
+                                      <Link
+                                        href={`/aliados/servicio/${orden.id}`}
+                                        target="_blank"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full h-8 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black flex items-center justify-center gap-1.5 border border-slate-200 transition-colors shadow-2xs"
+                                        title="Ver Checklist TTM y Candado de Odómetro"
+                                      >
+                                        <ClipboardCheck className="w-3.5 h-3.5 text-slate-600" />
+                                        <span>Ver Checklist TTM</span>
+                                      </Link>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* En PAGO_REPORTADO / PENDIENTE_PAGO: Ver Comprobante + Rechazar / Aprobar */}
+                              {(columna.id === 'PAGO_REPORTADO' || columna.id === 'PENDIENTE_PAGO') && (
+                                <div className="p-3 rounded-2xl bg-purple-50/80 border border-purple-200 ml-5 space-y-2.5">
+                                  <div className="flex items-baseline justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-900">
+                                      Total a Liquidar:
+                                    </span>
+                                    <span className="text-base font-black text-[#0A1525] font-mono">
+                                      ${typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0 ? (Number(orden.ganancia_estimada) * 1.5).toFixed(2) : '75.00'}{' '}
+                                      <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
                                     </span>
                                   </div>
-                                  <div className="pt-0.5">
-                                    <Link
-                                      href={`/aliados/servicio/${orden.id}`}
-                                      target="_blank"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="w-full h-8 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black flex items-center justify-center gap-1.5 border border-slate-200 transition-colors shadow-2xs"
-                                      title="Ver Checklist TTM y Candado de Odómetro"
+
+                                  {orden.estado === 'PAGO_REPORTADO' || orden.comprobante_url ? (
+                                    <div className="space-y-2">
+                                      <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs">
+                                        <span className="text-emerald-800 font-extrabold flex items-center gap-1.5 text-[11px]">
+                                          <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                                          Ticket Cargado
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAbrirComprobante(orden);
+                                          }}
+                                          className="h-6 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                                        >
+                                          <Eye className="w-3 h-3" />
+                                          <span>Ver Comprobante</span>
+                                        </button>
+                                      </div>
+
+                                      {/* Dos botones: Rechazar vs Aprobar Pago y Cerrar Orden */}
+                                      <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                                        <button
+                                          type="button"
+                                          disabled={isUpdating}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRechazarComprobante(orden);
+                                          }}
+                                          className="h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black flex items-center justify-center gap-1 transition-colors cursor-pointer active:scale-95"
+                                          title="Rechazar comprobante y devolver a Pendiente de Pago"
+                                        >
+                                          <X className="w-3 h-3 stroke-[2.5]" />
+                                          <span>Rechazar</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          disabled={isUpdating}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAprobarPagoYTerminar(orden);
+                                          }}
+                                          className="h-8 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border border-slate-900/10 text-[10px] font-black flex items-center justify-center gap-1 transition-colors shadow-2xs cursor-pointer active:scale-95"
+                                          title="Aprobar pago y cerrar orden (el dinero entra oficialmente)"
+                                        >
+                                          <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
+                                          <span>Aprobar Pago</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const tel = orden.cliente_telefono || '0414-2314194';
+                                          const msg = `Hola ${orden.cliente_nombre || 'estimado cliente'}, te recordamos los datos para realizar el pago de tu servicio en TuTallerMóvil: Zelle (correo@tutallermovil.com) o Pago Móvil (0102 • V-1786991 • 0414-2314194). Puedes subir tu comprobante en tu portal: https://tutallermovil.vercel.app/cliente/servicio/${orden.id}`;
+                                          window.open(generarLinkWhatsApp(tel, msg), '_blank');
+                                        }}
+                                        className="w-full h-8 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-[10px] font-black flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                      >
+                                        <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                                        <span>Recordar Pago por WhatsApp</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleValidarPagoYCerrar(orden);
+                                        }}
+                                        className="w-full h-8 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-[10px] font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                                      >
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-[#CCFF00]" />
+                                        <span>Validar Pago y Cerrar</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Abajo: Sector y Acciones Rápidas */}
+                              <div className="pt-2 border-t border-slate-100 flex items-center justify-between pl-5">
+                                <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
+                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="truncate max-w-[100px] sm:max-w-[120px]">{orden.sector}</span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  {/* Botón Ver Evidencia: solo cuando el servicio llega a ejecución (o posterior) */}
+                                  {(columna.id === 'EN_EJECUCION' || columna.id === 'PAGO_REPORTADO') && (
+                                    <button
+                                      type="button"
+                                      disabled={estaBloqueadaPorOtra}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAbrirEvidencia(orden);
+                                      }}
+                                      className="h-7 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs border bg-blue-50/90 hover:bg-blue-100 text-[#1E56B0] border-blue-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                      title={orden.foto_odometro_url ? 'Foto de odómetro y evidencias verificadas (Clic para ver)' : 'Ver evidencia del servicio'}
                                     >
-                                      <ClipboardCheck className="w-3.5 h-3.5 text-slate-600" />
-                                      <span>Ver Checklist TTM</span>
-                                    </Link>
-                                  </div>
-                                </div>
-                              );
-                            })()}
+                                      <Camera className="w-3.5 h-3.5 text-[#1E56B0]" />
+                                      <span>{orden.foto_odometro_url ? 'Evidencia ✓' : 'Evidencia'}</span>
+                                    </button>
+                                  )}
 
-                            {/* En PAGO_REPORTADO / PENDIENTE_PAGO: Ver Comprobante + Rechazar / Aprobar */}
-                            {(columna.id === 'PAGO_REPORTADO' || columna.id === 'PENDIENTE_PAGO') && (
-                              <div className="p-3 rounded-2xl bg-purple-50/80 border border-purple-200 ml-5 space-y-2.5">
-                                <div className="flex items-baseline justify-between">
-                                  <span className="text-[10px] font-black uppercase tracking-wider text-purple-900">
-                                    Total a Liquidar:
-                                  </span>
-                                  <span className="text-base font-black text-[#0A1525] font-mono">
-                                    ${typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0 ? (Number(orden.ganancia_estimada) * 1.5).toFixed(2) : '75.00'}{' '}
-                                    <span className="text-[10px] font-sans text-slate-500 font-bold">USD</span>
-                                  </span>
-                                </div>
-
-                                {orden.estado === 'PAGO_REPORTADO' || orden.comprobante_url ? (
-                                  <div className="space-y-2">
-                                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs">
-                                      <span className="text-emerald-800 font-extrabold flex items-center gap-1.5 text-[11px]">
-                                        <Receipt className="w-3.5 h-3.5 text-emerald-600" />
-                                        Ticket Cargado
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleAbrirComprobante(orden);
-                                        }}
-                                        className="h-6 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
-                                      >
-                                        <Eye className="w-3 h-3" />
-                                        <span>Ver Comprobante</span>
-                                      </button>
-                                    </div>
-
-                                    {/* Dos botones: Rechazar vs Aprobar Pago y Cerrar Orden */}
-                                    <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                                      <button
-                                        type="button"
-                                        disabled={isUpdating}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRechazarComprobante(orden);
-                                        }}
-                                        className="h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black flex items-center justify-center gap-1 transition-colors cursor-pointer active:scale-95"
-                                        title="Rechazar comprobante y devolver a Pendiente de Pago"
-                                      >
-                                        <X className="w-3 h-3 stroke-[2.5]" />
-                                        <span>Rechazar</span>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        disabled={isUpdating}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleAprobarPagoYTerminar(orden);
-                                        }}
-                                        className="h-8 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border border-slate-900/10 text-[10px] font-black flex items-center justify-center gap-1 transition-colors shadow-2xs cursor-pointer active:scale-95"
-                                        title="Aprobar pago y cerrar orden (el dinero entra oficialmente)"
-                                      >
-                                        <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
-                                        <span>Aprobar Pago</span>
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
+                                  {/* Botón de asignación táctica en columna lead nuevo */}
+                                  {columna.id === 'LEAD_NUEVO' && (
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const tel = orden.cliente_telefono || '0414-2314194';
-                                        const msg = `Hola ${orden.cliente_nombre || 'estimado cliente'}, te recordamos los datos para realizar el pago de tu servicio en TuTallerMóvil: Zelle (correo@tutallermovil.com) o Pago Móvil (0102 • V-1786991 • 0414-2314194). Puedes subir tu comprobante en tu portal: https://tutallermovil.vercel.app/cliente/servicio/${orden.id}`;
-                                        window.open(generarLinkWhatsApp(tel, msg), '_blank');
-                                      }}
-                                      className="w-full h-8 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366] text-[#128C7E] hover:text-white border border-[#25D366]/30 text-[10px] font-black flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                                    >
-                                      <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
-                                      <span>Recordar Pago por WhatsApp</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleValidarPagoYCerrar(orden);
-                                      }}
-                                      className="w-full h-8 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-[10px] font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                                    >
-                                      <CheckCircle2 className="w-3.5 h-3.5 text-[#CCFF00]" />
-                                      <span>Validar Pago y Cerrar</span>
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Abajo: Sector y Acciones Rápidas */}
-                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between pl-5">
-                              <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
-                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span className="truncate max-w-[100px] sm:max-w-[120px]">{orden.sector}</span>
-                              </div>
-
-                              <div className="flex items-center gap-1.5">
-                                {/* Botón Ver Evidencia: solo cuando el servicio llega a ejecución (o posterior) */}
-                                {(columna.id === 'EN_EJECUCION' || columna.id === 'PAGO_REPORTADO') && (
-                                  <button
-                                    type="button"
-                                    disabled={estaBloqueadaPorOtra}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAbrirEvidencia(orden);
-                                    }}
-                                    className="h-7 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs border bg-blue-50/90 hover:bg-blue-100 text-[#1E56B0] border-blue-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                                    title={orden.foto_odometro_url ? 'Foto de odómetro y evidencias verificadas (Clic para ver)' : 'Ver evidencia del servicio'}
-                                  >
-                                    <Camera className="w-3.5 h-3.5 text-[#1E56B0]" />
-                                    <span>{orden.foto_odometro_url ? 'Evidencia ✓' : 'Evidencia'}</span>
-                                  </button>
-                                )}
-
-                                {/* Botón de asignación táctica en columna lead nuevo */}
-                                {columna.id === 'LEAD_NUEVO' && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOrdenParaRadar(orden);
-                                      setSheetRadarMecanicosOpen(true);
-                                    }}
-                                    className="h-8 px-2.5 rounded-lg bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center gap-1.5 transition-all opacity-90 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-2xs"
-                                    title="Abrir Radar de Mecánicos para asignación manual"
-                                  >
-                                    <UserPlus className="w-3.5 h-3.5" />
-                                    <span>Asignar</span>
-                                  </button>
-                                )}
-
-                                {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente con fade-in */}
-                                {columna.estadoSiguiente && (
-                                  <motion.button
-                                    type="button"
-                                    disabled={isUpdating}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (columna.id === 'LEAD_NUEVO') {
                                         setOrdenParaRadar(orden);
                                         setSheetRadarMecanicosOpen(true);
-                                      } else {
-                                        moverOrden(orden.id, columna.estadoSiguiente!);
-                                      }
-                                    }}
-                                    className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-all shadow-xs cursor-pointer shrink-0 opacity-90 sm:opacity-0 sm:group-hover:opacity-100"
-                                    title={`Mover a ${columna.estadoSiguiente}`}
-                                  >
-                                    {isUpdating ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                      <ArrowRight className="w-3.5 h-3.5" />
-                                    )}
-                                  </motion.button>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                                      }}
+                                      className="h-8 px-2.5 rounded-lg bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center gap-1.5 transition-all opacity-90 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-2xs"
+                                      title="Abrir Radar de Mecánicos para asignación manual"
+                                    >
+                                      <UserPlus className="w-3.5 h-3.5" />
+                                      <span>Asignar</span>
+                                    </button>
+                                  )}
 
+                                  {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente con fade-in */}
+                                  {columna.estadoSiguiente && (
+                                    <motion.button
+                                      type="button"
+                                      disabled={isUpdating}
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (columna.id === 'LEAD_NUEVO') {
+                                          setOrdenParaRadar(orden);
+                                          setSheetRadarMecanicosOpen(true);
+                                        } else {
+                                          moverOrden(orden.id, columna.estadoSiguiente!);
+                                        }
+                                      }}
+                                      className="w-8 h-8 rounded-full bg-[#1E56B0] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] flex items-center justify-center transition-all shadow-xs cursor-pointer shrink-0 opacity-90 sm:opacity-0 sm:group-hover:opacity-100"
+                                      title={`Mover a ${columna.estadoSiguiente}`}
+                                    >
+                                      {isUpdating ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      ) : (
+                                        <ArrowRight className="w-3.5 h-3.5" />
+                                      )}
+                                    </motion.button>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       </main>
 
