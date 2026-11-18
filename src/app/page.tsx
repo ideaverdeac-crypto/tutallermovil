@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import {
   Wrench,
@@ -18,7 +19,11 @@ import {
   Sparkles,
   Car,
   Settings,
-  X
+  X,
+  Star,
+  Check,
+  Shield,
+  Zap
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 
@@ -159,21 +164,35 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 3. Hero Section (Sección Principal con Staggered Fade-up y Carnet Flotante) */}
-      <section className="bg-white py-12 sm:py-16 lg:py-24 flex-1 flex items-center overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-            
+      {/* 3. Hero Section (Fondos Claros, Galería de Especialistas y Mockup del Teléfono con Credencial Digital) */}
+      <section className="relative bg-gradient-to-b from-white via-slate-50/70 to-[#F1F5F9] py-12 sm:py-16 lg:py-20 flex-1 flex items-center overflow-hidden border-b border-slate-200/80">
+        {/* Patrón técnico de puntos sutil en el fondo claro */}
+        <div 
+          className="absolute inset-0 opacity-[0.45] pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(#CBD5E1 1px, transparent 1px)',
+            backgroundSize: '24px 24px'
+          }}
+        />
+
+        {/* Resplandores ambientales tenues y suaves para profundidad */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 -right-24 w-96 h-96 bg-[#CCFF00]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-slate-200/50 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+
             {/* Columna Izquierda: Entrada Cascada (Staggered Fade-up) */}
             <motion.div
               variants={heroContainerVariants}
               initial="hidden"
               animate="show"
-              className="lg:col-span-7 space-y-6 text-center lg:text-left"
+              className="lg:col-span-6 space-y-6 text-center lg:text-left"
             >
               {/* Insignia Oferta Gancho */}
               <motion.div variants={heroItemVariants}>
-                <div className="inline-flex items-center gap-2 bg-[#CCFF00] text-[#0A1525] px-4 py-2 rounded-lg font-bold text-xs sm:text-sm border border-[#0A1525]/15 shadow-sm">
+                <div className="inline-flex items-center gap-2 bg-[#CCFF00] text-[#0A1525] px-4 py-2 rounded-full font-black text-xs sm:text-sm border border-[#0A1525]/15 shadow-sm">
                   <Sparkles className="w-4 h-4 shrink-0 text-[#0A1525]" />
                   <span>
                     Diagnóstico a Domicilio $15 USD — ¡100% GRATIS si reparas &gt; $40 hoy!
@@ -181,20 +200,23 @@ export default function Home() {
                 </div>
               </motion.div>
 
-              {/* H1 Principal */}
+              {/* H1 Principal con Enfásis Moderno */}
               <motion.h1
                 variants={heroItemVariants}
-                className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#0A1525] leading-[1.12]"
+                className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#0A1525] leading-[1.12]"
               >
-                Tu mecánico de confianza, directo en la puerta de tu casa u oficina.
+                Mecánica Automotriz a Domicilio{' '}
+                <span className="text-[#1E56B0] underline decoration-[#CCFF00] decoration-wavy decoration-2">
+                  en Caracas
+                </span>
               </motion.h1>
 
               {/* Subtítulo */}
               <motion.p
                 variants={heroItemVariants}
-                className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
+                className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium"
               >
-                Mecánica especializada a domicilio en Caracas con escaneo computarizado, repuestos verificados y garantía por escrito en cada intervención.
+                Especialistas certificados en la puerta de tu casa u oficina con escaneo computarizado OBD2, repuestos garantizados y la única plataforma con <strong className="text-[#0A1525] font-extrabold">Credencial Digital de Confianza QR</strong> para tu total seguridad.
               </motion.p>
 
               {/* CTAs de acción rápida */}
@@ -208,132 +230,280 @@ export default function Home() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="h-12 px-8 text-base font-bold bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  className="h-12 px-8 text-base font-black bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all shadow-md shadow-lime-900/10 flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 active:scale-95"
                 >
                   <Wrench className="w-5 h-5 text-[#0A1525]" />
                   <span>Pedir Mecánico Ahora</span>
                 </motion.button>
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="h-12 px-6 text-base font-semibold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] border border-[#CBD5E1] rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+
+                <Link
+                  href="/carnet/CAR-8492"
+                  className="h-12 px-6 text-base font-bold bg-white hover:bg-slate-50 text-[#0A1525] border-2 border-[#CBD5E1] hover:border-[#1E56B0] rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-95"
                 >
-                  <Car className="w-5 h-5 text-[#1E56B0]" />
-                  <span>Ver Servicios y Precios</span>
-                </motion.button>
+                  <ShieldCheck className="w-5 h-5 text-[#1E56B0]" />
+                  <span>Ver Credencial QR</span>
+                </Link>
               </motion.div>
 
-              {/* Beneficios directos */}
+              {/* Beneficios directos de Confianza (4 Pilares) */}
               <motion.div
                 variants={heroItemVariants}
-                className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left border-t border-slate-100"
+                className="pt-4 grid grid-cols-2 sm:grid-cols-2 gap-3 text-left border-t border-slate-200/80"
               >
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Mecánicos certificados</span>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+                  <span>Llegada en &lt; 45 minutos</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Precio claro sin sorpresas</span>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+                  <span>Mecánicos Verificados con QR</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Garantía de 90 días</span>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+                  <span>Garantía de 90 Días por Escrito</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+                  <span>Diagnóstico $15 Exonerable</span>
                 </div>
               </motion.div>
             </motion.div>
 
-            {/* Columna Derecha: Tarjeta de Carnet Digital con Flotación Continua */}
-            <div className="lg:col-span-5 flex justify-center w-full">
+            {/* Columna Derecha: Composición de Fotos de Mecánicos + Mockup de Smartphone con Credencial Digital */}
+            <div className="lg:col-span-6 relative flex items-center justify-center min-h-[540px] sm:min-h-[590px] lg:min-h-[630px] w-full py-6">
+
+              {/* === CAPA TRASERA: Varias Imágenes Reales de Mecánicos en Taller y Campo === */}
+              {/* Foto 1: Especialista en frenos y tren delantero (Arriba Derecha) */}
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, x: 30, y: -20, rotate: 3 }}
+                animate={{ opacity: 1, x: 0, y: 0, rotate: 3 }}
+                transition={{ duration: 0.7, delay: 0.1 }}
+                whileHover={{ rotate: 0, scale: 1.03 }}
+                className="absolute top-2 right-0 sm:right-2 w-48 sm:w-60 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
+                title="Mantenimiento de Frenos y Suspensión TuTallerMóvil"
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=700&q=80"
+                  alt="Mecánico especializado en frenos"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                <div className="absolute bottom-2 left-2.5 right-2 flex items-center gap-1.5 text-white">
+                  <span className="w-2 h-2 rounded-full bg-[#CCFF00]" />
+                  <span className="text-[10px] sm:text-[11px] font-black tracking-tight drop-shadow-sm">Frenos &amp; Suspensión</span>
+                </div>
+              </motion.div>
+
+              {/* Foto 2: Escaneo Electrónico y Diagnóstico OBD2 con Tablet (Abajo Izquierda) */}
+              <motion.div
+                initial={{ opacity: 0, x: -30, y: 20, rotate: -4 }}
+                animate={{ opacity: 1, x: 0, y: 0, rotate: -4 }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+                whileHover={{ rotate: 0, scale: 1.03 }}
+                className="absolute bottom-2 left-0 sm:left-2 w-48 sm:w-56 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
+                title="Diagnóstico Electrónico OBD2"
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=600&q=80"
+                  alt="Escaneo computarizado OBD2 en vehículo"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
+                <div className="absolute bottom-2 left-2.5 right-2 flex items-center gap-1.5 text-white">
+                  <Zap className="w-3 h-3 text-[#CCFF00]" />
+                  <span className="text-[10px] sm:text-[11px] font-black tracking-tight drop-shadow-sm">Escáner OBD2 en Vivo</span>
+                </div>
+              </motion.div>
+
+              {/* Foto 3: Inspección de Motor Bajo Capó (Fondo Arriba Izquierda - Desktop) */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85, rotate: -6 }}
+                animate={{ opacity: 1, scale: 1, rotate: -6 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+                whileHover={{ rotate: 0, scale: 1.04 }}
+                className="hidden sm:block absolute -top-4 left-6 w-36 aspect-square rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer opacity-90"
+                title="Inspección de 25 Puntos de Seguridad"
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=500&q=80"
+                  alt="Inspección de motor a domicilio"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent" />
+                <div className="absolute bottom-1.5 left-2 text-white">
+                  <span className="text-[9px] font-black tracking-tight">Inspección 25 Pts</span>
+                </div>
+              </motion.div>
+
+              {/* === CAPA FRONTAL: EL MOCKUP DEL TELÉFONO CON LA CREDENCIAL DIGITAL === */}
+              <motion.div
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
                 animate={{
                   opacity: 1,
-                  y: [0, -6, 0]
+                  y: [0, -8, 0],
+                  scale: 1
                 }}
                 transition={{
                   opacity: { duration: 0.6, ease: "easeOut" },
+                  scale: { duration: 0.6, ease: "easeOut" },
                   y: {
                     repeat: Infinity,
-                    duration: 4.5,
+                    duration: 5,
                     ease: "easeInOut"
                   }
                 }}
-                whileHover={{ scale: 1.015 }}
-                className="w-full max-w-sm bg-white border-2 border-[#CBD5E1] rounded-2xl p-6 shadow-xl relative overflow-hidden will-change-transform"
+                whileHover={{ scale: 1.02 }}
+                className="w-[285px] sm:w-[315px] bg-[#0A1525] p-2.5 sm:p-3 rounded-[46px] sm:rounded-[50px] shadow-[0_25px_60px_-15px_rgba(10,21,37,0.4),0_12px_24px_-8px_rgba(0,0,0,0.18)] border-[3.5px] border-slate-700/80 ring-1 ring-slate-800/80 relative z-20 will-change-transform select-none"
               >
-                {/* Franja superior decorativa de marca */}
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#0A1525] via-[#1E56B0] to-[#CCFF00]"></div>
+                {/* Botones Físicos Laterales del Smartphone */}
+                <div className="absolute -left-[5px] top-24 w-[3px] h-9 bg-slate-600 rounded-l-md" />
+                <div className="absolute -left-[5px] top-36 w-[3px] h-9 bg-slate-600 rounded-l-md" />
+                <div className="absolute -right-[5px] top-28 w-[3px] h-12 bg-slate-600 rounded-r-md" />
 
-                {/* Encabezado del Carnet */}
-                <div className="flex items-center justify-between border-b border-[#CBD5E1] pb-4 mb-5 pt-1">
-                  <div>
-                    <img src="/icon.svg" alt="TuTallerMóvil" className="h-[35px] w-auto object-contain" />
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mt-0.5">Credencial Digital</p>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-bold">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>TÉCNICO OFICIAL VERIFICADO</span>
-                  </div>
-                </div>
+                {/* Brillo / Reflejo sutil de cristal en la esquina superior derecha */}
+                <div className="absolute top-3 right-6 w-20 h-10 bg-gradient-to-b from-white/10 to-transparent rounded-full -rotate-45 pointer-events-none z-30" />
 
-                {/* Foto / Placeholder Técnico */}
-                <div className="space-y-4">
-                  <div className="bg-slate-100 border border-[#CBD5E1] rounded-xl aspect-[4/3] flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                    <UserCircle className="w-16 h-16 text-slate-300 stroke-[1.5]" />
-                    <span className="text-xs font-semibold text-slate-500 mt-2">
-                      FOTOGRAFÍA DEL ESPECIALISTA
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      ID: TTM-CAR-8492
-                    </span>
-                  </div>
-
-                  {/* Datos del Especialista */}
-                  <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg p-3 space-y-1">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-medium">Especialista:</span>
-                      <span className="font-bold text-[#0A1525]">Carlos E. Mendoza</span>
+                {/* Pantalla del Teléfono (Fondo Blanco Limpio / Credencial Digital) */}
+                <div className="bg-white rounded-[38px] sm:rounded-[42px] overflow-hidden border border-slate-200/90 flex flex-col relative text-[#0A1525] shadow-inner">
+                  
+                  {/* Barra de Estado con Dynamic Island (iOS Style) */}
+                  <div className="pt-2.5 px-5 pb-1 flex items-center justify-between bg-white text-[11px] font-bold text-slate-800">
+                    <span className="font-semibold tracking-tight">9:41</span>
+                    {/* Dynamic Island */}
+                    <div className="w-20 h-4 bg-slate-950 rounded-full flex items-center justify-center px-2 gap-1.5 shadow-inner">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-700" />
+                      <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-medium">Especialidad:</span>
-                      <span className="font-semibold text-[#1E56B0]">Diagnóstico &amp; Inyección</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-medium">Estatus:</span>
-                      <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Activo en Ruta
-                      </span>
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <span className="text-[9px] font-black">5G</span>
+                      <div className="w-4 h-2 border border-slate-800 rounded-xs p-[0.5px] flex items-center">
+                        <div className="w-full h-full bg-slate-800 rounded-2xs" />
+                      </div>
                     </div>
                   </div>
 
-                  {/* QR Code Placeholder */}
-                  <div className="border border-[#CBD5E1] rounded-xl p-4 bg-white flex items-center gap-4">
-                    <div className="bg-[#0A1525] p-2.5 rounded-lg text-white shrink-0 flex items-center justify-center">
-                      <QrCode className="w-12 h-12 text-[#CCFF00]" />
+                  {/* Encabezado del Carnet Oficial */}
+                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50">
+                    <div className="flex items-center gap-1.5">
+                      <img src="/icon.svg" alt="TuTallerMóvil" className="h-[28px] w-auto object-contain" />
+                      <div className="leading-tight">
+                        <p className="text-[9px] font-black tracking-wider uppercase text-[#0A1525]">CREDENCIAL</p>
+                        <p className="text-[8px] font-bold text-[#1E56B0]">OFICIAL TTM</p>
+                      </div>
                     </div>
-                    <div className="text-left space-y-0.5">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-[#0A1525]">
-                        Código QR Dinámico
-                      </p>
-                      <p className="text-[11px] text-slate-500 leading-tight">
-                        Escanea al recibir al técnico para verificar su carnet oficial.
-                      </p>
-                      <span className="inline-block text-[10px] font-mono text-[#1E56B0] font-semibold">
-                        HASH: 7855-TTM-VERIFIED
-                      </span>
+                    <div className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full shadow-2xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      <span>VERIFICADO</span>
                     </div>
                   </div>
-                </div>
 
-                {/* Footer del Carnet */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-                  <span>TuTallerMóvil CCS</span>
-                  <span>Seguridad Garantizada</span>
+                  {/* Tarjeta del Mecánico con Foto Real y Checkmark */}
+                  <div className="p-3 sm:p-3.5 space-y-2.5">
+                    <div className="flex items-center gap-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl p-2.5 shadow-2xs">
+                      <div className="relative shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=240&q=80"
+                          alt="Carlos Mendoza - Especialista"
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-[#1E56B0] shadow-xs"
+                        />
+                        <span 
+                          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#16a34a] border-2 border-white flex items-center justify-center shadow-xs"
+                          title="Técnico Verificado Oficial"
+                        >
+                          <Check className="w-3 h-3 text-white stroke-[3.5]" />
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-black text-[#0A1525] truncate leading-tight">
+                          Carlos E. Mendoza
+                        </h3>
+                        <p className="text-[11px] font-bold text-[#1E56B0] truncate">
+                          Mecánico 1 — Senior
+                        </p>
+                        <p className="text-[9px] font-mono font-semibold text-slate-500">
+                          ID: <span className="text-[#0A1525] font-black">#TTM-CAR-8492</span> • V-12.345.678
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" /> 4.9 (148)
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> En Ruta
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* QR Code Dinámico con Generación Criptográfica Real */}
+                    <div className="bg-white border-2 border-slate-200/90 rounded-2xl p-2.5 flex items-center gap-3 shadow-xs">
+                      <div className="bg-[#0A1525] p-1.5 rounded-xl shrink-0 flex items-center justify-center shadow-xs">
+                        <QRCodeSVG
+                          value="https://tutallermovil.vercel.app/carnet/CAR-8492"
+                          size={62}
+                          level="M"
+                          fgColor="#CCFF00"
+                          bgColor="#0A1525"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className="text-[10px] font-black uppercase text-[#0A1525] tracking-wide flex items-center gap-1">
+                          <QrCode className="w-3.5 h-3.5 text-[#1E56B0]" /> QR Antifraude
+                        </p>
+                        <p className="text-[9px] text-slate-500 leading-tight mt-0.5">
+                          Escanea para verificar la identidad antes de autorizar acceso.
+                        </p>
+                        <span className="inline-block mt-1 text-[8px] font-mono text-[#1E56B0] font-black bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60">
+                          HASH: 7855-TTM-VERIFIED
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Botón Dentro del Teléfono para Ver Credencial */}
+                    <Link
+                      href="/carnet/CAR-8492"
+                      className="w-full py-2.5 px-3 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 border border-[#0A1525]/15"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-[#0A1525]" />
+                      <span>Validar Credencial Oficial</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#0A1525]" />
+                    </Link>
+                  </div>
+
+                  {/* Barra de Inicio (Home Indicator de iOS) */}
+                  <div className="py-2 flex justify-center bg-slate-50 border-t border-slate-100">
+                    <div className="w-24 h-1 bg-slate-400 rounded-full" />
+                  </div>
                 </div>
               </motion.div>
+
+              {/* Insignia Flotante 1: Técnico en Ruta (Arriba a la Izquierda del Celular) */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.35 }}
+                className="absolute -top-1 left-2 sm:-left-4 z-30 bg-white/95 backdrop-blur-md border border-slate-200 rounded-full px-3 py-1.5 shadow-lg flex items-center gap-2 text-xs font-bold text-[#0A1525]"
+              >
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </span>
+                <span className="text-[11px] font-black text-[#0A1525]">Llegada en &lt; 45 min</span>
+              </motion.div>
+
+              {/* Insignia Flotante 2: Garantía Escrita (Abajo a la Derecha del Celular) */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.45 }}
+                className="absolute -bottom-2 right-2 sm:-right-4 z-30 bg-[#0A1525] text-white border border-slate-700 rounded-2xl px-3.5 py-2 shadow-xl flex items-center gap-2.5 text-xs font-bold"
+              >
+                <ShieldCheck className="w-5 h-5 text-[#CCFF00] shrink-0" />
+                <div className="text-left">
+                  <p className="text-[11px] font-black text-white leading-tight">Garantía Escrita</p>
+                  <p className="text-[9px] text-slate-300">100% Repuestos y Mano de Obra</p>
+                </div>
+              </motion.div>
+
             </div>
 
           </div>
@@ -353,7 +523,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-            
+
             {/* Tarjeta 1: Pedir Mecánico */}
             <motion.div
               initial={{ opacity: 0, y: 28 }}
