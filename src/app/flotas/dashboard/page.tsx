@@ -865,9 +865,11 @@ export default function FlotasDashboardPage() {
           {/* Logo y Badge B2B */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 group">
-              <span className="text-2xl font-black tracking-tight text-[#0A1525] group-hover:text-[#1E56B0] transition-colors">
-                TTM
-              </span>
+              <img
+                src="/icon.svg"
+                alt="TuTallerMóvil"
+                className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
+              />
               <span className="text-[10px] font-black uppercase tracking-widest bg-[#0A1525] text-[#CCFF00] px-2 py-0.5 rounded-md border border-slate-700">
                 Flotas B2B
               </span>

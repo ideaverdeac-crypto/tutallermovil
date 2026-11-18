@@ -270,8 +270,8 @@ export default function Home() {
                 {/* Encabezado del Carnet */}
                 <div className="flex items-center justify-between border-b border-[#CBD5E1] pb-4 mb-5 pt-1">
                   <div>
-                    <span className="text-xl font-black tracking-tight text-[#0A1525]">TTM</span>
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Credencial Digital</p>
+                    <img src="/icon.svg" alt="TuTallerMóvil" className="h-7 w-auto object-contain" />
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mt-0.5">Credencial Digital</p>
                   </div>
                   <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-bold">
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />

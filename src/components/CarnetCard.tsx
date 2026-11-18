@@ -98,9 +98,8 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
 
           {/* Logo TTM flotante arriba a la izquierda */}
           <div className="absolute top-4 left-4 z-20">
-            <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-3 py-1 rounded-xl shadow-sm border border-[#CBD5E1]">
-              <span className="font-black text-sm tracking-tighter text-[#0A1525]">TTM</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#1E56B0]">TuTallerMóvil</span>
+            <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-xs border border-[#CBD5E1] flex items-center">
+              <img src="/icon.svg" alt="TuTallerMóvil" className="h-6 w-auto object-contain" />
             </div>
           </div>
 

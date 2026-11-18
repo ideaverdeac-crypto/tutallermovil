@@ -85,13 +85,18 @@ export default function RegistroHubPage() {
 
       {/* Header */}
       <header className="relative z-10 w-full max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
-        <Link
-          href="/"
-          className="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 transition-all shadow-2xs"
-        >
-          <ArrowLeft className="w-4 h-4 text-[#1E56B0]" />
-          <span>Volver al Inicio</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 transition-all shadow-2xs"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#1E56B0]" />
+            <span>Volver</span>
+          </Link>
+          <Link href="/" className="hover:opacity-90 transition-opacity">
+            <img src="/icon.svg" alt="TuTallerMóvil" className="h-8 w-auto object-contain" />
+          </Link>
+        </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 font-medium hidden sm:inline">

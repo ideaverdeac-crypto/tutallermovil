@@ -377,9 +377,13 @@ export default function ClienteDashboardPage() {
           
           {/* Logo y Garaje */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl font-black text-[#0A1525] tracking-tight">TTM</span>
-              <span className="text-xs font-bold uppercase tracking-wider bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-[#1E56B0]">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <img
+                src="/icon.svg"
+                alt="TuTallerMóvil"
+                className="h-10 sm:h-11 w-auto object-contain transition-transform group-hover:scale-105"
+              />
+              <span className="text-xs font-bold uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg text-[#1E56B0] shadow-2xs">
                 Mi Garaje
               </span>
             </Link>

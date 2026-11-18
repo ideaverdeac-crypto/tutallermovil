@@ -217,9 +217,9 @@ function LoginClienteContent() {
             <span>Volver a Inicio</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-black text-[#0A1525]">TTM</span>
-            <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full">
+          <div className="flex items-center gap-2.5">
+            <img src="/icon.svg" alt="TuTallerMóvil" className="h-8 w-auto object-contain" />
+            <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
               Portal Clientes
             </span>
           </div>

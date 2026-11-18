@@ -382,9 +382,13 @@ function LoginForm() {
         
         {/* Cabecera / Identidad */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black tracking-wider text-xl shadow-md mx-auto mb-3 border border-slate-700/60">
-            TTM
-          </div>
+          <Link href="/" className="inline-block mx-auto mb-4 group">
+            <img
+              src="/icon.svg"
+              alt="TuTallerMóvil"
+              className="h-12 w-auto object-contain mx-auto transition-transform group-hover:scale-105"
+            />
+          </Link>
           <h1 className="text-2xl font-black text-[#0A1525] tracking-tight">
             Iniciar Sesión
           </h1>
