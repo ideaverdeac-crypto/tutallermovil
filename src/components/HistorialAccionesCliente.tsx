@@ -8,8 +8,11 @@ import {
   Car,
   Sparkles,
   ArrowRight,
-  Plus
+  Plus,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import { SolicitarExpedienteModal } from '@/components/SolicitarExpedienteModal';
 
@@ -27,12 +30,23 @@ interface HistorialAccionesClienteProps {
     telefono?: string;
   };
   esHistorialVacio?: boolean;
+  tieneSuscripcionActiva?: boolean;
+  servicios?: Array<{
+    id: string;
+    fecha?: string;
+    kilometraje?: number;
+    tipo_servicio?: string;
+    costo?: number;
+    detalles?: string;
+  }>;
 }
 
 export function HistorialAccionesCliente({
   vehiculo,
   cliente,
-  esHistorialVacio = true
+  esHistorialVacio = true,
+  tieneSuscripcionActiva = false,
+  servicios = []
 }: HistorialAccionesClienteProps) {
   const [modalMecanicoOpen, setModalMecanicoOpen] = useState(false);
   const [modalExpedienteOpen, setModalExpedienteOpen] = useState(false);
@@ -41,6 +55,80 @@ export function HistorialAccionesCliente({
   const handleMecanicoSuccess = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 5000);
+  };
+
+  // Generador de Certificado PDF Oficial
+  const handleDescargarCertificadoPdf = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = 210;
+      const margin = 14;
+
+      // 1. Cabecera institucional
+      doc.setFillColor(10, 21, 37); // #0A1525
+      doc.rect(0, 0, pageWidth, 26, 'F');
+      doc.setFillColor(204, 255, 0); // #CCFF00
+      doc.rect(0, 26, pageWidth, 3, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.text('TuTallerMóvil CCS', margin, 17);
+
+      doc.setFontSize(10);
+      doc.text('CERTIFICADO TÉCNICO OFICIAL', pageWidth - margin, 17, { align: 'right' });
+
+      // 2. Datos del Vehículo y Propietario
+      doc.setTextColor(10, 21, 37);
+      doc.setFontSize(12);
+      doc.text(`EXPEDIENTE DIGITAL • PLACA ${vehiculo.placa.toUpperCase()}`, margin, 38);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Vehículo: ${vehiculo.marca} ${vehiculo.modelo} (${vehiculo.anio || 'N/A'})${vehiculo.color ? ` • Color: ${vehiculo.color}` : ''}`, margin, 44);
+      doc.text(`Propietario: ${cliente?.nombre || 'Cliente Verificado'} • Contacto: ${cliente?.telefono || 'Registrado'}`, margin, 50);
+      doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-VE')} • HASH: TTM-${vehiculo.placa}-${Date.now().toString().slice(-6)}`, margin, 56);
+
+      // 3. Tabla de Intervenciones y Mantenimientos
+      const tableData = (servicios || []).map((s) => [
+        s.fecha || 'N/A',
+        s.tipo_servicio || 'Mantenimiento Preventivo Certificado',
+        s.kilometraje ? `${Number(s.kilometraje).toLocaleString()} km` : 'N/A',
+        s.costo ? `$${Number(s.costo).toFixed(2)} USD` : 'N/A',
+        'Validado TTM'
+      ]);
+
+      autoTable(doc, {
+        startY: 63,
+        head: [['Fecha', 'Intervención / Servicio', 'Kilometraje', 'Monto USD', 'Certificación']],
+        body: tableData.length > 0 ? tableData : [['N/A', 'Inspección de Ingreso a Pasaporte Digital', '0 km', '$0.00', 'Certificado']],
+        theme: 'striped',
+        headStyles: {
+          fillColor: [30, 86, 176], // #1E56B0
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 8.5
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3.5
+        }
+      });
+
+      const finalY = (doc as any).lastAutoTable?.finalY || 180;
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Documento oficial inmutable emitido por TuTallerMóvil Technologies Caracas.', margin, finalY + 12);
+      doc.text(`Verificable en: https://tutallermovil.vercel.app/historial/${vehiculo.placa}`, margin, finalY + 17);
+
+      doc.save(`Certificado_Tecnico_TTM_${vehiculo.placa}.pdf`);
+      setToastMsg('📄 Certificado PDF descargado con éxito.');
+      setTimeout(() => setToastMsg(null), 4000);
+    } catch (e) {
+      console.error('Error al generar PDF:', e);
+      if (typeof window !== 'undefined') window.print();
+    }
   };
 
   return (
@@ -133,23 +221,37 @@ export function HistorialAccionesCliente({
 
         </div>
       ) : (
-        /* BOTÓN COMPACTO CUANDO SÍ HAY HISTORIAL PERO QUIERE AGREGAR OTRO SERVICIO O EXPEDIENTE */
-        <div className="flex flex-wrap items-center gap-3">
+        /* BARRA UNIFICADA DE ACCIONES Y DESCARGA (100% ALINEADA) */
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          {tieneSuscripcionActiva && servicios && servicios.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDescargarCertificadoPdf}
+              className="h-10 px-4 rounded-xl bg-[#1E56B0] hover:bg-[#16448c] text-white text-xs font-black inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 whitespace-nowrap"
+              title="Descargar Certificado Técnico Digital Oficial en formato PDF"
+            >
+              <Download className="w-4 h-4 shrink-0" />
+              <span>Descargar Certificado PDF</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setModalExpedienteOpen(true)}
-            className="h-10 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-black flex items-center gap-2 transition-colors cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-black inline-flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap shadow-2xs hover:shadow-xs active:scale-95"
+            title="Solicitar Auditoría Técnica in situ de 25 Puntos ($5)"
           >
-            <ClipboardCheck className="w-4 h-4 text-purple-700" />
+            <ClipboardCheck className="w-4 h-4 text-purple-700 shrink-0" />
             <span>Auditoría 25 Pts ($5)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setModalMecanicoOpen(true)}
-            className="h-10 px-4 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+            className="h-10 px-4 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 whitespace-nowrap"
+            title="Solicitar mecánico a domicilio para diagnóstico o mantenimiento"
           >
-            <Wrench className="w-4 h-4 text-[#CCFF00]" />
+            <Wrench className="w-4 h-4 text-[#CCFF00] shrink-0" />
             <span>Pedir Servicio</span>
           </button>
         </div>

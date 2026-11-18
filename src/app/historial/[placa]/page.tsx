@@ -330,29 +330,18 @@ export default async function HistorialPlacaPage({ params, searchParams }: PageP
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Si tiene servicios y suscripción activa: Descargar Certificado PDF */}
-            {tieneSuscripcionActiva && listaServicios.length > 0 && (
-              <button
-                type="button"
-                className="h-11 px-4 bg-[#1E56B0] hover:bg-[#16448c] text-white text-sm font-bold rounded-xl transition-colors shadow-sm inline-flex items-center gap-2 cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>Descargar Certificado PDF</span>
-              </button>
-            )}
-
-            {/* Acciones para solicitar nuevo servicio o expediente */}
-            <HistorialAccionesCliente
-              vehiculo={{ marca, modelo, anio, placa, color }}
-              cliente={{
-                nombre: vehiculo.cliente_nombre || '',
-                email: vehiculo.cliente_email || '',
-                telefono: vehiculo.cliente_telefono || ''
-              }}
-              esHistorialVacio={false}
-            />
-          </div>
+          {/* Acciones unificadas: Descargar Certificado PDF + Auditoría 25 Pts + Pedir Servicio */}
+          <HistorialAccionesCliente
+            vehiculo={{ marca, modelo, anio, placa, color }}
+            cliente={{
+              nombre: vehiculo.cliente_nombre || '',
+              email: vehiculo.cliente_email || '',
+              telefono: vehiculo.cliente_telefono || ''
+            }}
+            esHistorialVacio={false}
+            tieneSuscripcionActiva={tieneSuscripcionActiva}
+            servicios={listaServicios}
+          />
         </div>
 
         {/* Contenedor del Historial: Lógica de Vehículo Nuevo (Cero) vs Historial Existente */}
