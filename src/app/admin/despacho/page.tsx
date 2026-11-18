@@ -67,6 +67,7 @@ import FloatingSupportButton from '@/components/ui/floating-support-button';
 import CredencialesOperadorasModal from '@/components/CredencialesOperadorasModal';
 import ModalCrearServicioManual from '@/components/ModalCrearServicioManual';
 import CierreServiciosDia, { ServicioFinalizadoDia, SERVICIOS_DIA_INICIALES } from '@/components/CierreServiciosDia';
+import BandejaMensajeriaDespacho from '@/components/BandejaMensajeriaDespacho';
 import { generarLinkWhatsApp } from '@/lib/utils';
 import { enviarEmailRecibo } from '@/lib/email';
 import { registrarOperacionEnBitacora } from '@/lib/audit';
@@ -548,8 +549,8 @@ export default function TableroDespachoPage() {
   const [cargando, setCargando] = useState<boolean>(true);
   const [actualizandoId, setActualizandoId] = useState<string | null>(null);
 
-  // Vista Activa: Tablero Activo (Kanban) vs Servicios del Día (Cierre & Expedientes)
-  const [vistaActiva, setVistaActiva] = useState<'kanban' | 'servicios_dia'>('kanban');
+  // Vista Activa: Tablero Activo (Kanban) vs Servicios del Día (Cierre & Expedientes) vs Mensajería & WhatsApp
+  const [vistaActiva, setVistaActiva] = useState<'kanban' | 'servicios_dia' | 'mensajeria'>('kanban');
   const [serviciosDia, setServiciosDia] = useState<ServicioFinalizadoDia[]>([]);
 
   // Estados de Drag and Drop
@@ -2272,6 +2273,26 @@ export default function TableroDespachoPage() {
                 {serviciosDia.length}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setVistaActiva('mensajeria')}
+              className={`h-11 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2.5 cursor-pointer ${vistaActiva === 'mensajeria'
+                ? 'bg-[#0A1525] text-white shadow-sm'
+                : 'text-slate-700 hover:text-[#0A1525] hover:bg-white/50'
+                }`}
+            >
+              <MessageCircle className="w-4 h-4 text-[#CCFF00]" />
+              <span>Mensajería &amp; WhatsApp</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-black ${vistaActiva === 'mensajeria'
+                  ? 'bg-[#CCFF00] text-[#0A1525]'
+                  : 'bg-emerald-100 text-emerald-900'
+                  }`}
+              >
+                En Vivo
+              </span>
+            </button>
           </div>
 
           {vistaActiva === 'kanban' && (
@@ -2284,12 +2305,19 @@ export default function TableroDespachoPage() {
           )}
         </div>
 
-        {/* Vista Condicional: Servicios Finalizados del Día o Tablero Kanban */}
+        {/* Vista Condicional: Servicios Finalizados del Día, Mensajería Central o Tablero Kanban */}
         {vistaActiva === 'servicios_dia' ? (
           <CierreServiciosDia
             servicios={serviciosDia}
             onVolverAlKanban={() => setVistaActiva('kanban')}
             operadoraActual={miOperadora}
+          />
+        ) : vistaActiva === 'mensajeria' ? (
+          <BandejaMensajeriaDespacho
+            operadoraActual={miOperadora}
+            onIrAKanbanConPlaca={(placa) => {
+              setVistaActiva('kanban');
+            }}
           />
         ) : (
           /* 1. Estructura del Tablero: Contenedor con scroll horizontal suave, snap-x y soporte Drag & Drop */
@@ -2457,10 +2485,23 @@ export default function TableroDespachoPage() {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1">
-                                      {esFlota && <Building2 className="w-3 h-3 text-[#1E56B0] shrink-0" />}
-                                      <span>{orden.cliente_nombre || 'Cliente Particular'}</span>
-                                    </p>
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1">
+                                        {esFlota && <Building2 className="w-3 h-3 text-[#1E56B0] shrink-0" />}
+                                        <span className="truncate">{orden.cliente_nombre || 'Cliente Particular'}</span>
+                                      </p>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setVistaActiva('mensajeria');
+                                        }}
+                                        className="w-5 h-5 rounded-md bg-emerald-50 hover:bg-[#CCFF00] text-emerald-700 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-1 border border-emerald-200/60"
+                                        title="Chatear con el cliente en la Bandeja Central"
+                                      >
+                                        <MessageCircle className="w-3 h-3" />
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import { SolicitarExpedienteModal } from '@/components/SolicitarExpedienteModal';
+import WidgetChatCliente from '@/components/WidgetChatCliente';
 
 interface VehiculoGaraje {
   id: string;
@@ -978,6 +979,23 @@ export default function ClienteDashboardPage() {
           }}
         />
       )}
+
+      {/* Widget de Chat en Vivo con la Operadora Central (Andrea Silva) */}
+      <WidgetChatCliente
+        cliente={{
+          nombre: usuario.nombre,
+          email: usuario.email,
+          telefono: usuario.telefono
+        }}
+        placaActiva={vehiculoSeleccionado?.placa || vehiculos[0]?.placa || 'AB123CD'}
+        vehiculoInfo={
+          vehiculoSeleccionado
+            ? `${vehiculoSeleccionado.marca} ${vehiculoSeleccionado.modelo} (${vehiculoSeleccionado.anio})`
+            : vehiculos[0]
+            ? `${vehiculos[0].marca} ${vehiculos[0].modelo} (${vehiculos[0].anio})`
+            : 'Vehículo en Garaje'
+        }
+      />
 
     </div>
   );
