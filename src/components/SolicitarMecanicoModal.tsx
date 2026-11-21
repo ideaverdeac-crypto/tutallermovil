@@ -381,7 +381,7 @@ export function SolicitarMecanicoModal({
                   className="w-full max-w-lg bg-white rounded-2xl border-2 border-[#CBD5E1] shadow-2xl p-6 sm:p-7 relative overflow-hidden"
                 >
                   {/* Borde superior de marca */}
-                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-brand-trust via-[#1E56B0] to-brand-primary" />
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#050B14] via-[#00E5FF] to-[#CCFF00]" />
 
                   {/* Botón Cerrar */}
                   <Dialog.Close asChild>
@@ -396,8 +396,8 @@ export function SolicitarMecanicoModal({
 
                   {/* Header */}
                   <div className="flex items-center gap-3 mb-2 pt-2">
-                    <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0 shadow-xs">
-                      <Wrench className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-[#CCFF00] flex items-center justify-center text-[#050B14] shrink-0 shadow-xs">
+                      <Wrench className="w-5 h-5 text-[#050B14]" />
                     </div>
                     <div>
                       <Dialog.Title className="text-xl sm:text-2xl font-black text-[#0A1525] tracking-tight">
@@ -778,17 +778,17 @@ export function SolicitarMecanicoModal({
                       whileTap={{ scale: submitting ? 1 : 0.98 }}
                       className={`w-full h-12 text-sm sm:text-base font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${submitting
                         ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                        : 'bg-brand-primary hover:bg-brand-primary-hover text-white shadow-brand-primary/20'
+                        : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#050B14] shadow-limeGlow'
                         }`}
                     >
                       {submitting ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          <Loader2 className="w-4 h-4 animate-spin text-[#050B14]" />
                           <span>Despachando solicitud...</span>
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="w-5 h-5 text-white" />
+                          <CheckCircle2 className="w-5 h-5 text-[#050B14]" />
                           <span>Confirmar y Pedir Mecánico</span>
                         </>
                       )}

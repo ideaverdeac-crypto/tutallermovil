@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import { Star, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { TiltCard } from './TiltCard';
 
 interface Testimonial {
   id: string;
@@ -86,29 +88,65 @@ const TRABAJOS_RECIENTES: TrabajoReciente[] = [
 ];
 
 export function SocialProof() {
+  const [inView, setInView] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      setReducedMotion(rm);
+      if (rm) {
+        setInView(true);
+        return;
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) observer.observe(sectionRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="bg-brand-neutral-50 py-12 sm:py-16 lg:py-20 border-b border-brand-neutral-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section
+      ref={sectionRef}
+      className="bg-[#050B14] py-16 sm:py-20 lg:py-24 border-b border-slate-800/80 relative overflow-hidden"
+    >
+      {/* Resplandor sutil de fondo */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#00E5FF]/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Cabecera de la sección */}
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-success/10 text-brand-success text-xs font-semibold uppercase tracking-wider mb-3">
-            <ShieldCheck className="w-4 h-4" />
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#CCFF00]/10 text-[#CCFF00] border border-[#CCFF00]/25 text-caption font-mono uppercase tracking-wider mb-4 shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-[#CCFF00]" />
             <span>Confianza Comprobada</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-brand-trust tracking-tight">
+          <h2 className="text-h2 font-medium text-white tracking-tight">
             Clientes que ya confían en nosotros
           </h2>
-          <p className="mt-2 text-sm sm:text-base text-brand-neutral-600">
+          <p className="mt-2 text-body text-slate-400">
             Más de 500 servicios realizados en Caracas con garantía escrita.
           </p>
         </div>
 
-        {/* 1. Grid de Testimonios (3 Columnas en Desktop, 1 en Mobile) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* 1. Grid de Testimonios con Tilt 3D Sutil */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {TESTIMONIOS.map((item) => (
-            <div
+            <TiltCard
               key={item.id}
-              className="bg-white border border-brand-neutral-200 rounded-card p-6 shadow-card flex flex-col justify-between"
+              maxTiltDeg={5}
+              className="bg-[#0F1B2D]/90 border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#CCFF00]/30 transition-colors"
             >
               <div>
                 {/* 5 Estrellas */}
@@ -121,65 +159,82 @@ export function SocialProof() {
                   ))}
                 </div>
 
-                {/* Comentario (2 líneas en desktop) */}
-                <p className="text-sm text-brand-neutral-700 leading-relaxed line-clamp-3 mb-5">
+                {/* Comentario */}
+                <p className="text-body text-slate-300 leading-relaxed mb-6 font-normal">
                   &ldquo;{item.comentario}&rdquo;
                 </p>
               </div>
 
               {/* Perfil del Cliente */}
-              <div className="flex items-center gap-3 pt-4 border-t border-brand-neutral-200">
-                <img
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-800">
+                <Image
                   src={item.avatarUrl}
                   alt={item.nombre}
                   loading="lazy"
                   width={44}
                   height={44}
-                  className="w-11 h-11 rounded-full object-cover border border-brand-neutral-300"
+                  className="w-11 h-11 rounded-full object-cover border border-slate-700"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-brand-trust truncate">
+                  <p className="text-small font-medium text-white truncate">
                     {item.nombre}
                   </p>
-                  <p className="text-xs text-brand-neutral-500 truncate">
+                  <p className="text-caption text-slate-400 truncate">
                     {item.servicio}
                   </p>
                 </div>
               </div>
-            </div>
+            </TiltCard>
           ))}
         </div>
 
-        {/* 2. Grid de Trabajos Recientes (3 Columnas en Desktop, 1 en Mobile) */}
+        {/* 2. Grid de Trabajos Recientes con Stagger y Clip-Path */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-brand-trust">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-h3 font-medium text-white">
               Evidencias de trabajos recientes en Caracas
             </h3>
-            <span className="text-xs text-brand-neutral-500 hidden sm:inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-brand-success" />
+            <span className="text-caption text-slate-400 hidden sm:inline-flex items-center gap-1 font-mono">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
               Fotos directas de servicio
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TRABAJOS_RECIENTES.map((trabajo) => (
+            {TRABAJOS_RECIENTES.map((trabajo, idx) => (
               <div
                 key={trabajo.id}
-                className="group relative overflow-hidden rounded-card border border-brand-neutral-200 shadow-card bg-brand-neutral-100 aspect-[16/10]"
+                className="group relative overflow-hidden rounded-card border border-slate-800 bg-[#0F1B2D] aspect-[16/10] will-change-transform shadow-card hover:border-[#00E5FF]/40 transition-colors"
+                style={{
+                  clipPath:
+                    reducedMotion || inView
+                      ? 'inset(0 0 0 0)'
+                      : 'inset(10% 0 10% 0)',
+                  opacity: reducedMotion || inView ? 1 : 0.4,
+                  transform:
+                    reducedMotion || inView
+                      ? 'scale(1)'
+                      : 'scale(0.96)',
+                  transition: `clip-path 700ms cubic-bezier(0.16, 1, 0.3, 1) ${
+                    idx * 120
+                  }ms, transform 700ms cubic-bezier(0.16, 1, 0.3, 1) ${
+                    idx * 120
+                  }ms, opacity 500ms ease-out ${idx * 120}ms`,
+                }}
               >
-                <img
+                <Image
                   src={trabajo.imagenUrl}
                   alt={trabajo.altText}
                   loading="lazy"
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  width={700}
+                  height={438}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                {/* Overlay con descripción y zona */}
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-trust/85 via-brand-trust/30 to-transparent flex flex-col justify-end p-4">
-                  <span className="text-xs font-semibold text-brand-primary uppercase tracking-wider">
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050B14]/90 via-[#050B14]/30 to-transparent flex flex-col justify-end p-4">
+                  <span className="text-caption font-mono font-bold text-[#CCFF00] tracking-wider">
                     {trabajo.zona}
                   </span>
-                  <p className="text-sm font-semibold text-white drop-shadow-sm">
+                  <p className="text-small font-semibold text-white drop-shadow-sm">
                     {trabajo.titulo}
                   </p>
                 </div>

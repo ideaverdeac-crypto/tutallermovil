@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import {
   Wrench,
@@ -19,14 +18,17 @@ import {
   Sparkles,
   Car,
   Settings,
-  X,
-  Star,
-  Check,
-  Shield
+  X
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
 import { SocialProof } from '@/components/SocialProof';
+import { MagneticButton } from '@/components/MagneticButton';
+import { SplitText } from '@/components/SplitText';
+import { CountUp } from '@/components/CountUp';
+import { TiltCard } from '@/components/TiltCard';
+import { Marquee } from '@/components/Marquee';
+import { HeroCredencialQR } from '@/components/HeroCredencialQR';
 
 export default function Home() {
   const router = useRouter();
@@ -67,26 +69,26 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-brand-trust flex flex-col font-sans selection:bg-brand-primary selection:text-white">
+    <div className="min-h-screen bg-[#050B14] text-white flex flex-col font-sans selection:bg-[#CCFF00] selection:text-[#050B14]">
       {/* 1. Barra Superior Informativa (Top Bar) */}
-      <div className="bg-brand-trust text-white text-xs sm:text-small py-2 px-4 relative z-50">
+      <div className="bg-[#0A1525] text-slate-300 text-xs sm:text-small py-2.5 px-4 relative z-50 border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto flex items-center justify-center text-center">
-          <div className="flex items-center gap-2 font-medium flex-wrap justify-center">
-            {/* Punto de estado activo con verde brand.success */}
+          <div className="flex items-center gap-2.5 font-medium flex-wrap justify-center">
+            {/* Punto de estado activo con verde firma */}
             <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-brand-success opacity-75 animate-ping" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-success" />
+              <span className="absolute inline-flex h-full w-full rounded-full bg-[#CCFF00] opacity-75 animate-ping" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#CCFF00] shadow-[0_0_8px_#CCFF00]" />
             </span>
-            <span>
+            <span className="tracking-wide">
               Especialistas activos hoy en Caracas • Llegada en &lt; 45 min • Aceptamos Zelle, Pago Móvil y Cashea
             </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Header (Navegación) */}
-      <header className="bg-white border-b border-brand-neutral-200 sticky top-0 z-40 backdrop-blur-md bg-white/95">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+      {/* 2. Header (Navegación Awwwards Dark) */}
+      <header className="bg-[#050B14]/90 border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
           {/* Logo Oficial TTM */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <img
@@ -99,7 +101,7 @@ export default function Home() {
           </Link>
 
           {/* Acceso Clientes ('Ingresar' o 'Mi Garaje') y Staff / Aliados */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
             {/* Botón Soporte WhatsApp en Header */}
             <BotonSoporteWhatsApp modo="header" className="hidden md:inline-flex" />
 
@@ -107,20 +109,20 @@ export default function Home() {
             {!session ? (
               <Link
                 href="/login-cliente"
-                className="h-10 px-3.5 text-xs sm:text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98]"
+                className="h-10 px-4 text-xs sm:text-small font-semibold bg-[#0F1B2D] hover:bg-[#14233a] text-white border border-slate-700/80 rounded-card transition-fast flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98] hover:border-[#CCFF00]/40"
                 title="Iniciar sesión en Tu Garaje"
               >
-                <User className="w-4 h-4 text-brand-trust shrink-0" />
+                <User className="w-4 h-4 text-[#CCFF00] shrink-0" />
                 <span>Ingresar</span>
               </Link>
             ) : (
-              /* Si SÍ hay sesión: Botón Secundario 'Mi Garaje' */
+              /* Si SÍ hay sesión: Botón 'Mi Garaje' */
               <Link
                 href="/cliente/dashboard"
-                className="h-10 px-3.5 text-xs sm:text-small font-semibold bg-brand-trust hover:bg-slate-800 text-white rounded-card transition-standard flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98]"
+                className="h-10 px-4 text-xs sm:text-small font-semibold bg-[#0F1B2D] hover:bg-[#14233a] text-white border border-[#CCFF00]/40 rounded-card transition-fast flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98]"
                 title="Ir a Mi Garaje y Pasaporte Técnico"
               >
-                <Car className="w-4 h-4 text-brand-primary shrink-0" />
+                <Car className="w-4 h-4 text-[#CCFF00] shrink-0" />
                 <span className="hidden sm:inline">Mi Garaje</span>
                 <span className="sm:hidden">Garaje</span>
               </Link>
@@ -129,7 +131,7 @@ export default function Home() {
             {/* Acceso Staff / Aliados */}
             <Link
               href="/login"
-              className="w-10 h-10 rounded-card text-brand-neutral-400 hover:text-brand-trust hover:bg-brand-neutral-100 flex items-center justify-center transition-standard cursor-pointer border border-transparent hover:border-brand-neutral-200 active:scale-[0.98]"
+              className="w-10 h-10 rounded-card text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center transition-fast cursor-pointer border border-transparent hover:border-slate-700 active:scale-[0.98]"
               title="Acceso Staff & Aliados"
               aria-label="Acceso Staff & Aliados"
             >
@@ -139,181 +141,114 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 3. Hero Section (Arriba del Fold: Titular y Credencial QR Protagonista) */}
-      <section className="relative bg-gradient-to-b from-white via-brand-neutral-50/60 to-brand-neutral-100 py-10 sm:py-14 lg:py-16 border-b border-brand-neutral-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      {/* 3. Hero Section (Awwwards Dark + Lima Firma + Ocupación 60% Titular) */}
+      <section className="relative bg-[#050B14] py-14 sm:py-20 lg:py-24 border-b border-slate-800/80 overflow-hidden">
+        {/* Resplandores ambientales técnicos de fondo */}
+        <div className="absolute -top-32 -left-32 w-[550px] h-[550px] bg-[#00E5FF]/5 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/3 -right-24 w-[500px] h-[500px] bg-[#CCFF00]/5 rounded-full blur-[140px] pointer-events-none" />
 
-            {/* Columna Izquierda: Titular y Acciones */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              {/* Insignia Oferta Gancho */}
-              <div>
-                <div className="inline-flex items-center gap-2 bg-brand-neutral-100 text-brand-trust px-3.5 py-1.5 rounded-full font-semibold text-xs sm:text-small border border-brand-neutral-300 shadow-card">
-                  <Sparkles className="w-4 h-4 shrink-0 text-brand-primary" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+
+            {/* Columna Izquierda: Titular Awwwards (Ocupa el 60% de ancho en Desktop) */}
+            <div className="lg:col-span-7 space-y-7 text-center lg:text-left">
+              {/* Insignia Oferta Gancho con CountUp de $15 */}
+              <div className="flex justify-center lg:justify-start">
+                <div className="inline-flex items-center gap-2 bg-[#0F1B2D] text-white px-4 py-1.5 rounded-full font-medium text-xs sm:text-small border border-[#00E5FF]/25 shadow-card backdrop-blur-md">
+                  <Sparkles className="w-4 h-4 shrink-0 text-[#CCFF00]" />
                   <span>
-                    Diagnóstico a Domicilio $15 USD — 100% GRATIS si reparas &gt; $40 hoy
+                    Diagnóstico a Domicilio{' '}
+                    <CountUp
+                      value={15}
+                      prefix="$"
+                      suffix=" USD"
+                      className="text-[#CCFF00]"
+                      childrenAfter="— 100% GRATIS si reparas > $40 hoy"
+                    />
                   </span>
                 </div>
               </div>
 
-              {/* H1 Principal con Escala Display y Tracking Tight */}
-              <h1 className="text-display tracking-tight text-brand-trust">
-                Mecánica automotriz a domicilio{' '}
-                <span className="text-brand-primary font-semibold">
-                  en Caracas
-                </span>
-              </h1>
+              {/* Titular Principal Display-XL con SplitText Reveal */}
+              <div className="max-w-3xl">
+                <h1 className="sr-only">
+                  Mecánica automotriz a domicilio en Caracas
+                </h1>
+                <SplitText
+                  text="Mecánica automotriz a domicilio en Caracas"
+                  as="h1"
+                  className="text-display-xl tracking-tight text-white font-normal leading-[0.95]"
+                />
+              </div>
 
               {/* Subtítulo */}
-              <p className="text-body text-brand-neutral-600 max-w-2xl mx-auto lg:mx-0 font-normal">
-                Especialistas certificados en la puerta de tu casa u oficina con escaneo computarizado OBD2, repuestos garantizados y la única plataforma con <strong className="text-brand-trust font-semibold">Credencial Digital de Confianza QR</strong> para tu total seguridad.
+              <p className="text-body text-slate-300 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
+                Especialistas certificados en la puerta de tu casa u oficina con escaneo computarizado OBD2, repuestos garantizados y la única plataforma con <strong className="text-[#CCFF00] font-semibold">Credencial Digital de Confianza QR</strong> para tu total seguridad.
               </p>
 
-              {/* CTAs de acción rápida: Un solo botón primario naranja */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-1 justify-center lg:justify-start">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="h-12 px-8 text-body font-semibold bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.98] text-white rounded-card shadow-card hover:scale-[1.02] transition-spring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-brand-primary/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  <Wrench className="w-5 h-5 text-white" />
-                  <span>PEDIR MECÁNICO HOY</span>
-                </button>
+              {/* CTAs de acción rápida: Botón Magnético "PEDIR MECÁNICO HOY" */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-2 justify-center lg:justify-start items-center">
+                <MagneticButton strength={0.25}>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(true)}
+                    className="h-14 px-9 text-body font-bold bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.98] text-[#050B14] rounded-card shadow-limeGlow hover:scale-[1.02] transition-spring flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none tracking-tight"
+                  >
+                    <Wrench className="w-5 h-5 text-[#050B14]" />
+                    <span>PEDIR MECÁNICO HOY</span>
+                  </button>
+                </MagneticButton>
 
                 <Link
                   href="/carnet/CAR-8492"
-                  className="h-12 px-6 text-body font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard flex items-center justify-center gap-2 cursor-pointer shadow-card active:scale-[0.98] hover:border-brand-primary"
+                  className="h-14 px-7 text-body font-medium bg-[#0F1B2D] hover:bg-[#14233a] text-white border border-slate-700/90 hover:border-[#CCFF00]/50 rounded-card transition-base flex items-center justify-center gap-2 cursor-pointer shadow-card active:scale-[0.98]"
                 >
-                  <ShieldCheck className="w-5 h-5 text-brand-primary" />
+                  <ShieldCheck className="w-5 h-5 text-[#CCFF00]" />
                   <span>Ver Credencial QR</span>
                 </Link>
               </div>
 
               {/* Beneficios directos de Confianza (4 Pilares) */}
-              <div className="pt-4 grid grid-cols-2 gap-3 text-left border-t border-brand-neutral-200">
-                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
+              <div className="pt-6 grid grid-cols-2 gap-3 text-left border-t border-slate-800/80">
+                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
                   <span>Llegada en &lt; 45 minutos</span>
                 </div>
-                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
+                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
                   <span>Mecánicos Verificados con QR</span>
                 </div>
-                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
+                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
                   <span>Garantía de 90 Días por Escrito</span>
                 </div>
-                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
+                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
                   <span>Diagnóstico $15 Exonerable</span>
                 </div>
               </div>
             </div>
 
-            {/* Columna Derecha: Credencial QR convertida en HÉROE VISUAL Arriba del Fold */}
+            {/* Columna Derecha: Credencial QR con Morphing y Parallax */}
             <div className="lg:col-span-5 flex justify-center w-full">
-              <motion.div
-                initial={{ opacity: 0, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, filter: 'blur(0px)' }}
-                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-                className="w-full max-w-sm bg-white border border-brand-neutral-200 rounded-card shadow-elevated p-6 flex flex-col items-center text-center space-y-4"
-              >
-                {/* Badge Superior "Verificado" con brand.success */}
-                <div className="w-full flex items-center justify-between pb-3 border-b border-brand-neutral-200">
-                  <div className="flex items-center gap-1.5 text-left">
-                    <img
-                      src="/icon.svg"
-                      alt="TuTallerMóvil"
-                      width={28}
-                      height={28}
-                      className="h-7 w-auto object-contain"
-                    />
-                    <div>
-                      <p className="text-caption font-semibold uppercase text-brand-trust tracking-wider leading-none">
-                        CREDENCIAL OFICIAL
-                      </p>
-                      <p className="text-[10px] text-brand-neutral-500 font-medium">
-                        Personal en Sitio
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="inline-flex items-center gap-1 bg-brand-success text-white px-2.5 py-1 rounded-full text-caption font-semibold shadow-card">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Verificado</span>
-                  </div>
-                </div>
-
-                {/* Foto y Datos del Especialista */}
-                <div className="flex items-center gap-3 w-full bg-brand-neutral-50 border border-brand-neutral-200 rounded-card p-3 text-left">
-                  <img
-                    src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=160&q=80"
-                    alt="Carlos E. Mendoza - Mecánico Senior"
-                    width={52}
-                    height={52}
-                    className="w-13 h-13 rounded-card object-cover border border-brand-neutral-300 shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body font-semibold text-brand-trust truncate leading-tight">
-                      Carlos E. Mendoza
-                    </p>
-                    <p className="text-small text-brand-primary font-medium truncate">
-                      Mecánico 1 — Senior
-                    </p>
-                    <p className="text-caption font-mono text-brand-neutral-500">
-                      ID: <span className="text-brand-trust font-semibold">#TTM-CAR-8492</span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Código QR: El elemento más grande después del titular */}
-                <div className="p-4 bg-brand-neutral-50 border border-brand-neutral-200 rounded-card flex flex-col items-center justify-center w-full">
-                  <div className="p-3 bg-white border border-brand-neutral-300 rounded-card shadow-card">
-                    <QRCodeSVG
-                      value="https://tutallermovil.vercel.app/carnet/CAR-8492"
-                      size={160}
-                      level="M"
-                      includeMargin={false}
-                      fgColor="#0A1525"
-                      bgColor="#FFFFFF"
-                    />
-                  </div>
-                  <div className="mt-3 space-y-1">
-                    <p className="text-small font-semibold text-brand-trust flex items-center justify-center gap-1.5">
-                      <QrCode className="w-4 h-4 text-brand-primary" />
-                      Código QR Antifraude
-                    </p>
-                    <p className="text-caption text-brand-neutral-500 max-w-[220px]">
-                      Escanea para confirmar identidad y póliza antes de autorizar acceso.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Pie de la Credencial */}
-                <div className="w-full pt-1 flex items-center justify-between text-caption text-brand-neutral-500">
-                  <span className="flex items-center gap-1 font-semibold text-brand-success">
-                    <span className="w-2 h-2 rounded-full bg-brand-success inline-block animate-pulse" />
-                    En Ruta Activa
-                  </span>
-                  <span className="font-mono text-[11px] text-brand-neutral-400">
-                    HASH: 7855-TTM
-                  </span>
-                </div>
-              </motion.div>
+              <HeroCredencialQR />
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* 4. Menú de 4 Tarjetas de Acción Rápida */}
-      <section className="bg-white py-12 sm:py-16 border-b border-brand-neutral-200">
+      {/* 4. Marquee Horizontal Infinito entre Hero y Acceso Rápido */}
+      <Marquee text="LLEGADA < 45 MIN · GARANTÍA 90 DÍAS · CARACAS · DIAGNÓSTICO $15 · ESPECIALISTAS OBD2 · CREDENCIAL QR ·" />
+
+      {/* 5. Menú de 4 Tarjetas de Acción Rápida con Tilt 3D */}
+      <section className="bg-[#0A1525] py-16 sm:py-20 lg:py-24 border-b border-slate-800/80 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 text-center sm:text-left">
-            <h2 className="text-h2 text-brand-trust">
+          <div className="mb-10 text-center sm:text-left">
+            <h2 className="text-h2 font-medium text-white tracking-tight">
               Acceso Rápido a Servicios
             </h2>
-            <p className="text-small text-brand-neutral-600">
+            <p className="text-small text-slate-400 mt-1">
               Selecciona una opción para gestionar tu vehículo de inmediato.
             </p>
           </div>
@@ -321,144 +256,158 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
             {/* Tarjeta 1: Pedir Mecánico (CTA Primario) */}
-            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
+            <TiltCard
+              maxTiltDeg={6}
+              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#CCFF00]/40 transition-colors"
+            >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-card bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                    <Wrench className="w-5 h-5 text-brand-primary" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-card bg-[#CCFF00]/10 flex items-center justify-center text-[#CCFF00] group-hover:rotate-8 transition-transform duration-200">
+                    <Wrench className="w-5 h-5 text-[#CCFF00]" />
                   </div>
-                  <span className="inline-flex items-center gap-1 text-caption font-semibold uppercase tracking-wider text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-control">
+                  <span className="inline-flex items-center gap-1 text-caption font-mono uppercase tracking-wider text-[#CCFF00] bg-[#CCFF00]/10 px-2.5 py-0.5 rounded-control">
                     <Clock className="w-3 h-3" /> Inmediato
                   </span>
                 </div>
-                <h3 className="text-h3 text-brand-trust mb-1">
+                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
                   PEDIR MECÁNICO HOY
                 </h3>
-                <p className="text-small text-brand-neutral-600 mb-5">
+                <p className="text-small text-slate-400 mb-6">
                   En tu casa en menos de 45 minutos.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                className="w-full h-11 text-small font-semibold bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.98] text-white rounded-card shadow-card hover:scale-[1.02] transition-spring flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-brand-primary/35 disabled:opacity-50 disabled:pointer-events-none"
-              >
-                <span>Agendar Servicio</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+              <MagneticButton strength={0.2} className="w-full">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  className="w-full h-12 text-small font-bold bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.98] text-[#050B14] rounded-card shadow-limeGlow hover:scale-[1.02] transition-spring flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <span>Agendar Servicio</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </MagneticButton>
+            </TiltCard>
 
-            {/* Tarjeta 2: Historial por Placa (Secundario) */}
-            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
+            {/* Tarjeta 2: Historial por Placa */}
+            <TiltCard
+              maxTiltDeg={6}
+              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#00E5FF]/40 transition-colors"
+            >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-card bg-brand-neutral-100 flex items-center justify-center text-brand-trust">
-                    <Search className="w-5 h-5 text-brand-trust" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-card bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] group-hover:rotate-8 transition-transform duration-200">
+                    <Search className="w-5 h-5 text-[#00E5FF]" />
                   </div>
-                  <span className="text-caption font-semibold uppercase tracking-wider text-brand-neutral-500 bg-brand-neutral-100 px-2 py-0.5 rounded-control">
+                  <span className="text-caption font-mono uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-control">
                     Consulta
                   </span>
                 </div>
-                <h3 className="text-h3 text-brand-trust mb-1">
+                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
                   HISTORIAL POR PLACA
                 </h3>
-                <p className="text-small text-brand-neutral-600 mb-3">
+                <p className="text-small text-slate-400 mb-4">
                   Revisa servicios y diagnósticos previos.
                 </p>
               </div>
 
-              <form onSubmit={handleSearchPlate} className="space-y-2">
+              <form onSubmit={handleSearchPlate} className="space-y-2.5">
                 <input
                   type="text"
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
                   placeholder="Ej. AD456EF"
-                  className="w-full h-11 px-3 text-small uppercase font-mono font-medium rounded-control border border-brand-neutral-300 focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white text-brand-trust"
+                  className="w-full h-11 px-3 text-small uppercase font-mono font-medium rounded-control border border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#CCFF00] bg-[#050B14] text-white"
                 />
                 <button
                   type="submit"
-                  className="w-full h-11 text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-brand-primary"
+                  className="w-full h-11 text-small font-medium bg-[#0A1525] hover:bg-[#14233a] text-white border border-slate-700 rounded-card transition-fast shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-[#CCFF00]/40"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-4 h-4 text-[#CCFF00]" />
                   <span>Buscar</span>
                 </button>
               </form>
-            </div>
+            </TiltCard>
 
-            {/* Tarjeta 3: Verificar Carnet QR (Secundario) */}
-            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
+            {/* Tarjeta 3: Verificar Carnet QR */}
+            <TiltCard
+              maxTiltDeg={6}
+              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#16A34A]/40 transition-colors"
+            >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-card bg-brand-success/10 flex items-center justify-center text-brand-success">
-                    <QrCode className="w-5 h-5 text-brand-success" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-card bg-[#16A34A]/10 flex items-center justify-center text-[#16A34A] group-hover:rotate-8 transition-transform duration-200">
+                    <QrCode className="w-5 h-5 text-[#16A34A]" />
                   </div>
-                  <span className="inline-flex items-center gap-1 text-caption font-semibold uppercase tracking-wider text-brand-success bg-brand-success/10 px-2 py-0.5 rounded-control">
+                  <span className="inline-flex items-center gap-1 text-caption font-mono uppercase tracking-wider text-[#16A34A] bg-[#16A34A]/10 px-2.5 py-0.5 rounded-control">
                     <ShieldCheck className="w-3 h-3" /> Seguro
                   </span>
                 </div>
-                <h3 className="text-h3 text-brand-trust mb-1">
+                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
                   VERIFICAR CARNET QR
                 </h3>
-                <p className="text-small text-brand-neutral-600 mb-5">
+                <p className="text-small text-slate-400 mb-6">
                   Valida a tu especialista antes de permitir el acceso.
                 </p>
               </div>
 
               <Link
                 href="/carnet/CAR-8492"
-                className="w-full h-11 text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-brand-primary"
+                className="w-full h-11 text-small font-medium bg-[#0A1525] hover:bg-[#14233a] text-white border border-slate-700 rounded-card transition-fast shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-[#CCFF00]/40"
               >
                 <span>Escanear Carnet</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-[#CCFF00]" />
               </Link>
-            </div>
+            </TiltCard>
 
-            {/* Tarjeta 4: Portal de Aliados (Secundario) */}
-            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
+            {/* Tarjeta 4: Portal de Aliados */}
+            <TiltCard
+              maxTiltDeg={6}
+              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#FF006E]/40 transition-colors"
+            >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-card bg-brand-neutral-100 flex items-center justify-center text-brand-neutral-700">
-                    <UserCircle className="w-5 h-5 text-brand-neutral-700" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-card bg-slate-800 flex items-center justify-center text-slate-300 group-hover:rotate-8 transition-transform duration-200">
+                    <UserCircle className="w-5 h-5 text-slate-300" />
                   </div>
-                  <span className="text-caption font-semibold uppercase tracking-wider text-brand-neutral-600 bg-brand-neutral-100 px-2 py-0.5 rounded-control">
+                  <span className="text-caption font-mono uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-control">
                     Red TTM
                   </span>
                 </div>
-                <h3 className="text-h3 text-brand-trust mb-1">
+                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
                   PORTAL DE ALIADOS
                 </h3>
-                <p className="text-small text-brand-neutral-600 mb-5">
+                <p className="text-small text-slate-400 mb-6">
                   Mecánicos, Talleres, Runners y Repuesteras.
                 </p>
               </div>
 
               <Link
                 href="/aliados/portal"
-                className="w-full h-11 text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-brand-primary"
+                className="w-full h-11 text-small font-medium bg-[#0A1525] hover:bg-[#14233a] text-white border border-slate-700 rounded-card transition-fast shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-[#CCFF00]/40"
               >
                 <span>Ingresar al Portal</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-[#CCFF00]" />
               </Link>
-            </div>
+            </TiltCard>
 
           </div>
         </div>
       </section>
 
-      {/* 5. TAREA 5: Nueva Sección de Prueba Social */}
+      {/* 6. Sección de Prueba Social (Con Tilt 3D y Clip-Path en Evidencias) */}
       <SocialProof />
 
-      {/* 6. Footer */}
-      <footer className="bg-white border-t border-brand-neutral-200 py-6 text-center text-caption text-brand-neutral-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      {/* 7. Footer */}
+      <footer className="bg-[#050B14] border-t border-slate-800 py-8 text-center text-caption text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 TuTallerMóvil (TTM). Titular: José Ángel Acosta Llovera. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4 text-caption font-semibold">
-            <Link href="/terminos" className="text-brand-primary hover:underline">
+          <div className="flex items-center gap-4 text-caption font-medium">
+            <Link href="/terminos" className="text-[#CCFF00] hover:underline">
               Términos, Condiciones y Privacidad
             </Link>
-            <span className="text-brand-neutral-300">•</span>
-            <span className="text-brand-neutral-500">Caracas, Venezuela</span>
+            <span className="text-slate-700">•</span>
+            <span className="text-slate-400">Caracas, Venezuela</span>
           </div>
         </div>
       </footer>
@@ -481,14 +430,14 @@ export default function Home() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="fixed bottom-6 right-6 z-50 max-w-md bg-brand-trust text-white p-4 rounded-container shadow-elevated border border-brand-primary flex items-center justify-between gap-4"
+            className="fixed bottom-6 right-6 z-50 max-w-md bg-[#0F1B2D] text-white p-4 rounded-container shadow-elevated border border-[#CCFF00] flex items-center justify-between gap-4"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-card bg-brand-primary flex items-center justify-center text-white shrink-0 font-semibold">
-                <CheckCircle2 className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-card bg-[#CCFF00] flex items-center justify-center text-[#050B14] shrink-0 font-bold">
+                <CheckCircle2 className="w-5 h-5 text-[#050B14]" />
               </div>
               <div>
-                <p className="text-caption font-semibold text-brand-primary uppercase tracking-wider">
+                <p className="text-caption font-mono font-bold text-[#CCFF00] uppercase tracking-wider">
                   Orden Despachada
                 </p>
                 <p className="text-small font-medium text-white">
@@ -499,7 +448,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setToastMessage(null)}
-              className="text-brand-neutral-400 hover:text-white p-1 rounded-control hover:bg-slate-800 transition-standard cursor-pointer"
+              className="text-slate-400 hover:text-white p-1 rounded-control hover:bg-slate-800 transition-fast cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
