@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -10,23 +10,14 @@ import {
   Search,
   QrCode,
   UserCircle,
-  User,
-  ShieldCheck,
-  CheckCircle2,
-  Clock,
   ArrowRight,
-  Sparkles,
-  Car,
-  Settings,
-  X
+  ShieldCheck,
+  X,
+  CheckCircle2
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
 import { SocialProof } from '@/components/SocialProof';
-import { MagneticButton } from '@/components/MagneticButton';
-import { SplitText } from '@/components/SplitText';
-import { CountUp } from '@/components/CountUp';
-import { TiltCard } from '@/components/TiltCard';
 import { Marquee } from '@/components/Marquee';
 import { HeroCredencialQR } from '@/components/HeroCredencialQR';
 
@@ -36,6 +27,7 @@ export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [session, setSession] = useState<any>(null);
+  const [bgOffsetY, setBgOffsetY] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,8 +42,17 @@ export default function Home() {
       setSession(currentSession);
     });
 
+    // Parallax sutil en fondo de imagen
+    const handleScroll = () => {
+      const scrolled = window.scrollY;
+      setBgOffsetY(scrolled * 0.25);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -69,350 +70,355 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050B14] text-white flex flex-col font-sans selection:bg-[#CCFF00] selection:text-[#050B14]">
-      {/* 1. Barra Superior Informativa (Top Bar) */}
-      <div className="bg-[#0A1525] text-slate-300 text-xs sm:text-small py-2.5 px-4 relative z-50 border-b border-slate-800/80">
-        <div className="max-w-7xl mx-auto flex items-center justify-center text-center">
-          <div className="flex items-center gap-2.5 font-medium flex-wrap justify-center">
-            {/* Punto de estado activo con verde firma */}
-            <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-[#CCFF00] opacity-75 animate-ping" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#CCFF00] shadow-[0_0_8px_#CCFF00]" />
-            </span>
-            <span className="tracking-wide">
-              Especialistas activos hoy en Caracas • Llegada en &lt; 45 min • Aceptamos Zelle, Pago Móvil y Cashea
-            </span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col font-mono selection:bg-[#CCFF00] selection:text-[#050505] uppercase">
 
-      {/* 2. Header (Navegación Awwwards Dark) */}
-      <header className="bg-[#050B14]/90 border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
-          {/* Logo Oficial TTM */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <img
-              src="/icon.svg"
-              alt="TuTallerMóvil"
-              width={160}
-              height={50}
-              className="h-[46px] sm:h-[54px] w-auto object-contain transition-transform group-hover:scale-105"
-            />
+      {/* TAREA 2 — Navegación Técnica (Header Brutalista) */}
+      <header className="bg-[#050505]/95 border-b border-neutral-800 sticky top-0 z-50 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+          
+          {/* Logo / Marca Técnica */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <span className="text-sm sm:text-base font-bold tracking-widest text-[#CCFF00]">
+              [ TUTALLERMÓVIL ]
+            </span>
           </Link>
 
-          {/* Acceso Clientes ('Ingresar' o 'Mi Garaje') y Staff / Aliados */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
-            {/* Botón Soporte WhatsApp en Header */}
-            <BotonSoporteWhatsApp modo="header" className="hidden md:inline-flex" />
+          {/* Menú de Enlaces Monoespaciados entre Corchetes */}
+          <nav className="hidden md:flex items-center gap-6 text-xs font-mono font-medium tracking-wider text-neutral-400">
+            <Link href="/" className="hover:text-[#CCFF00] transition-colors">
+              [ INICIO ]
+            </Link>
+            <a href="#servicios" className="hover:text-[#CCFF00] transition-colors">
+              [ SERVICIOS ]
+            </a>
+            <a href="#precios" className="hover:text-[#CCFF00] transition-colors">
+              [ PRECIOS ]
+            </a>
+            <a href="#contacto" className="hover:text-[#CCFF00] transition-colors">
+              [ CONTACTO ]
+            </a>
+          </nav>
 
-            {/* Si NO hay sesión: Botón Secundario 'Ingresar' */}
+          {/* Acceso Clientes y WhatsApp */}
+          <div className="flex items-center gap-3">
+            <BotonSoporteWhatsApp modo="header" className="hidden sm:inline-flex" />
+
             {!session ? (
               <Link
                 href="/login-cliente"
-                className="h-10 px-4 text-xs sm:text-small font-semibold bg-[#0F1B2D] hover:bg-[#14233a] text-white border border-slate-700/80 rounded-card transition-fast flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98] hover:border-[#CCFF00]/40"
+                className="h-9 px-3.5 text-xs font-mono font-bold border border-neutral-700 bg-neutral-900/80 text-white hover:text-[#050505] hover:bg-[#CCFF00] hover:border-[#CCFF00] transition-colors rounded-sm flex items-center gap-1.5"
                 title="Iniciar sesión en Tu Garaje"
               >
-                <User className="w-4 h-4 text-[#CCFF00] shrink-0" />
-                <span>Ingresar</span>
+                <span>[ INGRESAR ]</span>
               </Link>
             ) : (
-              /* Si SÍ hay sesión: Botón 'Mi Garaje' */
               <Link
                 href="/cliente/dashboard"
-                className="h-10 px-4 text-xs sm:text-small font-semibold bg-[#0F1B2D] hover:bg-[#14233a] text-white border border-[#CCFF00]/40 rounded-card transition-fast flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98]"
-                title="Ir a Mi Garaje y Pasaporte Técnico"
+                className="h-9 px-3.5 text-xs font-mono font-bold bg-[#CCFF00] text-[#050505] border border-[#CCFF00] transition-colors rounded-sm flex items-center gap-1.5"
+                title="Mi Garaje y Pasaporte Técnico"
               >
-                <Car className="w-4 h-4 text-[#CCFF00] shrink-0" />
-                <span className="hidden sm:inline">Mi Garaje</span>
-                <span className="sm:hidden">Garaje</span>
+                <span>[ MI GARAJE ]</span>
               </Link>
             )}
-
-            {/* Acceso Staff / Aliados */}
-            <Link
-              href="/login"
-              className="w-10 h-10 rounded-card text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center transition-fast cursor-pointer border border-transparent hover:border-slate-700 active:scale-[0.98]"
-              title="Acceso Staff & Aliados"
-              aria-label="Acceso Staff & Aliados"
-            >
-              <Settings className="w-4 h-4 transition-transform duration-300 hover:rotate-45" />
-            </Link>
           </div>
         </div>
       </header>
 
-      {/* 3. Hero Section (Awwwards Dark + Lima Firma + Ocupación 60% Titular) */}
-      <section className="relative bg-[#050B14] py-14 sm:py-20 lg:py-24 border-b border-slate-800/80 overflow-hidden">
-        {/* Resplandores ambientales técnicos de fondo */}
-        <div className="absolute -top-32 -left-32 w-[550px] h-[550px] bg-[#00E5FF]/5 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute top-1/3 -right-24 w-[500px] h-[500px] bg-[#CCFF00]/5 rounded-full blur-[140px] pointer-events-none" />
+      {/* TAREA 1 — Rediseño del HERO (Efecto Cartel Editorial Brutalista) */}
+      <section className="relative min-h-[90vh] lg:min-h-[95vh] flex flex-col justify-between overflow-hidden border-b border-neutral-800 pt-6 pb-8 px-4 sm:px-6 lg:px-8">
+        
+        {/* 1. Fondo de Imagen con Filtros Editoriales y Parallax */}
+        <div
+          className="absolute inset-0 z-0 pointer-events-none will-change-transform"
+          style={{
+            transform: `translate3d(0, ${bgOffsetY}px, 0)`,
+          }}
+        >
+          <img
+            src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1920&q=80"
+            alt="Taller y mecánica automotriz"
+            className="w-full h-[120%] object-cover object-center brutalist-hero-image"
+          />
+        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+        {/* 2. Efecto Halftone (Trama de Puntos Radial) */}
+        <div className="absolute inset-0 z-0 pointer-events-none halftone-overlay" />
 
-            {/* Columna Izquierda: Titular Awwwards (Ocupa el 60% de ancho en Desktop) */}
-            <div className="lg:col-span-7 space-y-7 text-center lg:text-left">
-              {/* Insignia Oferta Gancho con CountUp de $15 */}
-              <div className="flex justify-center lg:justify-start">
-                <div className="inline-flex items-center gap-2 bg-[#0F1B2D] text-white px-4 py-1.5 rounded-full font-medium text-xs sm:text-small border border-[#00E5FF]/25 shadow-card backdrop-blur-md">
-                  <Sparkles className="w-4 h-4 shrink-0 text-[#CCFF00]" />
-                  <span>
-                    Diagnóstico a Domicilio{' '}
-                    <CountUp
-                      value={15}
-                      prefix="$"
-                      suffix=" USD"
-                      className="text-[#CCFF00]"
-                      childrenAfter="— 100% GRATIS si reparas > $40 hoy"
-                    />
-                  </span>
-                </div>
-              </div>
+        {/* Gradiente sutil para legibilidad editorial */}
+        <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#050505]/80 via-[#050505]/40 to-[#050505]/90" />
 
-              {/* Titular Principal Display-XL con SplitText Reveal */}
-              <div className="max-w-3xl">
-                <h1 className="sr-only">
-                  Mecánica automotriz a domicilio en Caracas
-                </h1>
-                <SplitText
-                  text="Mecánica automotriz a domicilio en Caracas"
-                  as="h1"
-                  className="text-display-xl tracking-tight text-white font-normal leading-[0.95]"
-                />
-              </div>
+        {/* 4. Metadata: Franja Superior */}
+        <div className="relative z-10 w-full flex items-center justify-between text-xs tracking-widest text-neutral-400 font-mono animate-metadata">
+          <div className="text-[#CCFF00] font-bold">
+            [ TUTALLERMÓVIL ]
+          </div>
+          <div className="hidden sm:block text-neutral-300">
+            [ DIAGNÓSTICO $15 USD · 100% EXONERABLE SI REPARAS &gt; $40 · GARANTÍA 90 DÍAS ]
+          </div>
+          <div>
+            [ CCS / 2026 ]
+          </div>
+        </div>
 
-              {/* Subtítulo */}
-              <p className="text-body text-slate-300 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
-                Especialistas certificados en la puerta de tu casa u oficina con escaneo computarizado OBD2, repuestos garantizados y la única plataforma con <strong className="text-[#CCFF00] font-semibold">Credencial Digital de Confianza QR</strong> para tu total seguridad.
-              </p>
+        {/* 3. Titular Masivo Centrado y Superpuesto a la Imagen con Efecto Cortina */}
+        <div className="relative z-10 my-auto py-12 sm:py-16 text-center flex flex-col items-center justify-center max-w-6xl mx-auto w-full animate-curtain">
+          
+          {/* Línea 1: Playfair Display itálica */}
+          <span
+            style={{ fontFamily: 'var(--font-serif)' }}
+            className="italic text-white text-5xl md:text-7xl lg:text-8xl font-normal tracking-normal drop-shadow-md select-none lowercase first-letter:uppercase"
+          >
+            Llevamos tu
+          </span>
 
-              {/* CTAs de acción rápida: Botón Magnético "PEDIR MECÁNICO HOY" */}
-              <div className="flex flex-col sm:flex-row gap-4 pt-2 justify-center lg:justify-start items-center">
-                <MagneticButton strength={0.25}>
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(true)}
-                    className="h-14 px-9 text-body font-bold bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.98] text-[#050B14] rounded-card shadow-limeGlow hover:scale-[1.02] transition-spring flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none tracking-tight"
-                  >
-                    <Wrench className="w-5 h-5 text-[#050B14]" />
-                    <span>PEDIR MECÁNICO HOY</span>
-                  </button>
-                </MagneticButton>
+          {/* Línea 2: Anton / Oswald pesada y condensada */}
+          <h1
+            style={{ fontFamily: 'var(--font-display)' }}
+            className="text-white text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black uppercase tracking-tighter leading-none mt-1 sm:mt-2 drop-shadow-2xl select-none"
+          >
+            MECÁNICA A DOMICILIO
+          </h1>
 
-                <Link
-                  href="/carnet/CAR-8492"
-                  className="h-14 px-7 text-body font-medium bg-[#0F1B2D] hover:bg-[#14233a] text-white border border-slate-700/90 hover:border-[#CCFF00]/50 rounded-card transition-base flex items-center justify-center gap-2 cursor-pointer shadow-card active:scale-[0.98]"
-                >
-                  <ShieldCheck className="w-5 h-5 text-[#CCFF00]" />
-                  <span>Ver Credencial QR</span>
-                </Link>
-              </div>
+          {/* Subtítulo técnico */}
+          <p className="mt-5 max-w-xl text-neutral-300 text-xs sm:text-sm font-mono tracking-wider leading-relaxed px-4">
+            Especialistas certificados con escáner OBD2 en la puerta de tu casa u oficina. Sin remolques ni costos ocultos.
+          </p>
 
-              {/* Beneficios directos de Confianza (4 Pilares) */}
-              <div className="pt-6 grid grid-cols-2 gap-3 text-left border-t border-slate-800/80">
-                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
-                  <span>Llegada en &lt; 45 minutos</span>
-                </div>
-                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
-                  <span>Mecánicos Verificados con QR</span>
-                </div>
-                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
-                  <span>Garantía de 90 Días por Escrito</span>
-                </div>
-                <div className="flex items-center gap-2 text-small text-slate-300 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-[#CCFF00] shrink-0" />
-                  <span>Diagnóstico $15 Exonerable</span>
-                </div>
-              </div>
+          {/* 5. CTA Principal Brutalista (Píldora con bordes casi rectos rounded-sm) */}
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="h-13 px-8 text-sm sm:text-base font-mono font-bold bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.98] text-[#050505] rounded-sm transition-all duration-150 flex items-center justify-center gap-3 cursor-pointer shadow-[0_0_24px_rgba(204,255,0,0.4)] hover:shadow-[0_0_32px_rgba(204,255,0,0.6)]"
+            >
+              <span>PEDIR MECÁNICO HOY</span>
+              <ArrowRight className="w-5 h-5 stroke-[2.5]" />
+            </button>
+
+            <a
+              href="#verificar-carnet"
+              className="h-13 px-6 text-xs sm:text-sm font-mono font-bold bg-[#050505]/80 hover:bg-[#121212] text-white border border-neutral-700 hover:border-[#CCFF00] rounded-sm transition-colors flex items-center justify-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4 text-[#CCFF00]" />
+              <span>[ VER CREDENCIAL QR ]</span>
+            </a>
+          </div>
+        </div>
+
+        {/* 4. Metadata: Franja Inferior (Esquinas y Centro) */}
+        <div className="relative z-10 w-full grid grid-cols-1 md:grid-cols-3 gap-4 items-end text-xs text-neutral-400 font-mono tracking-wider animate-metadata border-t border-neutral-800/60 pt-4">
+          
+          {/* Esquina Inferior Izquierda */}
+          <div className="text-left font-bold text-white">
+            [ 15+ MARCAS ATENDIDAS ]
+          </div>
+
+          {/* Centro Abajo: Pequeño Listado Vertical de Servicios */}
+          <div className="text-left md:text-center text-[11px] text-neutral-300">
+            <span className="text-[#CCFF00] font-bold block mb-0.5">[ SERVICIOS PRINCIPALES ]</span>
+            <span className="tracking-widest">DIAGNÓSTICO / BATERÍA / FRENOS / MOTOR</span>
+          </div>
+
+          {/* Esquina Inferior Derecha */}
+          <div className="text-left md:text-right font-bold text-white">
+            [ CARACAS, VZLA — LLEGADA &lt; 45 MIN ]
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* Marquee Divisor Brutalista */}
+      <Marquee text="LLEGADA < 45 MIN · GARANTÍA 90 DÍAS · CARACAS · DIAGNÓSTICO $15 · ESPECIALISTAS OBD2 · CREDENCIAL QR ·" />
+
+      {/* TAREA 4 — Sección de Credencial QR Flotante Brutalista */}
+      <section id="verificar-carnet" className="py-16 sm:py-20 bg-[#050505] border-b border-neutral-800 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10">
+          <div className="max-w-xl space-y-4">
+            <span className="text-xs text-[#CCFF00] font-bold tracking-widest">
+              [ PROTOCOLO DE SEGURIDAD Y CONFIANZA ]
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white font-mono">
+              CREDENCIAL DIGITAL ANTIFRAUDE
+            </h2>
+            <p className="text-sm text-neutral-400 leading-relaxed font-mono">
+              Cada especialista que llega a tu ubicación porta su credencial con código QR criptográfico. Escanéalo antes de autorizar el acceso para verificar identidad, estatus en tiempo real y póliza de garantía escrita.
+            </p>
+            <div className="flex items-center gap-3 pt-2 text-xs text-neutral-300">
+              <span className="px-2.5 py-1 bg-[#121212] border border-neutral-800 rounded-sm">[ HASH INMUTABLE ]</span>
+              <span className="px-2.5 py-1 bg-[#121212] border border-neutral-800 rounded-sm">[ PÓLIZA ACTIVA ]</span>
+              <span className="px-2.5 py-1 bg-[#121212] border border-neutral-800 rounded-sm text-[#CCFF00]">[ VERIFICACIÓN EN VIVO ]</span>
             </div>
+          </div>
 
-            {/* Columna Derecha: Credencial QR con Morphing y Parallax */}
-            <div className="lg:col-span-5 flex justify-center w-full">
-              <HeroCredencialQR />
-            </div>
-
+          {/* Tarjeta de la Credencial enmarcada en verde lima */}
+          <div className="w-full lg:w-auto flex justify-center">
+            <HeroCredencialQR />
           </div>
         </div>
       </section>
 
-      {/* 4. Marquee Horizontal Infinito entre Hero y Acceso Rápido */}
-      <Marquee text="LLEGADA < 45 MIN · GARANTÍA 90 DÍAS · CARACAS · DIAGNÓSTICO $15 · ESPECIALISTAS OBD2 · CREDENCIAL QR ·" />
-
-      {/* 5. Menú de 4 Tarjetas de Acción Rápida con Tilt 3D */}
-      <section className="bg-[#0A1525] py-16 sm:py-20 lg:py-24 border-b border-slate-800/80 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center sm:text-left">
-            <h2 className="text-h2 font-medium text-white tracking-tight">
-              Acceso Rápido a Servicios
-            </h2>
-            <p className="text-small text-slate-400 mt-1">
-              Selecciona una opción para gestionar tu vehículo de inmediato.
+      {/* Acceso Rápido a Servicios (Estilo Brutalista) */}
+      <section id="servicios" className="bg-[#0B0B0B] py-16 sm:py-20 border-b border-neutral-800 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-neutral-800 pb-4">
+            <div>
+              <span className="text-xs text-[#CCFF00] font-bold tracking-widest">[ PANEL RÁPIDO ]</span>
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                SERVICIOS Y CONSULTAS EN LÍNEA
+              </h2>
+            </div>
+            <p className="text-xs text-neutral-400">
+              Operatividad activa en todo el Distrito Capital.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-            {/* Tarjeta 1: Pedir Mecánico (CTA Primario) */}
-            <TiltCard
-              maxTiltDeg={6}
-              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#CCFF00]/40 transition-colors"
-            >
+            {/* Tarjeta 1: Pedir Mecánico */}
+            <div className="bg-[#121212] border border-neutral-800 rounded-sm p-6 flex flex-col justify-between hover:border-[#CCFF00] transition-colors">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-card bg-[#CCFF00]/10 flex items-center justify-center text-[#CCFF00] group-hover:rotate-8 transition-transform duration-200">
+                  <div className="w-10 h-10 rounded-sm bg-[#CCFF00]/10 border border-[#CCFF00]/30 flex items-center justify-center text-[#CCFF00]">
                     <Wrench className="w-5 h-5 text-[#CCFF00]" />
                   </div>
-                  <span className="inline-flex items-center gap-1 text-caption font-mono uppercase tracking-wider text-[#CCFF00] bg-[#CCFF00]/10 px-2.5 py-0.5 rounded-control">
-                    <Clock className="w-3 h-3" /> Inmediato
+                  <span className="text-[10px] font-bold text-[#CCFF00]">
+                    [ INMEDIATO ]
                   </span>
                 </div>
-                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
+                <h3 className="text-base font-bold text-white mb-1">
                   PEDIR MECÁNICO HOY
                 </h3>
-                <p className="text-small text-slate-400 mb-6">
-                  En tu casa en menos de 45 minutos.
+                <p className="text-xs text-neutral-400 mb-6">
+                  Atención en menos de 45 minutos en tu ubicación.
                 </p>
               </div>
 
-              <MagneticButton strength={0.2} className="w-full">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="w-full h-12 text-small font-bold bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.98] text-[#050B14] rounded-card shadow-limeGlow hover:scale-[1.02] transition-spring flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  <span>Agendar Servicio</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </MagneticButton>
-            </TiltCard>
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="w-full h-11 text-xs font-bold bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.98] text-[#050505] rounded-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>[ AGENDAR SERVICIO ]</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
 
             {/* Tarjeta 2: Historial por Placa */}
-            <TiltCard
-              maxTiltDeg={6}
-              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#00E5FF]/40 transition-colors"
-            >
+            <div className="bg-[#121212] border border-neutral-800 rounded-sm p-6 flex flex-col justify-between hover:border-[#00E5FF] transition-colors">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-card bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] group-hover:rotate-8 transition-transform duration-200">
+                  <div className="w-10 h-10 rounded-sm bg-[#00E5FF]/10 border border-[#00E5FF]/30 flex items-center justify-center text-[#00E5FF]">
                     <Search className="w-5 h-5 text-[#00E5FF]" />
                   </div>
-                  <span className="text-caption font-mono uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-control">
-                    Consulta
+                  <span className="text-[10px] font-bold text-neutral-400">
+                    [ CONSULTA ]
                   </span>
                 </div>
-                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
+                <h3 className="text-base font-bold text-white mb-1">
                   HISTORIAL POR PLACA
                 </h3>
-                <p className="text-small text-slate-400 mb-4">
-                  Revisa servicios y diagnósticos previos.
+                <p className="text-xs text-neutral-400 mb-4">
+                  Revisa servicios, diagnósticos y Pasaporte Técnico.
                 </p>
               </div>
 
-              <form onSubmit={handleSearchPlate} className="space-y-2.5">
+              <form onSubmit={handleSearchPlate} className="space-y-2">
                 <input
                   type="text"
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                  placeholder="Ej. AD456EF"
-                  className="w-full h-11 px-3 text-small uppercase font-mono font-medium rounded-control border border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#CCFF00] bg-[#050B14] text-white"
+                  placeholder="EJ. AD456EF"
+                  className="w-full h-10 px-3 text-xs uppercase font-mono font-medium rounded-sm border border-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#CCFF00] bg-[#050505] text-white"
                 />
                 <button
                   type="submit"
-                  className="w-full h-11 text-small font-medium bg-[#0A1525] hover:bg-[#14233a] text-white border border-slate-700 rounded-card transition-fast shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-[#CCFF00]/40"
+                  className="w-full h-10 text-xs font-bold bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-700 hover:border-[#CCFF00] rounded-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                 >
-                  <Search className="w-4 h-4 text-[#CCFF00]" />
-                  <span>Buscar</span>
+                  <Search className="w-3.5 h-3.5 text-[#CCFF00]" />
+                  <span>[ BUSCAR ]</span>
                 </button>
               </form>
-            </TiltCard>
+            </div>
 
             {/* Tarjeta 3: Verificar Carnet QR */}
-            <TiltCard
-              maxTiltDeg={6}
-              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#16A34A]/40 transition-colors"
-            >
+            <div className="bg-[#121212] border border-neutral-800 rounded-sm p-6 flex flex-col justify-between hover:border-[#16A34A] transition-colors">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-card bg-[#16A34A]/10 flex items-center justify-center text-[#16A34A] group-hover:rotate-8 transition-transform duration-200">
+                  <div className="w-10 h-10 rounded-sm bg-[#16A34A]/10 border border-[#16A34A]/30 flex items-center justify-center text-[#16A34A]">
                     <QrCode className="w-5 h-5 text-[#16A34A]" />
                   </div>
-                  <span className="inline-flex items-center gap-1 text-caption font-mono uppercase tracking-wider text-[#16A34A] bg-[#16A34A]/10 px-2.5 py-0.5 rounded-control">
-                    <ShieldCheck className="w-3 h-3" /> Seguro
+                  <span className="text-[10px] font-bold text-[#16A34A]">
+                    [ SEGURO ]
                   </span>
                 </div>
-                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
+                <h3 className="text-base font-bold text-white mb-1">
                   VERIFICAR CARNET QR
                 </h3>
-                <p className="text-small text-slate-400 mb-6">
+                <p className="text-xs text-neutral-400 mb-6">
                   Valida a tu especialista antes de permitir el acceso.
                 </p>
               </div>
 
               <Link
                 href="/carnet/CAR-8492"
-                className="w-full h-11 text-small font-medium bg-[#0A1525] hover:bg-[#14233a] text-white border border-slate-700 rounded-card transition-fast shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-[#CCFF00]/40"
+                className="w-full h-11 text-xs font-bold bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-700 hover:border-[#CCFF00] rounded-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
-                <span>Escanear Carnet</span>
+                <span>[ ESCANEAR CARNET ]</span>
                 <ArrowRight className="w-4 h-4 text-[#CCFF00]" />
               </Link>
-            </TiltCard>
+            </div>
 
             {/* Tarjeta 4: Portal de Aliados */}
-            <TiltCard
-              maxTiltDeg={6}
-              className="bg-[#0F1B2D] border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#FF006E]/40 transition-colors"
-            >
+            <div className="bg-[#121212] border border-neutral-800 rounded-sm p-6 flex flex-col justify-between hover:border-neutral-500 transition-colors">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-card bg-slate-800 flex items-center justify-center text-slate-300 group-hover:rotate-8 transition-transform duration-200">
-                    <UserCircle className="w-5 h-5 text-slate-300" />
+                  <div className="w-10 h-10 rounded-sm bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-300">
+                    <UserCircle className="w-5 h-5 text-neutral-300" />
                   </div>
-                  <span className="text-caption font-mono uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-control">
-                    Red TTM
+                  <span className="text-[10px] font-bold text-neutral-400">
+                    [ RED TTM ]
                   </span>
                 </div>
-                <h3 className="text-h3 font-medium text-white mb-1 tracking-tight">
+                <h3 className="text-base font-bold text-white mb-1">
                   PORTAL DE ALIADOS
                 </h3>
-                <p className="text-small text-slate-400 mb-6">
+                <p className="text-xs text-neutral-400 mb-6">
                   Mecánicos, Talleres, Runners y Repuesteras.
                 </p>
               </div>
 
               <Link
                 href="/aliados/portal"
-                className="w-full h-11 text-small font-medium bg-[#0A1525] hover:bg-[#14233a] text-white border border-slate-700 rounded-card transition-fast shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-[#CCFF00]/40"
+                className="w-full h-11 text-xs font-bold bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-700 hover:border-[#CCFF00] rounded-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
-                <span>Ingresar al Portal</span>
+                <span>[ ENTRAR AL PORTAL ]</span>
                 <ArrowRight className="w-4 h-4 text-[#CCFF00]" />
               </Link>
-            </TiltCard>
+            </div>
 
           </div>
         </div>
       </section>
 
-      {/* 6. Sección de Prueba Social (Con Tilt 3D y Clip-Path en Evidencias) */}
+      {/* Sección de Prueba Social */}
       <SocialProof />
 
-      {/* 7. Footer */}
-      <footer className="bg-[#050B14] border-t border-slate-800 py-8 text-center text-caption text-slate-500">
+      {/* Footer Brutalista */}
+      <footer id="contacto" className="bg-[#050505] border-t border-neutral-800 py-10 text-center text-xs text-neutral-500 font-mono">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 TuTallerMóvil (TTM). Titular: José Ángel Acosta Llovera. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4 text-caption font-medium">
+          <p>© 2026 TUTALLERMÓVIL (TTM) — TITULAR: JOSÉ ÁNGEL ACOSTA LLOVERA. TODOS LOS DERECHOS RESERVADOS.</p>
+          <div className="flex items-center gap-4">
             <Link href="/terminos" className="text-[#CCFF00] hover:underline">
-              Términos, Condiciones y Privacidad
+              [ TÉRMINOS Y PRIVACIDAD ]
             </Link>
-            <span className="text-slate-700">•</span>
-            <span className="text-slate-400">Caracas, Venezuela</span>
+            <span>·</span>
+            <span>CARACAS, VENEZUELA</span>
           </div>
         </div>
       </footer>
 
-      {/* Botón Flotante (FAB) Soporte WhatsApp */}
+      {/* Botón Flotante Soporte WhatsApp */}
       <BotonSoporteWhatsApp modo="fab" />
 
       {/* Modal Dialog de Solicitud de Mecánico */}
@@ -430,17 +436,17 @@ export default function Home() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="fixed bottom-6 right-6 z-50 max-w-md bg-[#0F1B2D] text-white p-4 rounded-container shadow-elevated border border-[#CCFF00] flex items-center justify-between gap-4"
+            className="fixed bottom-6 right-6 z-50 max-w-md bg-[#0B0B0B] text-white p-4 rounded-sm shadow-2xl border border-[#CCFF00] flex items-center justify-between gap-4 font-mono uppercase"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-card bg-[#CCFF00] flex items-center justify-center text-[#050B14] shrink-0 font-bold">
-                <CheckCircle2 className="w-5 h-5 text-[#050B14]" />
+              <div className="w-9 h-9 rounded-sm bg-[#CCFF00] flex items-center justify-center text-[#050505] shrink-0 font-bold">
+                <CheckCircle2 className="w-5 h-5 text-[#050505]" />
               </div>
               <div>
-                <p className="text-caption font-mono font-bold text-[#CCFF00] uppercase tracking-wider">
-                  Orden Despachada
+                <p className="text-[11px] font-bold text-[#CCFF00] tracking-wider">
+                  [ ORDEN DESPACHADA ]
                 </p>
-                <p className="text-small font-medium text-white">
+                <p className="text-xs text-white">
                   {toastMessage}
                 </p>
               </div>
@@ -448,7 +454,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setToastMessage(null)}
-              className="text-slate-400 hover:text-white p-1 rounded-control hover:bg-slate-800 transition-fast cursor-pointer"
+              className="text-neutral-400 hover:text-white p-1 rounded-sm hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>

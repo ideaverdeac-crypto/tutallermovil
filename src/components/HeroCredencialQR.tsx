@@ -12,7 +12,6 @@ export function HeroCredencialQR() {
   const [isReduced, setIsReduced] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // 1. Morphing del badge "Verificado"
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -29,14 +28,8 @@ export function HeroCredencialQR() {
       ([entry]) => {
         if (entry.isIntersecting) {
           sessionStorage.setItem('ttm_badge_morph_seen', 'true');
-          // Iniciar morph
-          setTimeout(() => {
-            setMorphed(true);
-          }, 150);
-          // Iniciar dibujo del check
-          setTimeout(() => {
-            setCheckDrawn(true);
-          }, 450);
+          setTimeout(() => setMorphed(true), 150);
+          setTimeout(() => setCheckDrawn(true), 450);
           observer.disconnect();
         }
       },
@@ -48,18 +41,15 @@ export function HeroCredencialQR() {
     return () => observer.disconnect();
   }, []);
 
-  // 2. Parallax sutil en Y respecto al scroll (20px máximo, solo desktop)
   useEffect(() => {
     if (typeof window === 'undefined' || isReduced) return;
-    const isMobile = window.innerWidth < 1024;
-    if (isMobile) return;
+    if (window.innerWidth < 1024) return;
 
     let rafId: number;
     const handleScroll = () => {
       rafId = requestAnimationFrame(() => {
         const scrolled = window.scrollY;
-        // 20px de parallax relativo
-        const offset = Math.min(Math.max((scrolled / 500) * 20, -10), 25);
+        const offset = Math.min(Math.max((scrolled / 500) * 15, -10), 20);
         setScrollY(offset);
       });
     };
@@ -74,128 +64,95 @@ export function HeroCredencialQR() {
   return (
     <div
       ref={cardRef}
-      className="w-full max-w-sm bg-[#0F1B2D]/95 backdrop-blur-xl border border-[#00E5FF]/20 rounded-card shadow-elevated p-6 flex flex-col items-center text-center space-y-4 relative will-change-transform group transition-all duration-300 hover:border-[#CCFF00]/40 hover:shadow-limeGlow"
+      className="w-full max-w-sm bg-[#0B0B0B] border border-[#CCFF00] rounded-sm p-5 flex flex-col items-center text-center space-y-4 relative will-change-transform font-mono shadow-[0_0_20px_rgba(204,255,0,0.15)] uppercase"
       style={{
         transform: `translate3d(0, ${scrollY}px, 0)`,
       }}
     >
-      {/* Resplandor ambiental de fondo */}
-      <div className="absolute -inset-0.5 bg-gradient-to-tr from-[#00E5FF]/10 via-[#CCFF00]/5 to-transparent rounded-card blur-md pointer-events-none -z-10" />
-
-      {/* Badge Superior con técnica de Morphing */}
-      <div className="w-full flex items-center justify-between pb-3 border-b border-slate-800">
-        <div className="flex items-center gap-2 text-left">
-          <img
-            src="/icon.svg"
-            alt="TuTallerMóvil"
-            width={28}
-            height={28}
-            className="h-7 w-auto object-contain"
-          />
-          <div>
-            <p className="text-caption font-mono font-bold uppercase text-white tracking-widest leading-none">
-              CREDENCIAL OFICIAL
-            </p>
-            <p className="text-[10px] text-slate-400 font-medium">
-              Personal en Sitio
-            </p>
-          </div>
+      {/* Header técnico del carnet */}
+      <div className="w-full flex items-center justify-between pb-3 border-b border-neutral-800">
+        <div className="text-left">
+          <p className="text-[10px] text-[#CCFF00] font-bold tracking-widest leading-none">
+            [ CREDENCIAL OFICIAL ]
+          </p>
+          <p className="text-[9px] text-neutral-400 mt-1">
+            PERSONAL EN SITIO
+          </p>
         </div>
 
-        {/* Morphing Badge: cuadrado 8px -> pill expandida con check dibujado */}
+        {/* Badge Morphing */}
         <div
-          className={`flex items-center justify-center overflow-hidden transition-all duration-700 ${
+          className={`flex items-center justify-center overflow-hidden transition-all duration-500 rounded-sm ${
             morphed
-              ? 'px-3 py-1 bg-[#CCFF00] text-[#050B14] rounded-full shadow-sm'
-              : 'w-2 h-2 bg-[#CCFF00] rounded-none'
+              ? 'px-2 py-0.5 bg-[#CCFF00] text-[#050505] font-bold text-[10px]'
+              : 'w-2 h-2 bg-[#CCFF00]'
           }`}
-          style={{
-            transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-          }}
         >
           {morphed ? (
-            <div className="flex items-center gap-1.5 text-caption font-bold tracking-tight">
-              <svg
-                className="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path
-                  d="M20 6L9 17L4 12"
-                  style={{
-                    strokeDasharray: 24,
-                    strokeDashoffset: checkDrawn ? 0 : 24,
-                    transition:
-                      'stroke-dashoffset 400ms cubic-bezier(0.16, 1, 0.3, 1)',
-                  }}
-                />
-              </svg>
-              <span>Verificado</span>
+            <div className="flex items-center gap-1">
+              <Check className="w-3 h-3 stroke-[4]" />
+              <span>VERIFICADO</span>
             </div>
           ) : null}
         </div>
       </div>
 
       {/* Foto y Datos del Especialista */}
-      <div className="flex items-center gap-3 w-full bg-[#0A1525]/80 border border-slate-800 rounded-card p-3 text-left">
+      <div className="flex items-center gap-3 w-full bg-[#121212] border border-neutral-800 p-2.5 text-left rounded-sm">
         <img
           src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=160&q=80"
-          alt="Carlos E. Mendoza - Mecánico Senior"
-          width={52}
-          height={52}
-          className="w-13 h-13 rounded-card object-cover border border-[#00E5FF]/30 shrink-0"
+          alt="Carlos E. Mendoza"
+          width={48}
+          height={48}
+          className="w-12 h-12 object-cover border border-[#CCFF00]/40 shrink-0 filter grayscale"
         />
-        <div className="min-w-0 flex-1">
-          <p className="text-body font-semibold text-white truncate leading-tight">
-            Carlos E. Mendoza
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="text-xs font-bold text-white truncate">
+            CARLOS E. MENDOZA
           </p>
-          <p className="text-small text-[#CCFF00] font-medium truncate">
-            Mecánico 1 — Senior
+          <p className="text-[10px] text-[#CCFF00] font-medium truncate mt-0.5">
+            MECÁNICO 1 — SENIOR
           </p>
-          <p className="text-caption font-mono text-slate-400">
-            ID: <span className="text-white font-semibold">#TTM-CAR-8492</span>
+          <p className="text-[9px] text-neutral-400 mt-0.5">
+            ID: <span className="text-white">#TTM-CAR-8492</span>
           </p>
         </div>
       </div>
 
-      {/* Código QR: El elemento protagonista */}
-      <div className="p-4 bg-[#0A1525] border border-slate-800 rounded-card flex flex-col items-center justify-center w-full">
+      {/* Código QR brutalista */}
+      <div className="p-3 bg-[#050505] border border-neutral-800 flex flex-col items-center justify-center w-full rounded-sm">
         <Link
           href="/carnet/CAR-8492"
-          className="p-3 bg-white border-2 border-white rounded-card shadow-card block hover:scale-105 transition-transform"
-          title="Ver credencial pública verificada"
+          className="p-2 bg-white block border border-white hover:border-[#CCFF00] transition-colors"
+          title="Ver credencial digital"
         >
           <QRCodeSVG
             value="https://tutallermovil.vercel.app/carnet/CAR-8492"
-            size={160}
+            size={140}
             level="M"
             includeMargin={false}
-            fgColor="#050B14"
+            fgColor="#050505"
             bgColor="#FFFFFF"
           />
         </Link>
-        <div className="mt-3 space-y-1">
-          <p className="text-small font-semibold text-white flex items-center justify-center gap-1.5">
-            <QrCode className="w-4 h-4 text-[#CCFF00]" />
-            Código QR Antifraude
+        <div className="mt-2.5 space-y-0.5">
+          <p className="text-[11px] font-bold text-white flex items-center justify-center gap-1.5">
+            <QrCode className="w-3.5 h-3.5 text-[#CCFF00]" />
+            <span>QR ANTIFRAUDE</span>
           </p>
-          <p className="text-caption text-slate-400 max-w-[220px]">
-            Escanea para confirmar identidad y póliza antes de autorizar acceso.
+          <p className="text-[9px] text-neutral-400 max-w-[210px] lowercase first-letter:uppercase">
+            escanea para confirmar identidad antes de autorizar acceso.
           </p>
         </div>
       </div>
 
-      {/* Pie de la Credencial */}
-      <div className="w-full pt-1 flex items-center justify-between text-caption text-slate-400">
-        <span className="flex items-center gap-1 font-semibold text-[#16A34A]">
-          <span className="w-2 h-2 rounded-full bg-[#16A34A] inline-block animate-pulse" />
-          En Ruta Activa
+      {/* Pie técnico */}
+      <div className="w-full pt-1 flex items-center justify-between text-[10px] text-neutral-400">
+        <span className="flex items-center gap-1 text-[#CCFF00]">
+          <span className="w-1.5 h-1.5 bg-[#CCFF00] inline-block animate-ping" />
+          EN RUTA ACTIVA
         </span>
-        <span className="font-mono text-[11px] text-slate-500">
+        <span className="text-[10px] text-neutral-500">
           HASH: 7855-TTM
         </span>
       </div>

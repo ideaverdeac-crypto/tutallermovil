@@ -1,12 +1,24 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Playfair_Display, Anton, Space_Mono } from "next/font/google";
 import "./globals.css";
 import CustomCursor from "@/components/CustomCursor";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  style: ["italic", "normal"],
+});
+
+const anton = Anton({
+  variable: "--font-anton",
+  weight: "400",
+  subsets: ["latin"],
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
+  weight: ["400", "700"],
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -53,9 +65,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${spaceGrotesk.variable} h-full antialiased dark`}
+      className={`${playfair.variable} ${anton.variable} ${spaceMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col bg-[#050B14] text-white selection:bg-[#CCFF00] selection:text-[#050B14]">
+      <body className="min-h-full flex flex-col bg-[#050505] text-white selection:bg-[#CCFF00] selection:text-[#050505] uppercase">
         <CustomCursor />
         {children}
       </body>
