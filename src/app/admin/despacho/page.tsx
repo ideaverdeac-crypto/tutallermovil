@@ -59,7 +59,11 @@ import {
   Receipt,
   Lock,
   Truck,
-  Building2
+  Building2,
+  Mail,
+  Copy,
+  Navigation,
+  Share2
 } from 'lucide-react';
 import BandejaWhatsAppSheet from '@/components/BandejaWhatsAppSheet';
 import { cerrarSesion } from '@/lib/auth';
@@ -92,6 +96,8 @@ interface OrdenKanban {
   kilometraje_actual?: number | null;
   falla_reportada: string;
   sector: string;
+  direccion?: string | null;
+  ubicacion_gps?: string | null;
   ganancia_estimada: number | string;
   estado: string;
   mecanico_id?: string | null;
@@ -638,6 +644,24 @@ export default function TableroDespachoPage() {
 
   const [toastCondicionCarrera, setToastCondicionCarrera] = useState<string | null>(null);
   const canalPresenciaRef = useRef<any>(null);
+
+  // Estados y funciones para la Ficha Detallada del Cliente (Teléfono, Ubicación, Nombre, Correo y Falla)
+  const [modalDetalleClienteOpen, setModalDetalleClienteOpen] = useState(false);
+  const [ordenParaDetalleCliente, setOrdenParaDetalleCliente] = useState<OrdenKanban | null>(null);
+  const [copiadoDatoCliente, setCopiadoDatoCliente] = useState<string | null>(null);
+
+  const handleAbrirDetalleCliente = (orden: OrdenKanban) => {
+    setOrdenParaDetalleCliente(orden);
+    setModalDetalleClienteOpen(true);
+  };
+
+  const handleCopiarDatoCliente = (texto: string, clave: string) => {
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(texto);
+      setCopiadoDatoCliente(clave);
+      setTimeout(() => setCopiadoDatoCliente(null), 2500);
+    }
+  };
 
   const bloquearTarjeta = async (ordenId: string) => {
     setOrdenes((prev) =>
@@ -2317,13 +2341,18 @@ export default function TableroDespachoPage() {
                               onDragEnd={handleDragEnd}
                               whileHover={{ scale: isBeingDragged || estaBloqueadaPorOtra ? 1 : 1.02, y: isBeingDragged || estaBloqueadaPorOtra ? 0 : -2 }}
                               transition={{ duration: 0.2 }}
-                              className={`rounded-2xl p-3.5 transition-all relative flex flex-col justify-between gap-2.5 select-none group ${estaBloqueadaPorOtra
+                              onClick={() => {
+                                if (!isBeingDragged) {
+                                  handleAbrirDetalleCliente(orden);
+                                }
+                              }}
+                              className={`rounded-2xl p-3.5 transition-all relative flex flex-col justify-between gap-2.5 select-none group cursor-pointer ${estaBloqueadaPorOtra
                                 ? 'border-rose-200 bg-rose-50/20 cursor-not-allowed opacity-90'
                                 : isBeingDragged
                                   ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
                                   : esFlota
-                                    ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg cursor-grab active:cursor-grabbing'
-                                    : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing'
+                                    ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg'
+                                    : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md'
                                 }`}
                             >
                               {/* 0. Banner Distintivo Flota Corporativa B2B (Resalta la tarjeta de color diferente) */}
@@ -2385,10 +2414,13 @@ export default function TableroDespachoPage() {
                                       )}
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1">
+                                      <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1 group-hover:text-[#1E56B0] transition-colors" title="Clic para ver datos del cliente (teléfono, correo, dirección)">
                                         {esFlota && <Building2 className="w-3 h-3 text-[#1E56B0] shrink-0" />}
                                         <span className="truncate">{orden.cliente_nombre || 'Cliente Particular'}</span>
                                       </p>
+                                      <span className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 text-[#1E56B0]" title="Ver datos del cliente">
+                                        <User className="w-3 h-3 text-[#1E56B0]" />
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
@@ -2666,8 +2698,8 @@ export default function TableroDespachoPage() {
 
                               {/* Abajo: Sector y Acciones Rápidas */}
                               <div className="pt-2 border-t border-slate-100 flex items-center justify-between pl-5">
-                                <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <div className="flex items-center gap-1 text-[11px] text-[#475569] font-semibold group-hover:text-[#1E56B0] transition-colors" title="Clic para ver ubicación en Google Maps / Waze y datos del cliente">
+                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 group-hover:text-rose-500 transition-colors" />
                                   <span className="truncate max-w-[100px] sm:max-w-[120px]">{orden.sector}</span>
                                 </div>
 
@@ -4271,6 +4303,329 @@ export default function TableroDespachoPage() {
                   </button>
                 </div>
 
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Modal Ficha Detallada del Cliente (Teléfono, Ubicación, Nombre, Correo y Falla) */}
+      <AnimatePresence>
+        {modalDetalleClienteOpen && ordenParaDetalleCliente && (() => {
+          const ord = ordenParaDetalleCliente;
+          const nombreCliente = ord.cliente_nombre || 'Cliente Particular';
+          const telCliente = ord.cliente_telefono || '+58 414 123 4567';
+          const emailCliente = ord.cliente_email || (ord as any).email || 'cliente@tutallermovil.com';
+
+          // Formatear dirección completa
+          let direccionCompleta = ord.direccion || '';
+          if (!direccionCompleta && ord.diagnostico_json?.direccion) {
+            direccionCompleta = ord.diagnostico_json.direccion;
+          }
+          if (!direccionCompleta) {
+            direccionCompleta = ord.sector ? `${ord.sector}, Caracas, Venezuela` : 'Caracas, Venezuela';
+          }
+
+          // Teléfono para llamadas y WhatsApp
+          const telNumeros = telCliente.replace(/[^0-9]/g, '');
+          const telParaLlamar = telCliente.replace(/[^0-9+]/g, '');
+          let waNumero = telNumeros;
+          if (waNumero.startsWith('0')) {
+            waNumero = '58' + waNumero.slice(1);
+          } else if (waNumero.length === 10 && !waNumero.startsWith('58')) {
+            waNumero = '58' + waNumero;
+          }
+          const msgWhatsApp = encodeURIComponent(`Hola ${nombreCliente}, te contactamos desde TuTallerMóvil respecto a tu solicitud de mecánico para tu ${ord.vehiculo_modelo}.`);
+          const urlWhatsApp = `https://wa.me/${waNumero}?text=${msgWhatsApp}`;
+
+          // URLs de navegación
+          const urlGoogleMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccionCompleta)}`;
+          const urlWaze = `https://waze.com/ul?q=${encodeURIComponent(direccionCompleta)}`;
+
+          // Texto para copiar ficha completa
+          const textoFichaCompleta = `📋 *FICHA DE CLIENTE — TUTALLERMÓVIL*\n` +
+            `👤 *Cliente:* ${nombreCliente}\n` +
+            `📞 *Teléfono:* ${telCliente}\n` +
+            `✉️ *Correo:* ${emailCliente}\n` +
+            `📍 *Ubicación:* ${direccionCompleta}\n` +
+            `🚗 *Vehículo:* ${ord.vehiculo_modelo}${ord.vehiculo_placa ? ` [${ord.vehiculo_placa}]` : ''}\n` +
+            `⚠️ *Falla:* ${ord.falla_reportada}\n` +
+            `🕒 *Estado:* ${ord.estado}`;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]"
+              >
+                {/* Header del Modal */}
+                <div className="bg-[#0A1525] p-5 text-white flex items-start justify-between relative">
+                  <div className="space-y-1 pr-6">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#CCFF00] text-[#0A1525] uppercase tracking-wider">
+                        {ord.estado.replace(/_/g, ' ')}
+                      </span>
+                      {ord.es_flota && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500 text-white uppercase tracking-wider flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />
+                          {ord.empresa_flota || 'Flota B2B'}
+                        </span>
+                      )}
+                      <span className="text-slate-400 text-xs font-mono">
+                        #{ord.id.slice(0, 8)}
+                      </span>
+                    </div>
+                    <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                      <User className="w-5 h-5 text-[#CCFF00]" />
+                      <span>Ficha del Cliente & Datos del Servicio</span>
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalDetalleClienteOpen(false)}
+                    className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Contenido scrolleable */}
+                <div className="p-5 overflow-y-auto space-y-4 text-slate-800 text-sm">
+
+                  {/* Bloque 1: Identificación del Cliente */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Nombre del Cliente</span>
+                      <h3 className="text-base font-black text-[#0A1525] truncate">
+                        {nombreCliente}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {ord.es_flota ? 'Conductor / Representante Corporativo' : 'Cliente Particular Verificado'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopiarDatoCliente(nombreCliente, 'nombre')}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                      title="Copiar nombre"
+                    >
+                      {copiadoDatoCliente === 'nombre' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-700 font-black">¡Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copiar</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Bloque 2: Teléfono & Canales de Contacto Directo */}
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-[#1E56B0]" />
+                        Teléfono Móvil
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopiarDatoCliente(telCliente, 'telefono')}
+                        className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiadoDatoCliente === 'telefono' ? (
+                          <span className="text-emerald-600 font-black">¡Copiado!</span>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copiar número</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="text-lg font-mono font-black text-[#0A1525] tracking-wide">
+                      {telCliente}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <a
+                        href={`tel:${telParaLlamar}`}
+                        className="h-9 px-3 rounded-xl bg-blue-50 hover:bg-[#1E56B0] text-[#1E56B0] hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-blue-200 transition-all shadow-2xs"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Llamar Ahora</span>
+                      </a>
+                      <a
+                        href={urlWhatsApp}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-9 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Bloque 3: Correo Electrónico */}
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-purple-600" />
+                        Correo Electrónico
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopiarDatoCliente(emailCliente, 'email')}
+                        className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiadoDatoCliente === 'email' ? (
+                          <span className="text-emerald-600 font-black">¡Copiado!</span>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copiar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="text-sm font-medium text-slate-700 truncate">
+                      {emailCliente}
+                    </div>
+                    <div className="pt-1">
+                      <a
+                        href={`mailto:${emailCliente}?subject=TuTallerMóvil%20-%20Servicio%20para%20${encodeURIComponent(ord.vehiculo_modelo)}`}
+                        className="h-8 px-3 rounded-xl bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-200 transition-all shadow-2xs w-full"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Enviar Correo</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Bloque 4: Ubicación y Dirección */}
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                        Ubicación del Servicio
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopiarDatoCliente(direccionCompleta, 'direccion')}
+                        className="text-xs font-bold text-[#1E56B0] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiadoDatoCliente === 'direccion' ? (
+                          <span className="text-emerald-600 font-black">¡Copiado!</span>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copiar dirección</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        📍 {ord.sector}
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium text-slate-700 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                      {direccionCompleta}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <a
+                        href={urlGoogleMaps}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-200 shadow-2xs"
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Google Maps</span>
+                      </a>
+                      <a
+                        href={urlWaze}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-8 px-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-sky-200 shadow-2xs"
+                      >
+                        <Navigation className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Waze</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Bloque 5: Vehículo & Falla Reportada */}
+                  <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase font-bold text-amber-800 tracking-wider flex items-center gap-1.5">
+                        <Car className="w-3.5 h-3.5 text-amber-700" />
+                        Vehículo & Falla
+                      </span>
+                      {ord.vehiculo_placa && (
+                        <span className="font-mono text-xs font-black bg-white px-2 py-0.5 rounded border border-amber-200 text-[#0A1525]">
+                          {ord.vehiculo_placa}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-bold text-[#0A1525]">
+                      {ord.vehiculo_modelo}
+                    </div>
+                    <div className="text-xs text-slate-700 bg-white p-2.5 rounded-xl border border-amber-100">
+                      <span className="font-bold text-amber-900 block mb-0.5">Falla Reportada:</span>
+                      {ord.falla_reportada}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Footer del Modal con Acciones Tácticas */}
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopiarDatoCliente(textoFichaCompleta, 'ficha_completa')}
+                      className="flex-1 h-9 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      {copiadoDatoCliente === 'ficha_completa' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-700 font-black">¡Ficha Copiada!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copiar Ficha Completa</span>
+                        </>
+                      )}
+                    </button>
+                    {ord.estado === 'LEAD_NUEVO' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalDetalleClienteOpen(false);
+                          bloquearTarjeta(ord.id);
+                          setOrdenParaRadar(ord);
+                          setSheetRadarMecanicosOpen(true);
+                        }}
+                        className="flex-1 h-9 px-3 rounded-xl bg-[#1E56B0] hover:bg-[#0A1525] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                      >
+                        <UserPlus className="w-3.5 h-3.5 text-[#CCFF00]" />
+                        <span>Asignar Mecánico</span>
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalDetalleClienteOpen(false)}
+                    className="w-full h-8 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </motion.div>
             </div>
           );
