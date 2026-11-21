@@ -65,9 +65,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${playfair.variable} ${anton.variable} ${spaceMono.variable} h-full antialiased dark`}
+      className={`${playfair.variable} ${anton.variable} ${spaceMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#050505] text-white selection:bg-[#CCFF00] selection:text-[#050505] uppercase">
+      <body className="min-h-full flex flex-col bg-white text-[#0A1525] selection:bg-[#CCFF00] selection:text-[#050505]">
         <CustomCursor />
         {children}
       </body>

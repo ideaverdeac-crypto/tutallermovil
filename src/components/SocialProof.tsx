@@ -120,22 +120,19 @@ export function SocialProof() {
   return (
     <section
       ref={sectionRef}
-      className="bg-[#050B14] py-16 sm:py-20 lg:py-24 border-b border-slate-800/80 relative overflow-hidden"
+      className="bg-white py-16 sm:py-20 lg:py-24 border-b border-slate-200 relative overflow-hidden"
     >
-      {/* Resplandor sutil de fondo */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#00E5FF]/5 rounded-full blur-3xl pointer-events-none" />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Cabecera de la sección */}
         <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#CCFF00]/10 text-[#CCFF00] border border-[#CCFF00]/25 text-caption font-mono uppercase tracking-wider mb-4 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-[#CCFF00]" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#CCFF00]/30 text-[#0A1525] border border-[#CCFF00] text-caption font-mono uppercase tracking-wider mb-4 shadow-2xs font-bold">
+            <ShieldCheck className="w-4 h-4 text-emerald-700" />
             <span>Confianza Comprobada</span>
           </div>
-          <h2 className="text-h2 font-medium text-white tracking-tight">
+          <h2 className="text-h2 font-medium text-[#0A1525] tracking-tight">
             Clientes que ya confían en nosotros
           </h2>
-          <p className="mt-2 text-body text-slate-400">
+          <p className="mt-2 text-body text-slate-600">
             Más de 500 servicios realizados en Caracas con garantía escrita.
           </p>
         </div>
@@ -146,7 +143,7 @@ export function SocialProof() {
             <TiltCard
               key={item.id}
               maxTiltDeg={5}
-              className="bg-[#0F1B2D]/90 border border-slate-800 rounded-card p-6 shadow-card flex flex-col justify-between h-full hover:border-[#CCFF00]/30 transition-colors"
+              className="bg-slate-50 border border-slate-200 rounded-card p-6 shadow-xs flex flex-col justify-between h-full hover:border-[#0A1525] transition-colors"
             >
               <div>
                 {/* 5 Estrellas */}
@@ -160,26 +157,26 @@ export function SocialProof() {
                 </div>
 
                 {/* Comentario */}
-                <p className="text-body text-slate-300 leading-relaxed mb-6 font-normal">
+                <p className="text-body text-slate-700 leading-relaxed mb-6 font-normal">
                   &ldquo;{item.comentario}&rdquo;
                 </p>
               </div>
 
               {/* Perfil del Cliente */}
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-200">
                 <Image
                   src={item.avatarUrl}
                   alt={item.nombre}
                   loading="lazy"
                   width={44}
                   height={44}
-                  className="w-11 h-11 rounded-full object-cover border border-slate-700"
+                  className="w-11 h-11 rounded-full object-cover border border-slate-300"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-small font-medium text-white truncate">
+                  <p className="text-small font-bold text-[#0A1525] truncate">
                     {item.nombre}
                   </p>
-                  <p className="text-caption text-slate-400 truncate">
+                  <p className="text-caption text-slate-500 truncate">
                     {item.servicio}
                   </p>
                 </div>
@@ -191,10 +188,10 @@ export function SocialProof() {
         {/* 2. Grid de Trabajos Recientes con Stagger y Clip-Path */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-h3 font-medium text-white">
+            <h3 className="text-h3 font-medium text-[#0A1525]">
               Evidencias de trabajos recientes en Caracas
             </h3>
-            <span className="text-caption text-slate-400 hidden sm:inline-flex items-center gap-1 font-mono">
+            <span className="text-caption text-slate-500 hidden sm:inline-flex items-center gap-1 font-mono font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
               Fotos directas de servicio
             </span>
@@ -204,7 +201,7 @@ export function SocialProof() {
             {TRABAJOS_RECIENTES.map((trabajo, idx) => (
               <div
                 key={trabajo.id}
-                className="group relative overflow-hidden rounded-card border border-slate-800 bg-[#0F1B2D] aspect-[16/10] will-change-transform shadow-card hover:border-[#00E5FF]/40 transition-colors"
+                className="group relative overflow-hidden rounded-card border border-slate-200 bg-slate-100 aspect-[16/10] will-change-transform shadow-sm hover:border-[#0A1525] transition-colors"
                 style={{
                   clipPath:
                     reducedMotion || inView
@@ -230,7 +227,7 @@ export function SocialProof() {
                   height={438}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050B14]/90 via-[#050B14]/30 to-transparent flex flex-col justify-end p-4">
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A1525]/90 via-[#0A1525]/30 to-transparent flex flex-col justify-end p-4">
                   <span className="text-caption font-mono font-bold text-[#CCFF00] tracking-wider">
                     {trabajo.zona}
                   </span>
