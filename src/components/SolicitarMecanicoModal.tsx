@@ -381,7 +381,7 @@ export function SolicitarMecanicoModal({
                   className="w-full max-w-lg bg-white rounded-2xl border-2 border-[#CBD5E1] shadow-2xl p-6 sm:p-7 relative overflow-hidden"
                 >
                   {/* Borde superior de marca */}
-                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#0A1525] via-[#1E56B0] to-[#CCFF00]" />
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-brand-trust via-[#1E56B0] to-brand-primary" />
 
                   {/* Botón Cerrar */}
                   <Dialog.Close asChild>
@@ -396,7 +396,7 @@ export function SolicitarMecanicoModal({
 
                   {/* Header */}
                   <div className="flex items-center gap-3 mb-2 pt-2">
-                    <div className="w-10 h-10 rounded-xl bg-[#CCFF00] flex items-center justify-center text-[#0A1525] shrink-0 shadow-xs">
+                    <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0 shadow-xs">
                       <Wrench className="w-5 h-5" />
                     </div>
                     <div>
@@ -427,7 +427,7 @@ export function SolicitarMecanicoModal({
                     {usuarioAutenticado ? (
                       <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+                          <div className="w-10 h-10 rounded-xl bg-[#0A1525] text-brand-primary flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
                             {usuarioAutenticado.nombre ? usuarioAutenticado.nombre[0].toUpperCase() : 'U'}
                           </div>
                           <div className="min-w-0">
@@ -572,7 +572,7 @@ export function SolicitarMecanicoModal({
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <div
-                                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#0A1525] text-[#CCFF00]' : 'bg-slate-200 text-slate-600'
+                                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-brand-trust text-brand-primary' : 'bg-slate-200 text-slate-600'
                                         }`}
                                     >
                                       <Car className="w-4 h-4" />
@@ -776,19 +776,19 @@ export function SolicitarMecanicoModal({
                       disabled={submitting}
                       whileHover={{ scale: submitting ? 1 : 1.01 }}
                       whileTap={{ scale: submitting ? 1 : 0.98 }}
-                      className={`w-full h-12 text-sm sm:text-base font-extrabold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 ${submitting
+                      className={`w-full h-12 text-sm sm:text-base font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${submitting
                         ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                        : 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
+                        : 'bg-brand-primary hover:bg-brand-primary-hover text-white shadow-brand-primary/20'
                         }`}
                     >
                       {submitting ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin text-[#0A1525]" />
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
                           <span>Despachando solicitud...</span>
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="w-5 h-5 text-[#0A1525]" />
+                          <CheckCircle2 className="w-5 h-5 text-white" />
                           <span>Confirmar y Pedir Mecánico</span>
                         </>
                       )}

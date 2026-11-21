@@ -13,19 +13,49 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'TuTallerMóvil | Mecánica a Domicilio',
-  description: 'Especialistas en mecánica a domicilio en Caracas. Llegada en menos de 45 minutos.',
-  manifest: '/manifest.json',
+  metadataBase: new URL("https://tutallermovil.vercel.app"),
+  title: "TuTallerMóvil | Mecánica Automotriz a Domicilio en Caracas",
+  description:
+    "Mecánica automotriz a domicilio en Caracas. Diagnóstico desde $15, garantía escrita de 90 días, llegada en menos de 45 minutos.",
+  manifest: "/manifest.json",
   icons: {
-    icon: '/icon.svg',
-    apple: '/icon.svg',
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+  openGraph: {
+    title: "TuTallerMóvil | Mecánica Automotriz a Domicilio en Caracas",
+    description:
+      "Mecánica automotriz a domicilio en Caracas. Diagnóstico desde $15, garantía escrita de 90 días, llegada en menos de 45 minutos.",
+    url: "https://tutallermovil.vercel.app",
+    siteName: "TuTallerMóvil",
+    images: [
+      {
+        url: "/icon.svg",
+        width: 800,
+        height: 600,
+        alt: "Logo oficial de TuTallerMóvil",
+      },
+    ],
+    locale: "es_VE",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TuTallerMóvil | Mecánica Automotriz a Domicilio en Caracas",
+    description:
+      "Mecánica automotriz a domicilio en Caracas. Diagnóstico desde $15, garantía escrita de 90 días, llegada en menos de 45 minutos.",
+    images: ["/icon.svg"],
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

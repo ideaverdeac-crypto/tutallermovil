@@ -22,34 +22,11 @@ import {
   X,
   Star,
   Check,
-  Shield,
-  Zap
+  Shield
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
-
-const heroContainerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.05
-    }
-  }
-};
-
-const heroItemVariants = {
-  hidden: { opacity: 0, y: 24 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.55,
-      ease: [0.16, 1, 0.3, 1] as const
-    }
-  }
-};
+import { SocialProof } from '@/components/SocialProof';
 
 export default function Home() {
   const router = useRouter();
@@ -90,23 +67,15 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#0A1525] flex flex-col font-sans selection:bg-[#CCFF00] selection:text-[#0A1525]">
+    <div className="min-h-screen bg-white text-brand-trust flex flex-col font-sans selection:bg-brand-primary selection:text-white">
       {/* 1. Barra Superior Informativa (Top Bar) */}
-      <div className="bg-[#0A1525] text-white text-xs sm:text-sm py-2.5 px-4 relative z-50">
+      <div className="bg-brand-trust text-white text-xs sm:text-small py-2 px-4 relative z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-center text-center">
-          <div className="flex items-center gap-2.5 font-medium flex-wrap justify-center">
-            {/* Punto Pulsante con Framer Motion */}
-            <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
-              <motion.span
-                animate={{ scale: [1, 2.2, 1], opacity: [0.75, 0, 0.75] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute inline-flex h-full w-full rounded-full bg-[#CCFF00]"
-              />
-              <motion.span
-                animate={{ scale: [0.9, 1.1, 0.9] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="relative inline-flex rounded-full h-2 w-2 bg-[#CCFF00] shadow-[0_0_8px_#CCFF00]"
-              />
+          <div className="flex items-center gap-2 font-medium flex-wrap justify-center">
+            {/* Punto de estado activo con verde brand.success */}
+            <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-brand-success opacity-75 animate-ping" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-success" />
             </span>
             <span>
               Especialistas activos hoy en Caracas • Llegada en &lt; 45 min • Aceptamos Zelle, Pago Móvil y Cashea
@@ -116,14 +85,16 @@ export default function Home() {
       </div>
 
       {/* 2. Header (Navegación) */}
-      <header className="bg-white border-b border-[#CBD5E1] sticky top-0 z-40 backdrop-blur-md bg-white/95">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
+      <header className="bg-white border-b border-brand-neutral-200 sticky top-0 z-40 backdrop-blur-md bg-white/95">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Logo Oficial TTM */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <img
               src="/icon.svg"
               alt="TuTallerMóvil"
-              className="h-[50px] sm:h-[60px] w-auto object-contain transition-transform group-hover:scale-105"
+              width={160}
+              height={50}
+              className="h-[46px] sm:h-[54px] w-auto object-contain transition-transform group-hover:scale-105"
             />
           </Link>
 
@@ -136,471 +107,263 @@ export default function Home() {
             {!session ? (
               <Link
                 href="/login-cliente"
-                className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-extrabold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] hover:text-[#1E56B0] rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-[#CBD5E1] shadow-2xs active:scale-95"
+                className="h-10 px-3.5 text-xs sm:text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98]"
                 title="Iniciar sesión en Tu Garaje"
               >
-                <User className="w-4 h-4 text-[#1E56B0] shrink-0" />
+                <User className="w-4 h-4 text-brand-trust shrink-0" />
                 <span>Ingresar</span>
               </Link>
             ) : (
-              /* Si SÍ hay sesión: Botón Principal 'Mi Garaje' */
+              /* Si SÍ hay sesión: Botón Secundario 'Mi Garaje' */
               <Link
                 href="/cliente/dashboard"
-                className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-black bg-[#1E56B0] hover:bg-[#15448c] text-white rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-md shadow-blue-900/10 active:scale-95 border border-blue-400/30"
+                className="h-10 px-3.5 text-xs sm:text-small font-semibold bg-brand-trust hover:bg-slate-800 text-white rounded-card transition-standard flex items-center gap-1.5 cursor-pointer shadow-card active:scale-[0.98]"
                 title="Ir a Mi Garaje y Pasaporte Técnico"
               >
-                <Car className="w-4 h-4 text-[#CCFF00] shrink-0" />
+                <Car className="w-4 h-4 text-brand-primary shrink-0" />
                 <span className="hidden sm:inline">Mi Garaje</span>
                 <span className="sm:hidden">Garaje</span>
               </Link>
             )}
 
-            {/* Acceso Staff / Aliados (Disimulado con icono de configuración sutil) */}
+            {/* Acceso Staff / Aliados */}
             <Link
               href="/login"
-              className="w-10 h-10 rounded-xl text-slate-400 hover:text-[#0A1525] hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer border border-transparent hover:border-slate-200 active:scale-95 group/staff"
+              className="w-10 h-10 rounded-card text-brand-neutral-400 hover:text-brand-trust hover:bg-brand-neutral-100 flex items-center justify-center transition-standard cursor-pointer border border-transparent hover:border-brand-neutral-200 active:scale-[0.98]"
               title="Acceso Staff & Aliados"
               aria-label="Acceso Staff & Aliados"
             >
-              <Settings className="w-4 h-4 text-slate-400 group-hover/staff:text-[#0A1525] transition-transform duration-300 group-hover/staff:rotate-45" />
+              <Settings className="w-4 h-4 transition-transform duration-300 hover:rotate-45" />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* 3. Hero Section (Fondos Claros, Galería de Especialistas y Mockup del Teléfono con Credencial Digital) */}
-      <section className="relative bg-gradient-to-b from-white via-slate-50/70 to-[#F1F5F9] py-12 sm:py-16 lg:py-20 flex-1 flex items-center overflow-hidden border-b border-slate-200/80">
-        {/* Patrón técnico de puntos sutil en el fondo claro */}
-        <div 
-          className="absolute inset-0 opacity-[0.45] pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(#CBD5E1 1px, transparent 1px)',
-            backgroundSize: '24px 24px'
-          }}
-        />
+      {/* 3. Hero Section (Arriba del Fold: Titular y Credencial QR Protagonista) */}
+      <section className="relative bg-gradient-to-b from-white via-brand-neutral-50/60 to-brand-neutral-100 py-10 sm:py-14 lg:py-16 border-b border-brand-neutral-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
-        {/* Resplandores ambientales tenues y suaves para profundidad */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-1/2 -right-24 w-96 h-96 bg-[#CCFF00]/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-slate-200/50 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-
-            {/* Columna Izquierda: Entrada Cascada (Staggered Fade-up) */}
-            <motion.div
-              variants={heroContainerVariants}
-              initial="hidden"
-              animate="show"
-              className="lg:col-span-6 space-y-6 text-center lg:text-left"
-            >
+            {/* Columna Izquierda: Titular y Acciones */}
+            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               {/* Insignia Oferta Gancho */}
-              <motion.div variants={heroItemVariants}>
-                <div className="inline-flex items-center gap-2 bg-[#CCFF00] text-[#0A1525] px-4 py-2 rounded-full font-black text-xs sm:text-sm border border-[#0A1525]/15 shadow-sm">
-                  <Sparkles className="w-4 h-4 shrink-0 text-[#0A1525]" />
+              <div>
+                <div className="inline-flex items-center gap-2 bg-brand-neutral-100 text-brand-trust px-3.5 py-1.5 rounded-full font-semibold text-xs sm:text-small border border-brand-neutral-300 shadow-card">
+                  <Sparkles className="w-4 h-4 shrink-0 text-brand-primary" />
                   <span>
-                    Diagnóstico a Domicilio $15 USD — ¡100% GRATIS si reparas &gt; $40 hoy!
+                    Diagnóstico a Domicilio $15 USD — 100% GRATIS si reparas &gt; $40 hoy
                   </span>
                 </div>
-              </motion.div>
+              </div>
 
-              {/* H1 Principal con Enfásis Moderno */}
-              <motion.h1
-                variants={heroItemVariants}
-                className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#0A1525] leading-[1.12]"
-              >
-                Mecánica Automotriz a Domicilio{' '}
-                <span className="text-[#1E56B0] underline decoration-[#CCFF00] decoration-wavy decoration-2">
+              {/* H1 Principal con Escala Display y Tracking Tight */}
+              <h1 className="text-display tracking-tight text-brand-trust">
+                Mecánica automotriz a domicilio{' '}
+                <span className="text-brand-primary font-semibold">
                   en Caracas
                 </span>
-              </motion.h1>
+              </h1>
 
               {/* Subtítulo */}
-              <motion.p
-                variants={heroItemVariants}
-                className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium"
-              >
-                Especialistas certificados en la puerta de tu casa u oficina con escaneo computarizado OBD2, repuestos garantizados y la única plataforma con <strong className="text-[#0A1525] font-extrabold">Credencial Digital de Confianza QR</strong> para tu total seguridad.
-              </motion.p>
+              <p className="text-body text-brand-neutral-600 max-w-2xl mx-auto lg:mx-0 font-normal">
+                Especialistas certificados en la puerta de tu casa u oficina con escaneo computarizado OBD2, repuestos garantizados y la única plataforma con <strong className="text-brand-trust font-semibold">Credencial Digital de Confianza QR</strong> para tu total seguridad.
+              </p>
 
-              {/* CTAs de acción rápida */}
-              <motion.div
-                variants={heroItemVariants}
-                className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 justify-center lg:justify-start"
-              >
-                <motion.button
+              {/* CTAs de acción rápida: Un solo botón primario naranja */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-1 justify-center lg:justify-start">
+                <button
                   type="button"
                   onClick={() => setModalOpen(true)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="h-12 px-8 text-base font-black bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all shadow-md shadow-lime-900/10 flex items-center justify-center gap-2 cursor-pointer border border-[#0A1525]/10 active:scale-95"
+                  className="h-12 px-8 text-body font-semibold bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.98] text-white rounded-card shadow-card hover:scale-[1.02] transition-spring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-brand-primary/35 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  <Wrench className="w-5 h-5 text-[#0A1525]" />
-                  <span>Pedir Mecánico Ahora</span>
-                </motion.button>
+                  <Wrench className="w-5 h-5 text-white" />
+                  <span>PEDIR MECÁNICO HOY</span>
+                </button>
 
                 <Link
                   href="/carnet/CAR-8492"
-                  className="h-12 px-6 text-base font-bold bg-white hover:bg-slate-50 text-[#0A1525] border-2 border-[#CBD5E1] hover:border-[#1E56B0] rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-95"
+                  className="h-12 px-6 text-body font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard flex items-center justify-center gap-2 cursor-pointer shadow-card active:scale-[0.98] hover:border-brand-primary"
                 >
-                  <ShieldCheck className="w-5 h-5 text-[#1E56B0]" />
+                  <ShieldCheck className="w-5 h-5 text-brand-primary" />
                   <span>Ver Credencial QR</span>
                 </Link>
-              </motion.div>
+              </div>
 
               {/* Beneficios directos de Confianza (4 Pilares) */}
-              <motion.div
-                variants={heroItemVariants}
-                className="pt-4 grid grid-cols-2 sm:grid-cols-2 gap-3 text-left border-t border-slate-200/80"
-              >
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+              <div className="pt-4 grid grid-cols-2 gap-3 text-left border-t border-brand-neutral-200">
+                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
                   <span>Llegada en &lt; 45 minutos</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
                   <span>Mecánicos Verificados con QR</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
                   <span>Garantía de 90 Días por Escrito</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />
+                <div className="flex items-center gap-2 text-small text-brand-neutral-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-brand-success shrink-0" />
                   <span>Diagnóstico $15 Exonerable</span>
                 </div>
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
 
-            {/* Columna Derecha: Composición de Fotos de Mecánicos + Mockup de Smartphone con Credencial Digital */}
-            <div className="lg:col-span-6 relative flex items-center justify-center min-h-[600px] sm:min-h-[650px] lg:min-h-[680px] w-full py-6">
-
-              {/* === CAPA TRASERA: Varias Imágenes Reales de Mecánicos en Taller y Campo === */}
-              {/* Foto 1: Especialista en frenos y tren delantero (Arriba Derecha) */}
+            {/* Columna Derecha: Credencial QR convertida en HÉROE VISUAL Arriba del Fold */}
+            <div className="lg:col-span-5 flex justify-center w-full">
               <motion.div
-                initial={{ opacity: 0, x: 30, y: -20, rotate: 3 }}
-                animate={{ opacity: 1, x: 0, y: 0, rotate: 3 }}
-                transition={{ duration: 0.7, delay: 0.1 }}
-                whileHover={{ rotate: 0, scale: 1.03 }}
-                className="absolute top-4 right-0 sm:right-2 w-48 sm:w-60 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
-                title="Mantenimiento de Frenos y Suspensión TuTallerMóvil"
+                initial={{ opacity: 0, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, filter: 'blur(0px)' }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                className="w-full max-w-sm bg-white border border-brand-neutral-200 rounded-card shadow-elevated p-6 flex flex-col items-center text-center space-y-4"
               >
-                <img
-                  src="https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=700&q=80"
-                  alt="Mecánico especializado en frenos"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-                <div className="absolute bottom-2 left-2.5 right-2 flex items-center gap-1.5 text-white">
-                  <span className="w-2 h-2 rounded-full bg-[#CCFF00]" />
-                  <span className="text-[10px] sm:text-[11px] font-black tracking-tight drop-shadow-sm">Frenos &amp; Suspensión</span>
-                </div>
-              </motion.div>
-
-              {/* Foto 2: Escaneo Electrónico y Diagnóstico OBD2 con Tablet (Abajo Izquierda) */}
-              <motion.div
-                initial={{ opacity: 0, x: -30, y: 20, rotate: -4 }}
-                animate={{ opacity: 1, x: 0, y: 0, rotate: -4 }}
-                transition={{ duration: 0.7, delay: 0.2 }}
-                whileHover={{ rotate: 0, scale: 1.03 }}
-                className="absolute bottom-6 left-0 sm:left-2 w-48 sm:w-56 aspect-[4/3] rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer"
-                title="Diagnóstico Electrónico OBD2"
-              >
-                <img
-                  src="https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=600&q=80"
-                  alt="Escaneo computarizado OBD2 en vehículo"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
-                <div className="absolute bottom-2 left-2.5 right-2 flex items-center gap-1.5 text-white">
-                  <Zap className="w-3 h-3 text-[#CCFF00]" />
-                  <span className="text-[10px] sm:text-[11px] font-black tracking-tight drop-shadow-sm">Escáner OBD2 en Vivo</span>
-                </div>
-              </motion.div>
-
-              {/* Foto 3: Inspección de Motor Bajo Capó (Fondo Arriba Izquierda - Desktop) */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.85, rotate: -6 }}
-                animate={{ opacity: 1, scale: 1, rotate: -6 }}
-                transition={{ duration: 0.7, delay: 0.3 }}
-                whileHover={{ rotate: 0, scale: 1.04 }}
-                className="hidden sm:block absolute top-2 left-4 w-36 aspect-square rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-slate-100 z-0 transition-transform duration-300 group cursor-pointer opacity-90"
-                title="Inspección de 25 Puntos de Seguridad"
-              >
-                <img
-                  src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=500&q=80"
-                  alt="Inspección de motor a domicilio"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent" />
-                <div className="absolute bottom-1.5 left-2 text-white">
-                  <span className="text-[9px] font-black tracking-tight">Inspección 25 Pts</span>
-                </div>
-              </motion.div>
-
-              {/* === CAPA FRONTAL: EL MOCKUP DEL TELÉFONO EN PROPORCIÓN REAL (19.5:9) === */}
-              <motion.div
-                initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                animate={{
-                  opacity: 1,
-                  y: [0, -8, 0],
-                  scale: 1
-                }}
-                transition={{
-                  opacity: { duration: 0.6, ease: "easeOut" },
-                  scale: { duration: 0.6, ease: "easeOut" },
-                  y: {
-                    repeat: Infinity,
-                    duration: 5,
-                    ease: "easeInOut"
-                  }
-                }}
-                whileHover={{ scale: 1.02 }}
-                className="w-[280px] sm:w-[305px] h-[580px] sm:h-[630px] bg-[#0A1525] p-2.5 sm:p-3 rounded-[48px] sm:rounded-[54px] shadow-[0_25px_60px_-15px_rgba(10,21,37,0.4),0_12px_24px_-8px_rgba(0,0,0,0.18)] border-[3.5px] border-slate-700/80 ring-1 ring-slate-800/80 relative z-20 will-change-transform select-none flex flex-col justify-between"
-              >
-                {/* Botones Físicos Laterales del Smartphone */}
-                <div className="absolute -left-[5px] top-28 w-[3px] h-9 bg-slate-600 rounded-l-md" />
-                <div className="absolute -left-[5px] top-40 w-[3px] h-9 bg-slate-600 rounded-l-md" />
-                <div className="absolute -right-[5px] top-32 w-[3px] h-12 bg-slate-600 rounded-r-md" />
-
-                {/* Brillo / Reflejo sutil de cristal en la esquina superior derecha */}
-                <div className="absolute top-3 right-6 w-20 h-10 bg-gradient-to-b from-white/10 to-transparent rounded-full -rotate-45 pointer-events-none z-30" />
-
-                {/* Pantalla del Teléfono (Fondo Blanco Limpio / Proporción Vertical Real) */}
-                <div className="bg-white rounded-[40px] sm:rounded-[44px] overflow-hidden border border-slate-200/90 flex-1 flex flex-col justify-between relative text-[#0A1525] shadow-inner">
-                  
-                  {/* Zona Superior: Barra de Estado & Dynamic Island */}
-                  <div>
-                    {/* Barra de Estado con Dynamic Island (iOS Style) */}
-                    <div className="pt-2.5 px-5 pb-1 flex items-center justify-between bg-white text-[11px] font-bold text-slate-800">
-                      <span className="font-semibold tracking-tight">9:41</span>
-                      {/* Dynamic Island */}
-                      <div className="w-20 h-4 bg-slate-950 rounded-full flex items-center justify-center px-2 gap-1.5 shadow-inner">
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-700" />
-                        <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px]">
-                        <span className="text-[9px] font-black">5G</span>
-                        <div className="w-4 h-2 border border-slate-800 rounded-xs p-[0.5px] flex items-center">
-                          <div className="w-full h-full bg-slate-800 rounded-2xs" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Encabezado del Carnet Oficial */}
-                    <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50">
-                      <div className="flex items-center gap-1.5">
-                        <img src="/icon.svg" alt="TuTallerMóvil" className="h-[28px] w-auto object-contain" />
-                        <div className="leading-tight">
-                          <p className="text-[9px] font-black tracking-wider uppercase text-[#0A1525]">CREDENCIAL</p>
-                          <p className="text-[8px] font-bold text-[#1E56B0]">OFICIAL TTM</p>
-                        </div>
-                      </div>
-                      <div className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full shadow-2xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span>VERIFICADO</span>
-                      </div>
+                {/* Badge Superior "Verificado" con brand.success */}
+                <div className="w-full flex items-center justify-between pb-3 border-b border-brand-neutral-200">
+                  <div className="flex items-center gap-1.5 text-left">
+                    <img
+                      src="/icon.svg"
+                      alt="TuTallerMóvil"
+                      width={28}
+                      height={28}
+                      className="h-7 w-auto object-contain"
+                    />
+                    <div>
+                      <p className="text-caption font-semibold uppercase text-brand-trust tracking-wider leading-none">
+                        CREDENCIAL OFICIAL
+                      </p>
+                      <p className="text-[10px] text-brand-neutral-500 font-medium">
+                        Personal en Sitio
+                      </p>
                     </div>
                   </div>
 
-                  {/* Zona Central: Tarjeta del Mecánico + QR Code Antifraude */}
-                  <div className="p-3 sm:p-4 space-y-3.5 flex-1 flex flex-col justify-center">
-                    {/* Tarjeta del Mecánico con Foto Real y Checkmark */}
-                    <div className="flex items-center gap-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl p-3 shadow-2xs">
-                      <div className="relative shrink-0">
-                        <img
-                          src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=240&q=80"
-                          alt="Carlos Mendoza - Especialista"
-                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-[#1E56B0] shadow-xs"
-                        />
-                        <span 
-                          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#16a34a] border-2 border-white flex items-center justify-center shadow-xs"
-                          title="Técnico Verificado Oficial"
-                        >
-                          <Check className="w-3 h-3 text-white stroke-[3.5]" />
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-black text-[#0A1525] truncate leading-tight">
-                          Carlos E. Mendoza
-                        </h3>
-                        <p className="text-[11px] font-bold text-[#1E56B0] truncate">
-                          Mecánico 1 — Senior
-                        </p>
-                        <p className="text-[9px] font-mono font-semibold text-slate-500">
-                          ID: <span className="text-[#0A1525] font-black">#TTM-CAR-8492</span> • V-12.345.678
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" /> 4.9 (148)
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> En Ruta
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Píldoras de Especialidad Técnica */}
-                    <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold text-slate-600">
-                      <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">Inyección OBD2</span>
-                      <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">Frenos ABS</span>
-                      <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">Tren Delantero</span>
-                    </div>
-
-                    {/* QR Code Dinámico con Generación Criptográfica Real (Pase Digital Prominente) */}
-                    <div className="bg-white border-2 border-slate-200/90 rounded-2xl p-3 flex flex-col items-center text-center shadow-xs space-y-2">
-                      <div className="bg-[#0A1525] p-2 rounded-xl flex items-center justify-center shadow-sm">
-                        <QRCodeSVG
-                          value="https://tutallermovil.vercel.app/carnet/CAR-8492"
-                          size={96}
-                          level="M"
-                          fgColor="#CCFF00"
-                          bgColor="#0A1525"
-                        />
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-[10px] font-black uppercase text-[#0A1525] tracking-wide flex items-center justify-center gap-1">
-                          <QrCode className="w-3.5 h-3.5 text-[#1E56B0]" /> QR Antifraude Oficial
-                        </p>
-                        <p className="text-[9px] text-slate-500 leading-tight max-w-[210px] mx-auto">
-                          Escanea para verificar identidad y póliza de garantía antes de autorizar acceso.
-                        </p>
-                        <span className="inline-block mt-1 text-[8px] font-mono text-[#1E56B0] font-black bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
-                          HASH: 7855-TTM-VERIFIED
-                        </span>
-                      </div>
-                    </div>
+                  <div className="inline-flex items-center gap-1 bg-brand-success text-white px-2.5 py-1 rounded-full text-caption font-semibold shadow-card">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Verificado</span>
                   </div>
+                </div>
 
-                  {/* Zona Inferior: Seguridad & Home Bar de iOS */}
-                  <div className="pb-1.5 bg-slate-50 border-t border-slate-100 text-center">
-                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider py-1">
-                      Protocolo TuTallerMóvil • Seguridad Inmutable
+                {/* Foto y Datos del Especialista */}
+                <div className="flex items-center gap-3 w-full bg-brand-neutral-50 border border-brand-neutral-200 rounded-card p-3 text-left">
+                  <img
+                    src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=160&q=80"
+                    alt="Carlos E. Mendoza - Mecánico Senior"
+                    width={52}
+                    height={52}
+                    className="w-13 h-13 rounded-card object-cover border border-brand-neutral-300 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-body font-semibold text-brand-trust truncate leading-tight">
+                      Carlos E. Mendoza
                     </p>
-                    <div className="py-1 flex justify-center">
-                      <div className="w-24 h-1 bg-slate-400 rounded-full" />
-                    </div>
+                    <p className="text-small text-brand-primary font-medium truncate">
+                      Mecánico 1 — Senior
+                    </p>
+                    <p className="text-caption font-mono text-brand-neutral-500">
+                      ID: <span className="text-brand-trust font-semibold">#TTM-CAR-8492</span>
+                    </p>
                   </div>
                 </div>
-              </motion.div>
 
-              {/* Insignia Flotante 1: Técnico en Ruta (Arriba a la Izquierda del Celular) */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.35 }}
-                className="absolute -top-1 left-2 sm:-left-4 z-30 bg-white/95 backdrop-blur-md border border-slate-200 rounded-full px-3 py-1.5 shadow-lg flex items-center gap-2 text-xs font-bold text-[#0A1525]"
-              >
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-                </span>
-                <span className="text-[11px] font-black text-[#0A1525]">Llegada en &lt; 45 min</span>
-              </motion.div>
+                {/* Código QR: El elemento más grande después del titular */}
+                <div className="p-4 bg-brand-neutral-50 border border-brand-neutral-200 rounded-card flex flex-col items-center justify-center w-full">
+                  <div className="p-3 bg-white border border-brand-neutral-300 rounded-card shadow-card">
+                    <QRCodeSVG
+                      value="https://tutallermovil.vercel.app/carnet/CAR-8492"
+                      size={160}
+                      level="M"
+                      includeMargin={false}
+                      fgColor="#0A1525"
+                      bgColor="#FFFFFF"
+                    />
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-small font-semibold text-brand-trust flex items-center justify-center gap-1.5">
+                      <QrCode className="w-4 h-4 text-brand-primary" />
+                      Código QR Antifraude
+                    </p>
+                    <p className="text-caption text-brand-neutral-500 max-w-[220px]">
+                      Escanea para confirmar identidad y póliza antes de autorizar acceso.
+                    </p>
+                  </div>
+                </div>
 
-              {/* Insignia Flotante 2: Garantía Escrita (Abajo a la Derecha del Celular) */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.45 }}
-                className="absolute -bottom-2 right-2 sm:-right-4 z-30 bg-[#0A1525] text-white border border-slate-700 rounded-2xl px-3.5 py-2 shadow-xl flex items-center gap-2.5 text-xs font-bold"
-              >
-                <ShieldCheck className="w-5 h-5 text-[#CCFF00] shrink-0" />
-                <div className="text-left">
-                  <p className="text-[11px] font-black text-white leading-tight">Garantía Escrita</p>
-                  <p className="text-[9px] text-slate-300">100% Repuestos y Mano de Obra</p>
+                {/* Pie de la Credencial */}
+                <div className="w-full pt-1 flex items-center justify-between text-caption text-brand-neutral-500">
+                  <span className="flex items-center gap-1 font-semibold text-brand-success">
+                    <span className="w-2 h-2 rounded-full bg-brand-success inline-block animate-pulse" />
+                    En Ruta Activa
+                  </span>
+                  <span className="font-mono text-[11px] text-brand-neutral-400">
+                    HASH: 7855-TTM
+                  </span>
                 </div>
               </motion.div>
-
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* 4. Menú de 4 Tarjetas de Acción Rápida (Justo debajo del Hero, antes del Footer) */}
-      <section className="bg-[#F8FAFC] py-12 sm:py-16 border-t border-b border-[#CBD5E1]">
+      {/* 4. Menú de 4 Tarjetas de Acción Rápida */}
+      <section className="bg-white py-12 sm:py-16 border-b border-brand-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:text-left">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0A1525]">
+            <h2 className="text-h2 text-brand-trust">
               Acceso Rápido a Servicios
             </h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-small text-brand-neutral-600">
               Selecciona una opción para gestionar tu vehículo de inmediato.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-            {/* Tarjeta 1: Pedir Mecánico */}
-            <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.5, ease: "easeOut", delay: 0.05 }}
-              whileHover={{
-                scale: 1.02,
-                y: -5,
-                boxShadow: "0 14px 28px -6px rgba(10, 21, 37, 0.09), 0 10px 10px -5px rgba(10, 21, 37, 0.04)"
-              }}
-              className="bg-white border border-[#CBD5E1] rounded-xl p-5 shadow-sm flex flex-col justify-between transition-colors will-change-transform"
-            >
+            {/* Tarjeta 1: Pedir Mecánico (CTA Primario) */}
+            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#CCFF00]/25 flex items-center justify-center text-[#0A1525]">
-                    <Wrench className="w-5 h-5 text-[#0A1525]" />
+                  <div className="w-10 h-10 rounded-card bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                    <Wrench className="w-5 h-5 text-brand-primary" />
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase text-[#1E56B0] bg-[#1E56B0]/10 px-2 py-0.5 rounded">
+                  <span className="inline-flex items-center gap-1 text-caption font-semibold uppercase tracking-wider text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-control">
                     <Clock className="w-3 h-3" /> Inmediato
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-[#0A1525] tracking-tight mb-1">
+                <h3 className="text-h3 text-brand-trust mb-1">
                   PEDIR MECÁNICO HOY
                 </h3>
-                <p className="text-sm text-slate-600 mb-5">
-                  En tu casa en &lt; 45 min
+                <p className="text-small text-brand-neutral-600 mb-5">
+                  En tu casa en menos de 45 minutos.
                 </p>
               </div>
 
-              <motion.button
+              <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                whileTap={{ scale: 0.98 }}
-                className="w-full h-12 text-base font-semibold bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full h-11 text-small font-semibold bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.98] text-white rounded-card shadow-card hover:scale-[1.02] transition-spring flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-brand-primary/35 disabled:opacity-50 disabled:pointer-events-none"
               >
-                <span>Agendar</span>
+                <span>Agendar Servicio</span>
                 <ArrowRight className="w-4 h-4" />
-              </motion.button>
-            </motion.div>
+              </button>
+            </div>
 
-            {/* Tarjeta 2: Historial por Placa */}
-            <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.5, ease: "easeOut", delay: 0.15 }}
-              whileHover={{
-                scale: 1.02,
-                y: -5,
-                boxShadow: "0 14px 28px -6px rgba(10, 21, 37, 0.09), 0 10px 10px -5px rgba(10, 21, 37, 0.04)"
-              }}
-              className="bg-white border border-[#CBD5E1] rounded-xl p-5 shadow-sm flex flex-col justify-between transition-colors will-change-transform"
-            >
+            {/* Tarjeta 2: Historial por Placa (Secundario) */}
+            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#1E56B0]/10 flex items-center justify-center text-[#1E56B0]">
-                    <Search className="w-5 h-5 text-[#1E56B0]" />
+                  <div className="w-10 h-10 rounded-card bg-brand-neutral-100 flex items-center justify-center text-brand-trust">
+                    <Search className="w-5 h-5 text-brand-trust" />
                   </div>
-                  <span className="text-[11px] font-bold tracking-wider uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                  <span className="text-caption font-semibold uppercase tracking-wider text-brand-neutral-500 bg-brand-neutral-100 px-2 py-0.5 rounded-control">
                     Consulta
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-[#0A1525] tracking-tight mb-1">
+                <h3 className="text-h3 text-brand-trust mb-1">
                   HISTORIAL POR PLACA
                 </h3>
-                <p className="text-sm text-slate-600 mb-3">
+                <p className="text-small text-brand-neutral-600 mb-3">
                   Revisa servicios y diagnósticos previos.
                 </p>
               </div>
@@ -611,112 +374,91 @@ export default function Home() {
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
                   placeholder="Ej. AD456EF"
-                  className="w-full h-12 px-3.5 text-base uppercase font-mono font-medium rounded-lg border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-[#1E56B0] focus:border-transparent bg-white text-[#0A1525]"
+                  className="w-full h-11 px-3 text-small uppercase font-mono font-medium rounded-control border border-brand-neutral-300 focus:outline-none focus:ring-2 focus:ring-brand-primary bg-white text-brand-trust"
                 />
-                <motion.button
+                <button
                   type="submit"
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full h-12 text-base font-semibold bg-[#1E56B0] hover:bg-[#16448c] text-white rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full h-11 text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-brand-primary"
                 >
                   <Search className="w-4 h-4" />
                   <span>Buscar</span>
-                </motion.button>
+                </button>
               </form>
-            </motion.div>
+            </div>
 
-            {/* Tarjeta 3: Verificar Carnet QR */}
-            <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.5, ease: "easeOut", delay: 0.25 }}
-              whileHover={{
-                scale: 1.02,
-                y: -5,
-                boxShadow: "0 14px 28px -6px rgba(10, 21, 37, 0.09), 0 10px 10px -5px rgba(10, 21, 37, 0.04)"
-              }}
-              className="bg-white border border-[#CBD5E1] rounded-xl p-5 shadow-sm flex flex-col justify-between transition-colors will-change-transform"
-            >
+            {/* Tarjeta 3: Verificar Carnet QR (Secundario) */}
+            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700">
-                    <QrCode className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-card bg-brand-success/10 flex items-center justify-center text-brand-success">
+                    <QrCode className="w-5 h-5 text-brand-success" />
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                  <span className="inline-flex items-center gap-1 text-caption font-semibold uppercase tracking-wider text-brand-success bg-brand-success/10 px-2 py-0.5 rounded-control">
                     <ShieldCheck className="w-3 h-3" /> Seguro
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-[#0A1525] tracking-tight mb-1">
+                <h3 className="text-h3 text-brand-trust mb-1">
                   VERIFICAR CARNET QR
                 </h3>
-                <p className="text-sm text-slate-600 mb-5">
-                  Valida a tu especialista y confirma su identidad antes de abrir la puerta.
+                <p className="text-small text-brand-neutral-600 mb-5">
+                  Valida a tu especialista antes de permitir el acceso.
                 </p>
               </div>
 
-              <motion.a
-                href="#verificar-carnet"
-                whileTap={{ scale: 0.98 }}
-                className="w-full h-12 text-base font-semibold border border-[#CBD5E1] hover:border-[#1E56B0] text-[#1E56B0] hover:bg-[#F8FAFC] rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              <Link
+                href="/carnet/CAR-8492"
+                className="w-full h-11 text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-brand-primary"
               >
                 <span>Escanear Carnet</span>
                 <ArrowRight className="w-4 h-4" />
-              </motion.a>
-            </motion.div>
+              </Link>
+            </div>
 
-            {/* Tarjeta 4: Portal de Aliados */}
-            <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.5, ease: "easeOut", delay: 0.35 }}
-              whileHover={{
-                scale: 1.02,
-                y: -5,
-                boxShadow: "0 14px 28px -6px rgba(10, 21, 37, 0.09), 0 10px 10px -5px rgba(10, 21, 37, 0.04)"
-              }}
-              className="bg-white border border-[#CBD5E1] rounded-xl p-5 shadow-sm flex flex-col justify-between transition-colors will-change-transform"
-            >
+            {/* Tarjeta 4: Portal de Aliados (Secundario) */}
+            <div className="bg-white border border-brand-neutral-200 rounded-card p-5 shadow-card flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
-                    <UserCircle className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-card bg-brand-neutral-100 flex items-center justify-center text-brand-neutral-700">
+                    <UserCircle className="w-5 h-5 text-brand-neutral-700" />
                   </div>
-                  <span className="text-[11px] font-bold tracking-wider uppercase text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                  <span className="text-caption font-semibold uppercase tracking-wider text-brand-neutral-600 bg-brand-neutral-100 px-2 py-0.5 rounded-control">
                     Red TTM
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-[#0A1525] tracking-tight mb-1">
+                <h3 className="text-h3 text-brand-trust mb-1">
                   PORTAL DE ALIADOS
                 </h3>
-                <p className="text-sm text-slate-600 mb-5">
-                  Mecánicos, Talleres, Runners
+                <p className="text-small text-brand-neutral-600 mb-5">
+                  Mecánicos, Talleres, Runners y Repuesteras.
                 </p>
               </div>
 
               <Link
                 href="/aliados/portal"
-                className="w-full h-12 text-base font-semibold bg-[#F8FAFC] hover:bg-slate-100 text-[#0A1525] border border-[#CBD5E1] rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                className="w-full h-11 text-small font-semibold bg-white hover:bg-brand-neutral-50 text-brand-trust border border-brand-neutral-300 rounded-card transition-standard shadow-card flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:border-brand-primary"
               >
                 <span>Ingresar al Portal</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
-            </motion.div>
+            </div>
 
           </div>
         </div>
       </section>
 
-      {/* 5. Footer */}
-      <footer className="bg-white border-t border-[#CBD5E1] py-6 text-center text-xs text-slate-500">
+      {/* 5. TAREA 5: Nueva Sección de Prueba Social */}
+      <SocialProof />
+
+      {/* 6. Footer */}
+      <footer className="bg-white border-t border-brand-neutral-200 py-6 text-center text-caption text-brand-neutral-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© 2026 TuTallerMóvil (TTM). Titular: José Ángel Acosta Llovera. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <Link href="/terminos" className="text-[#1E56B0] hover:underline">
+          <div className="flex items-center gap-4 text-caption font-semibold">
+            <Link href="/terminos" className="text-brand-primary hover:underline">
               Términos, Condiciones y Privacidad
             </Link>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-400">Caracas, Venezuela</span>
+            <span className="text-brand-neutral-300">•</span>
+            <span className="text-brand-neutral-500">Caracas, Venezuela</span>
           </div>
         </div>
       </footer>
@@ -738,18 +480,18 @@ export default function Home() {
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="fixed bottom-6 right-6 z-50 max-w-md bg-[#0A1525] text-white p-4 rounded-2xl shadow-2xl border-2 border-[#CCFF00] flex items-center justify-between gap-4"
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="fixed bottom-6 right-6 z-50 max-w-md bg-brand-trust text-white p-4 rounded-container shadow-elevated border border-brand-primary flex items-center justify-between gap-4"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#CCFF00] flex items-center justify-center text-[#0A1525] shrink-0 font-bold">
-                <CheckCircle2 className="w-5 h-5 text-[#0A1525]" />
+              <div className="w-9 h-9 rounded-card bg-brand-primary flex items-center justify-center text-white shrink-0 font-semibold">
+                <CheckCircle2 className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-xs font-bold text-[#CCFF00] uppercase tracking-wider">
-                  ¡Orden Despachada!
+                <p className="text-caption font-semibold text-brand-primary uppercase tracking-wider">
+                  Orden Despachada
                 </p>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-small font-medium text-white">
                   {toastMessage}
                 </p>
               </div>
@@ -757,7 +499,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setToastMessage(null)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              className="text-brand-neutral-400 hover:text-white p-1 rounded-control hover:bg-slate-800 transition-standard cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
