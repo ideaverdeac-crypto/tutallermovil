@@ -37,10 +37,21 @@ import {
   Wrench,
   ChevronRight,
   ShieldAlert,
-  MessageCircle
+  MessageCircle,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+
+export interface EvidenciaPieza {
+  id: string;
+  nombre: string;
+  marca?: string;
+  fotoViejo: string | null;
+  fotoNuevo: string | null;
+  esDeCotizacion?: boolean;
+}
 
 interface ServicioEjecucionClientProps {
   id: string;
@@ -194,11 +205,40 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   };
 
   // ==========================================
-  // FASE 4: Instalación y Evidencias
+  // FASE 4: Instalación y Evidencias por Pieza
   // ==========================================
-  const [fotoRepuestoViejo, setFotoRepuestoViejo] = useState<string | null>(null);
-  const [fotoRepuestoNuevo, setFotoRepuestoNuevo] = useState<string | null>(null);
+  const [piezasEvidencias, setPiezasEvidencias] = useState<EvidenciaPieza[]>([
+    {
+      id: 'rep-01',
+      nombre: 'Pastillas de Freno Delanteras Cerámicas',
+      marca: 'Bosch Blue Edition',
+      fotoViejo: null,
+      fotoNuevo: null,
+      esDeCotizacion: true
+    },
+    {
+      id: 'rep-02',
+      nombre: 'Líquido de Frenos Sintético DOT 4 (500 ml)',
+      marca: 'Motul Brake Fluid',
+      fotoViejo: null,
+      fotoNuevo: null,
+      esDeCotizacion: true
+    }
+  ]);
+  const [modalAgregarPiezaMecanico, setModalAgregarPiezaMecanico] = useState<boolean>(false);
+  const [nombreNuevaPiezaMecanico, setNombreNuevaPiezaMecanico] = useState<string>('');
+  const [piezaCargandoFoto, setPiezaCargandoFoto] = useState<{ id: string; tipo: 'viejo' | 'nuevo' } | null>(null);
   const [guardandoFase4, setGuardandoFase4] = useState<boolean>(false);
+
+  // Retrocompatibilidad con referencias fijas
+  const fotoRepuestoViejo = piezasEvidencias[0]?.fotoViejo || null;
+  const fotoRepuestoNuevo = piezasEvidencias[0]?.fotoNuevo || null;
+  const setFotoRepuestoViejo = (url: string | null) => {
+    setPiezasEvidencias((prev) => prev.map((p, idx) => (idx === 0 ? { ...p, fotoViejo: url } : p)));
+  };
+  const setFotoRepuestoNuevo = (url: string | null) => {
+    setPiezasEvidencias((prev) => prev.map((p, idx) => (idx === 0 ? { ...p, fotoNuevo: url } : p)));
+  };
 
   // ==========================================
   // FASE 5: Cierre y Liquidación
@@ -224,6 +264,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
   const fileInputOdometroInicialRef = useRef<HTMLInputElement>(null);
   const fileInputRepuestoViejoRef = useRef<HTMLInputElement>(null);
   const fileInputRepuestoNuevoRef = useRef<HTMLInputElement>(null);
+  const fileInputPiezaDinamicaRef = useRef<HTMLInputElement>(null);
   const fileInputOdometroFinalRef = useRef<HTMLInputElement>(null);
 
   // Helper para calcular fase según estado de la orden
@@ -291,6 +332,28 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           }
           if (data.diagnostico_json?.piezas_requeridas) {
             setPiezasRequeridas(data.diagnostico_json.piezas_requeridas);
+          }
+          if (data.diagnostico_json?.evidencias_piezas && Array.isArray(data.diagnostico_json.evidencias_piezas) && data.diagnostico_json.evidencias_piezas.length > 0) {
+            setPiezasEvidencias(data.diagnostico_json.evidencias_piezas);
+          } else if (data.diagnostico_json?.repuestos_aprobados && Array.isArray(data.diagnostico_json.repuestos_aprobados) && data.diagnostico_json.repuestos_aprobados.length > 0) {
+            const piezasDesdeCotizacion: EvidenciaPieza[] = data.diagnostico_json.repuestos_aprobados.map((rep: any, idx: number) => ({
+              id: rep.id || `rep-aprobado-${idx}`,
+              nombre: rep.nombre || 'Pieza Cotizada',
+              marca: rep.marca || 'Original Certificado',
+              fotoViejo: idx === 0 ? (data.foto_repuesto_viejo_url || null) : null,
+              fotoNuevo: idx === 0 ? (data.foto_repuesto_nuevo_url || null) : null,
+              esDeCotizacion: true
+            }));
+            setPiezasEvidencias(piezasDesdeCotizacion);
+          } else if (data.foto_repuesto_viejo_url || data.foto_repuesto_nuevo_url) {
+            setPiezasEvidencias((prev) => [
+              {
+                ...prev[0],
+                fotoViejo: data.foto_repuesto_viejo_url || prev[0]?.fotoViejo || null,
+                fotoNuevo: data.foto_repuesto_nuevo_url || prev[0]?.fotoNuevo || null
+              },
+              ...prev.slice(1)
+            ]);
           }
         }
       } catch (err) {
@@ -400,9 +463,9 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
     const archivo = fotoPendienteReintento;
     const prefijo = tipoFotoPendiente.prefijo;
 
-    let callback = setFotoOdometroInicial;
-    if (prefijo === 'repuesto_viejo') callback = setFotoRepuestoViejo;
-    else if (prefijo === 'repuesto_nuevo') callback = setFotoRepuestoNuevo;
+    let callback: (url: string) => void = setFotoOdometroInicial;
+    if (prefijo === 'repuesto_viejo') callback = (url: string) => setFotoRepuestoViejo(url);
+    else if (prefijo === 'repuesto_nuevo') callback = (url: string) => setFotoRepuestoNuevo(url);
     else if (prefijo === 'odometro_final') callback = setFotoOdometroFinal;
 
     await handleSubirArchivo(archivo, prefijo, (url) => {
@@ -410,6 +473,50 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       setFotoPendienteReintento(null);
       setTipoFotoPendiente(null);
     });
+  };
+
+  // Subir foto para una pieza específica de la lista de evidencias
+  const handleSubirFotoPieza = async (piezaId: string, tipo: 'viejo' | 'nuevo', file: File) => {
+    const prefijo = `repuesto_${tipo}_${piezaId}`;
+    setSubiendoFotoTipo(prefijo);
+    await handleSubirArchivo(file, prefijo, (url) => {
+      setPiezasEvidencias((prev) =>
+        prev.map((p) => (p.id === piezaId ? { ...p, [tipo === 'viejo' ? 'fotoViejo' : 'fotoNuevo']: url } : p))
+      );
+      setPiezaCargandoFoto(null);
+    });
+  };
+
+  // Agregar otra pieza que se desmontó o reemplazó en sitio
+  const handleAgregarPiezaMecanico = (nombreParam?: string) => {
+    const nombre = (nombreParam || nombreNuevaPiezaMecanico).trim();
+    if (!nombre) {
+      setToastMensaje(['Indica el nombre de la pieza desmontada o reemplazada']);
+      setTimeout(() => setToastMensaje(null), 3000);
+      return;
+    }
+
+    const nueva: EvidenciaPieza = {
+      id: `pieza-sitio-${Date.now()}`,
+      nombre,
+      marca: 'Pieza Desmontada en Sitio',
+      fotoViejo: null,
+      fotoNuevo: null,
+      esDeCotizacion: false
+    };
+
+    setPiezasEvidencias((prev) => [...prev, nueva]);
+    setNombreNuevaPiezaMecanico('');
+    setModalAgregarPiezaMecanico(false);
+    setToastMensaje([`✓ Añadida "${nombre}" a la lista de evidencias`]);
+    setTimeout(() => setToastMensaje(null), 3500);
+  };
+
+  // Eliminar pieza agregada manualmente
+  const handleEliminarPiezaMecanico = (piezaId: string) => {
+    setPiezasEvidencias((prev) => prev.filter((p) => p.id !== piezaId));
+    setToastMensaje(['✓ Pieza eliminada de las evidencias']);
+    setTimeout(() => setToastMensaje(null), 3000);
   };
 
   // Validaciones Fase 1
@@ -519,14 +626,20 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
     }
   };
 
-  // Validaciones Fase 4
-  const fotosInstalacionCompletas = Boolean(fotoRepuestoViejo && fotoRepuestoNuevo);
+  // Validaciones Fase 4: Verificar que todas las piezas requeridas tengan sus fotos cargadas
+  const piezasIncompletas = piezasEvidencias.filter((p) => !p.fotoViejo || !p.fotoNuevo);
+  const fotosInstalacionCompletas = piezasEvidencias.length > 0 && piezasIncompletas.length === 0;
 
   // Terminar Trabajo de Instalación (Fase 4 -> Fase 5)
   const handleTerminarTrabajo = async () => {
     if (!fotosInstalacionCompletas) {
-      setToastMensaje(['Debes subir tanto la foto del repuesto viejo como del repuesto nuevo.']);
-      setTimeout(() => setToastMensaje(null), 4000);
+      if (piezasEvidencias.length === 0) {
+        setToastMensaje(['Debes registrar al menos una pieza con sus evidencias fotográficas.']);
+      } else {
+        const faltantes = piezasIncompletas.map((p) => p.nombre).join(', ');
+        setToastMensaje([`Faltan fotos (viejo y nuevo) para: ${faltantes}`]);
+      }
+      setTimeout(() => setToastMensaje(null), 4500);
       return;
     }
 
@@ -536,7 +649,13 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       await supabase
         .from('ordenes')
         .update({
-          estado: 'TRABAJO_TERMINADO'
+          estado: 'TRABAJO_TERMINADO',
+          foto_repuesto_viejo_url: piezasEvidencias[0]?.fotoViejo || null,
+          foto_repuesto_nuevo_url: piezasEvidencias[0]?.fotoNuevo || null,
+          diagnostico_json: {
+            piezas_requeridas: piezasRequeridas,
+            evidencias_piezas: piezasEvidencias
+          }
         })
         .eq('id', id);
 
@@ -1162,144 +1281,231 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 transition={{ duration: 0.3 }}
                 className="space-y-4"
               >
-                <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
-                    ✓ Repuestos Entregados • Habilitado para Montar
-                  </span>
-                  <h3 className="text-sm font-black text-[#0A1525] pt-1">
-                    Instalación y Evidencias Fotográficas Obligatorias
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Instala los componentes y sube ambas fotos para validar la garantía oficial TTM.
-                  </p>
-                </div>
-
-                {/* Botón 1: Subir Foto Repuesto Viejo */}
+                {/* Input de archivo dinámico universal para piezas */}
                 <input
                   type="file"
-                  ref={fileInputRepuestoViejoRef}
+                  ref={fileInputPiezaDinamicaRef}
                   accept="image/*"
                   capture="environment"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) handleSubirArchivo(f, 'repuesto_viejo', setFotoRepuestoViejo);
+                    if (f && piezaCargandoFoto) {
+                      handleSubirFotoPieza(piezaCargandoFoto.id, piezaCargandoFoto.tipo, f);
+                    }
+                    e.target.value = '';
                   }}
                 />
 
-                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-[#0A1525]">
-                      1. Foto del Repuesto Viejo (Desmontado) *
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${fotoRepuestoViejo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                      {fotoRepuestoViejo ? '✓ Cargado' : 'Pendiente'}
-                    </span>
-                  </div>
-
-                  {subiendoFotoTipo === 'repuesto_viejo' ? (
-                    <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
-                      <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
-                      <span className="text-xs font-bold text-[#0A1525]">Subiendo repuesto viejo...</span>
+                <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
+                        ✓ Repuestos Entregados • Habilitado para Montar
+                      </span>
+                      <h3 className="text-sm font-black text-[#0A1525] pt-1">
+                        Instalación y Evidencias por Pieza ({piezasEvidencias.length})
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Cada pieza aprobada o desmontada requiere foto del repuesto viejo y del nuevo montado.
+                      </p>
                     </div>
-                  ) : !fotoRepuestoViejo ? (
+
                     <button
                       type="button"
-                      onClick={() => fileInputRepuestoViejoRef.current?.click()}
-                      className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
+                      onClick={() => setModalAgregarPiezaMecanico(true)}
+                      className="h-8 px-3 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-[#CCFF00] font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer self-start sm:self-auto shrink-0"
                     >
-                      <Camera className="w-6 h-6 text-[#1E56B0]" />
-                      <span className="text-xs font-black text-[#0A1525]">Subir Foto Repuesto Viejo</span>
-                      <span className="text-[10px] text-slate-400">Pieza defectuosa extraída</span>
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>+ Agregar otra pieza</span>
                     </button>
-                  ) : (
-                    <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={fotoRepuestoViejo}
-                          alt="Repuesto Viejo"
-                          className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
-                          onClick={() => setModalFotoZoom(fotoRepuestoViejo)}
-                        />
-                        <div>
-                          <span className="text-xs font-black text-[#0A1525] block">✓ Repuesto Viejo Verificado</span>
-                          <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRepuestoViejoRef.current?.click()}
-                        className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
-                      >
-                        Cambiar
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* Botón 2: Subir Foto Repuesto Nuevo */}
-                <input
-                  type="file"
-                  ref={fileInputRepuestoNuevoRef}
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleSubirArchivo(f, 'repuesto_nuevo', setFotoRepuestoNuevo);
-                  }}
-                />
+                {/* Listado de Piezas con sus 2 casillas de evidencias (Viejo y Nuevo) */}
+                <div className="space-y-4">
+                  {piezasEvidencias.map((pieza, index) => {
+                    const cargandoViejo = subiendoFotoTipo === `repuesto_viejo_${pieza.id}`;
+                    const cargandoNuevo = subiendoFotoTipo === `repuesto_nuevo_${pieza.id}`;
+                    const piezaCompleta = Boolean(pieza.fotoViejo && pieza.fotoNuevo);
 
-                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-[#0A1525]">
-                      2. Foto del Repuesto Nuevo (Instalado) *
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${fotoRepuestoNuevo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                      {fotoRepuestoNuevo ? '✓ Cargado' : 'Pendiente'}
-                    </span>
-                  </div>
+                    return (
+                      <div
+                        key={pieza.id}
+                        className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-4"
+                      >
+                        {/* Encabezado de la pieza */}
+                        <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-100">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-md bg-[#0A1525] text-[#CCFF00] font-mono font-black text-[10px]">
+                                PIEZA #{index + 1}
+                              </span>
+                              <h4 className="text-xs font-black text-[#0A1525] tracking-tight">
+                                {pieza.nombre}
+                              </h4>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                pieza.esDeCotizacion
+                                  ? 'bg-blue-50 text-[#1E56B0] border border-blue-100'
+                                  : 'bg-purple-50 text-purple-700 border border-purple-100'
+                              }`}>
+                                {pieza.esDeCotizacion ? 'Cotización Aprobada' : 'Desmontada en Sitio'}
+                              </span>
+                              {pieza.marca && (
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {pieza.marca}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                  {subiendoFotoTipo === 'repuesto_nuevo' ? (
-                    <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
-                      <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
-                      <span className="text-xs font-bold text-[#0A1525]">Subiendo repuesto nuevo...</span>
-                    </div>
-                  ) : !fotoRepuestoNuevo ? (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRepuestoNuevoRef.current?.click()}
-                      className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                    >
-                      <Camera className="w-6 h-6 text-[#1E56B0]" />
-                      <span className="text-xs font-black text-[#0A1525]">Subir Foto Repuesto Nuevo</span>
-                      <span className="text-[10px] text-slate-400">Pieza nueva montada en el auto</span>
-                    </button>
-                  ) : (
-                    <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={fotoRepuestoNuevo}
-                          alt="Repuesto Nuevo"
-                          className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
-                          onClick={() => setModalFotoZoom(fotoRepuestoNuevo)}
-                        />
-                        <div>
-                          <span className="text-xs font-black text-[#0A1525] block">✓ Repuesto Nuevo Verificado</span>
-                          <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              piezaCompleta
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {piezaCompleta ? '✓ Completo' : (pieza.fotoViejo || pieza.fotoNuevo ? '1/2 Pendiente' : 'Pendiente (0/2)')}
+                            </span>
+
+                            {!pieza.esDeCotizacion && (
+                              <button
+                                type="button"
+                                onClick={() => handleEliminarPiezaMecanico(pieza.id)}
+                                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                                title="Eliminar pieza adicional"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Dos Casillas de Subida: Repuesto Viejo y Repuesto Nuevo */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* Subir Repuesto Viejo */}
+                          <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/80 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-black text-[#0A1525]">
+                                1. Foto Repuesto Viejo (Desmontado) *
+                              </span>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                pieza.fotoViejo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                              }`}>
+                                {pieza.fotoViejo ? '✓ Cargado' : 'Pendiente'}
+                              </span>
+                            </div>
+
+                            {cargandoViejo ? (
+                              <div className="h-24 rounded-xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1">
+                                <Loader2 className="w-5 h-5 text-[#1E56B0] animate-spin" />
+                                <span className="text-[10px] font-bold text-[#0A1525]">Subiendo repuesto viejo...</span>
+                              </div>
+                            ) : !pieza.fotoViejo ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPiezaCargandoFoto({ id: pieza.id, tipo: 'viejo' });
+                                  fileInputPiezaDinamicaRef.current?.click();
+                                }}
+                                className="w-full h-24 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-white hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all active:scale-98"
+                              >
+                                <Camera className="w-5 h-5 text-[#1E56B0]" />
+                                <span className="text-[11px] font-black text-[#0A1525]">Subir Foto Repuesto Viejo</span>
+                                <span className="text-[9px] text-slate-400">Pieza defectuosa extraída</span>
+                              </button>
+                            ) : (
+                              <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                  <img
+                                    src={pieza.fotoViejo}
+                                    alt={`Viejo - ${pieza.nombre}`}
+                                    className="w-12 h-12 rounded-lg object-cover border border-emerald-400 cursor-pointer"
+                                    onClick={() => setModalFotoZoom(pieza.fotoViejo)}
+                                  />
+                                  <div>
+                                    <span className="text-[11px] font-black text-[#0A1525] block">✓ Desmontado</span>
+                                    <span className="text-[9px] text-slate-500">Evidencia guardada</span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPiezaCargandoFoto({ id: pieza.id, tipo: 'viejo' });
+                                    fileInputPiezaDinamicaRef.current?.click();
+                                  }}
+                                  className="text-[10px] font-bold text-slate-600 underline cursor-pointer p-1"
+                                >
+                                  Cambiar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Subir Repuesto Nuevo */}
+                          <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/80 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-black text-[#0A1525]">
+                                2. Foto Repuesto Nuevo (Instalado) *
+                              </span>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                pieza.fotoNuevo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                              }`}>
+                                {pieza.fotoNuevo ? '✓ Cargado' : 'Pendiente'}
+                              </span>
+                            </div>
+
+                            {cargandoNuevo ? (
+                              <div className="h-24 rounded-xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1">
+                                <Loader2 className="w-5 h-5 text-[#1E56B0] animate-spin" />
+                                <span className="text-[10px] font-bold text-[#0A1525]">Subiendo repuesto nuevo...</span>
+                              </div>
+                            ) : !pieza.fotoNuevo ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPiezaCargandoFoto({ id: pieza.id, tipo: 'nuevo' });
+                                  fileInputPiezaDinamicaRef.current?.click();
+                                }}
+                                className="w-full h-24 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-white hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all active:scale-98"
+                              >
+                                <Camera className="w-5 h-5 text-[#1E56B0]" />
+                                <span className="text-[11px] font-black text-[#0A1525]">Subir Foto Repuesto Nuevo</span>
+                                <span className="text-[9px] text-slate-400">Pieza nueva montada en el auto</span>
+                              </button>
+                            ) : (
+                              <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                  <img
+                                    src={pieza.fotoNuevo}
+                                    alt={`Nuevo - ${pieza.nombre}`}
+                                    className="w-12 h-12 rounded-lg object-cover border border-emerald-400 cursor-pointer"
+                                    onClick={() => setModalFotoZoom(pieza.fotoNuevo)}
+                                  />
+                                  <div>
+                                    <span className="text-[11px] font-black text-[#0A1525] block">✓ Instalado</span>
+                                    <span className="text-[9px] text-slate-500">Evidencia guardada</span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPiezaCargandoFoto({ id: pieza.id, tipo: 'nuevo' });
+                                    fileInputPiezaDinamicaRef.current?.click();
+                                  }}
+                                  className="text-[10px] font-bold text-slate-600 underline cursor-pointer p-1"
+                                >
+                                  Cambiar
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRepuestoNuevoRef.current?.click()}
-                        className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
-                      >
-                        Cambiar
-                      </button>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
 
                 {/* Botón Acción Fase 4 */}
@@ -1468,6 +1674,95 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
           </AnimatePresence>
         )}
       </main>
+
+      {/* Modal para que el Mecánico agregue más piezas desmontadas o reemplazadas */}
+      <AnimatePresence>
+        {modalAgregarPiezaMecanico && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-sm bg-white rounded-3xl p-6 space-y-4 border border-[#CBD5E1] shadow-2xl relative"
+            >
+              <button
+                type="button"
+                onClick={() => setModalAgregarPiezaMecanico(false)}
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shadow-xs">
+                  <Plus className="w-5 h-5 stroke-[3]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1E56B0]">
+                    Evidencias Adicionales
+                  </span>
+                  <h3 className="text-base font-black text-[#0A1525]">
+                    Agregar Pieza Desmontada
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Registra cualquier otra pieza o insumo extraído o sustituido durante el servicio para documentar la evidencia fotográfica del viejo y nuevo.
+              </p>
+
+              {/* Sugerencias Rápidas */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Piezas comunes:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Estopera de Cigüeñal',
+                    'Buje de Meseta / Barra',
+                    'Abrazadera / Manguera',
+                    'Terminal de Dirección',
+                    'Filtro de Gasolina',
+                    'Sensor de Temperatura'
+                  ].map((sug, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleAgregarPiezaMecanico(sug)}
+                      className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#1E56B0] hover:text-white transition-all text-slate-700 cursor-pointer"
+                    >
+                      + {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Input personalizado */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="text-xs font-bold text-[#0A1525] block">
+                  O escribe el nombre de la pieza:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Empacadura de tapa de válvulas"
+                  value={nombreNuevaPiezaMecanico}
+                  onChange={(e) => setNombreNuevaPiezaMecanico(e.target.value)}
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-[#1E56B0]"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => handleAgregarPiezaMecanico()}
+                  className="w-full h-11 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer active:scale-95"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Añadir Pieza a la Inspección</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ======================================================== */}
       {/* MODAL DE ÉXITO DE LIQUIDACIÓN                            */}

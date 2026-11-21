@@ -54,7 +54,12 @@ import {
   FileCheck,
   ClipboardCheck,
   AlertTriangle,
-  Activity
+  Activity,
+  Plus,
+  Trash2,
+  Minus,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -73,6 +78,8 @@ export interface RepuestoDetallado {
   compatibilidad: string;
   garantia: string;
   estado_pieza: string;
+  seleccionado?: boolean;
+  esPersonalizado?: boolean;
 }
 
 const REPUESTOS_FALLBACK_DEFAULT: RepuestoDetallado[] = [
@@ -87,7 +94,8 @@ const REPUESTOS_FALLBACK_DEFAULT: RepuestoDetallado[] = [
     precio_total: 25.0,
     compatibilidad: 'Toyota Corolla 2014-2022 / Matrix',
     garantia: 'Garantía QA 90 días / 5,000 km',
-    estado_pieza: '100% Nuevo en Caja Sellada'
+    estado_pieza: '100% Nuevo en Caja Sellada',
+    seleccionado: true
   },
   {
     id: 'rep-02',
@@ -100,7 +108,8 @@ const REPUESTOS_FALLBACK_DEFAULT: RepuestoDetallado[] = [
     precio_total: 10.0,
     compatibilidad: 'Especificación SAE J1704 / ISO 4925',
     garantia: 'Certificado Sellado de Fábrica',
-    estado_pieza: 'Insumo Nuevo Grado Automotriz'
+    estado_pieza: 'Insumo Nuevo Grado Automotriz',
+    seleccionado: true
   }
 ];
 
@@ -135,6 +144,8 @@ interface OrdenCliente {
   kilometraje_actual?: number | null;
   vehiculo_id?: string | null;
   diagnostico_json?: any | null;
+  foto_repuesto_viejo_url?: string | null;
+  foto_repuesto_nuevo_url?: string | null;
 }
 
 // Variantes de animación para cascada fluida (UX 2027)
@@ -347,6 +358,65 @@ export function ClienteServicioClient({ id }: { id: string }) {
 
   // Lista detallada de repuestos que se van a instalar en el vehículo
   const [repuestosDetallados, setRepuestosDetallados] = useState<RepuestoDetallado[]>(REPUESTOS_FALLBACK_DEFAULT);
+
+  // Estados para que el Cliente pueda decidir qué quitar y/o poner en su cotización
+  const [modalAgregarPieza, setModalAgregarPieza] = useState<boolean>(false);
+  const [nuevaPiezaNombre, setNuevaPiezaNombre] = useState<string>('');
+  const [nuevaPiezaPrecio, setNuevaPiezaPrecio] = useState<string>('');
+  const [nuevaPiezaMarca, setNuevaPiezaMarca] = useState<string>('Repuesto Certificado TTM');
+
+  const toggleSeleccionarRepuesto = (id: string) => {
+    setRepuestosDetallados((prev) =>
+      prev.map((rep) =>
+        rep.id === id ? { ...rep, seleccionado: rep.seleccionado === false ? true : false } : rep
+      )
+    );
+  };
+
+  const handleEliminarRepuestoPersonalizado = (id: string) => {
+    setRepuestosDetallados((prev) => prev.filter((r) => r.id !== id));
+    setToastNotificacion('✓ Ítem eliminado de la cotización');
+    setTimeout(() => setToastNotificacion(null), 3000);
+  };
+
+  const handleAgregarRepuestoPersonalizado = (nombreParam?: string, precioParam?: number, marcaParam?: string) => {
+    const nombreFinal = (nombreParam || nuevaPiezaNombre).trim();
+    const precioFinal = precioParam !== undefined ? precioParam : parseFloat(nuevaPiezaPrecio);
+
+    if (!nombreFinal) {
+      setToastNotificacion('⚠ Por favor indica el nombre de la pieza');
+      setTimeout(() => setToastNotificacion(null), 3000);
+      return;
+    }
+    if (isNaN(precioFinal) || precioFinal <= 0) {
+      setToastNotificacion('⚠ Ingresa un precio válido en USD');
+      setTimeout(() => setToastNotificacion(null), 3000);
+      return;
+    }
+
+    const nuevoItem: RepuestoDetallado = {
+      id: `rep-custom-${Date.now()}`,
+      nombre: nombreFinal,
+      marca: marcaParam || nuevaPiezaMarca || 'Repuesto Certificado TTM',
+      referencia: `Ref: TTM-ADIC-${Math.floor(1000 + Math.random() * 9000)}`,
+      foto_url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=300&q=80',
+      cantidad: 1,
+      precio_unitario: precioFinal,
+      precio_total: precioFinal,
+      compatibilidad: `${orden.vehiculo_marca || ''} ${orden.vehiculo_modelo} • Especificación TTM`,
+      garantia: 'Garantía QA 90 días / 5,000 km',
+      estado_pieza: '100% Nuevo Sellado',
+      seleccionado: true,
+      esPersonalizado: true
+    };
+
+    setRepuestosDetallados((prev) => [...prev, nuevoItem]);
+    setNuevaPiezaNombre('');
+    setNuevaPiezaPrecio('');
+    setModalAgregarPieza(false);
+    setToastNotificacion(`✓ "${nombreFinal}" añadido a tu cotización`);
+    setTimeout(() => setToastNotificacion(null), 3500);
+  };
 
   // Estados para Navegación con Pestañas e Historial Médico (El Garaje)
   const [pestanaActiva, setPestanaActiva] = useState<'servicio' | 'historial'>('servicio');
@@ -685,31 +755,40 @@ export function ClienteServicioClient({ id }: { id: string }) {
 
           cargarHistorialYSuscripcion(data.placa, data.vehiculo_id || data.id);
 
-          // Consultar repuestos asociados a la orden en orden_repuestos
-          try {
-            const { data: repuestosData } = await supabase
-              .from('orden_repuestos')
-              .select('id, repuesto_id, cantidad, precio_al_momento, repuestos(*)')
-              .eq('orden_id', id);
+          // Consultar repuestos asociados a la orden en diagnostico_json o en orden_repuestos
+          if (data.diagnostico_json?.repuestos_aprobados && Array.isArray(data.diagnostico_json.repuestos_aprobados) && data.diagnostico_json.repuestos_aprobados.length > 0) {
+            const aprobados = data.diagnostico_json.repuestos_aprobados.map((r: any) => ({ ...r, seleccionado: true }));
+            const descartados = Array.isArray(data.diagnostico_json.repuestos_descartados)
+              ? data.diagnostico_json.repuestos_descartados.map((r: any) => ({ ...r, seleccionado: false }))
+              : [];
+            setRepuestosDetallados([...aprobados, ...descartados]);
+          } else {
+            try {
+              const { data: repuestosData } = await supabase
+                .from('orden_repuestos')
+                .select('id, repuesto_id, cantidad, precio_al_momento, repuestos(*)')
+                .eq('orden_id', id);
 
-            if (repuestosData && repuestosData.length > 0) {
-              const formateados: RepuestoDetallado[] = repuestosData.map((item: any) => ({
-                id: item.id || item.repuesto_id,
-                nombre: item.repuestos?.nombre_repuesto || 'Repuesto Original Certificado',
-                marca: item.repuestos?.marca || 'Marca Oficial',
-                referencia: item.repuestos?.id ? `Ref: TTM-${String(item.repuestos.id).slice(0, 6).toUpperCase()}` : 'OEM Genuino',
-                foto_url: item.repuestos?.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=300&q=80',
-                cantidad: item.cantidad || 1,
-                precio_unitario: Number(item.precio_al_momento) || 25.0,
-                precio_total: (Number(item.precio_al_momento) || 25.0) * (item.cantidad || 1),
-                compatibilidad: item.repuestos?.compatibilidad || `${data.vehiculo_modelo || 'Vehículo'} • Especificación OEM`,
-                garantia: 'Garantía QA 90 días / 5,000 km',
-                estado_pieza: '100% Nuevo en Caja Sellada'
-              }));
-              setRepuestosDetallados(formateados);
+              if (repuestosData && repuestosData.length > 0) {
+                const formateados: RepuestoDetallado[] = repuestosData.map((item: any) => ({
+                  id: item.id || item.repuesto_id,
+                  nombre: item.repuestos?.nombre_repuesto || 'Repuesto Original Certificado',
+                  marca: item.repuestos?.marca || 'Marca Oficial',
+                  referencia: item.repuestos?.id ? `Ref: TTM-${String(item.repuestos.id).slice(0, 6).toUpperCase()}` : 'OEM Genuino',
+                  foto_url: item.repuestos?.foto_url || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=300&q=80',
+                  cantidad: item.cantidad || 1,
+                  precio_unitario: Number(item.precio_al_momento) || 25.0,
+                  precio_total: (Number(item.precio_al_momento) || 25.0) * (item.cantidad || 1),
+                  compatibilidad: item.repuestos?.compatibilidad || `${data.vehiculo_modelo || 'Vehículo'} • Especificación OEM`,
+                  garantia: 'Garantía QA 90 días / 5,000 km',
+                  estado_pieza: '100% Nuevo en Caja Sellada',
+                  seleccionado: true
+                }));
+                setRepuestosDetallados(formateados);
+              }
+            } catch (errRep) {
+              console.warn('Usando catálogo descriptivo de repuestos para demostración:', errRep);
             }
-          } catch (errRep) {
-            console.warn('Usando catálogo descriptivo de repuestos para demostración:', errRep);
           }
         }
       } catch (err) {
@@ -751,22 +830,24 @@ export function ClienteServicioClient({ id }: { id: string }) {
     };
   }, [id]);
 
-  // Cálculos de Cotización y Repuestos
-  const repuestosTotal = useMemo(() => {
-    return repuestosDetallados.reduce((acc, curr) => acc + curr.precio_total, 0);
+  // Cálculos de Cotización y Repuestos (Reactivos a la personalización del cliente)
+  const repuestosActivos = useMemo(() => {
+    return repuestosDetallados.filter((r) => r.seleccionado !== false);
   }, [repuestosDetallados]);
 
-  const totalCotizado = useMemo(() => {
-    const val = typeof orden.ganancia_estimada === 'number' && orden.ganancia_estimada > 0
-      ? Number(orden.ganancia_estimada)
-      : parseFloat(String(orden.ganancia_estimada || '65')) || 65.0;
-    return val;
-  }, [orden.ganancia_estimada]);
+  const repuestosTotal = useMemo(() => {
+    return repuestosActivos.reduce((acc, curr) => acc + curr.precio_total, 0);
+  }, [repuestosActivos]);
 
+  // Mano de Obra: Base de $25 por primera pieza + $5 por cada repuesto adicional
   const manoDeObra = useMemo(() => {
-    const calculada = totalCotizado - repuestosTotal;
-    return calculada > 0 ? Math.round(calculada * 100) / 100 : Math.round(totalCotizado * 0.45 * 100) / 100;
-  }, [totalCotizado, repuestosTotal]);
+    if (repuestosActivos.length === 0) return 20.0;
+    return 25.0 + (repuestosActivos.length - 1) * 5.0;
+  }, [repuestosActivos]);
+
+  const totalCotizado = useMemo(() => {
+    return Math.round((repuestosTotal + manoDeObra) * 100) / 100;
+  }, [repuestosTotal, manoDeObra]);
 
   const exoneraDiagnostico = totalCotizado > 40;
 
@@ -875,18 +956,56 @@ export function ClienteServicioClient({ id }: { id: string }) {
     }
   }, [orden.estado]);
 
-  // Lista de fotos de evidencias combinadas (odómetro real + fotos técnicas)
+  // Lista de fotos de evidencias combinadas (odómetro real + fotos técnicas + piezas viejo/nuevo)
   const listaEvidencias = useMemo(() => {
-    const list = [...FOTOS_EVIDENCIAS_DEMO];
+    const list: { titulo: string; tipo: string; url: string }[] = [];
     if (orden.foto_odometro_url) {
-      list[0] = {
+      list.push({
         titulo: 'Odómetro Real (Subido en Sitio)',
-        tipo: 'Evidencia Certificada TTM',
+        tipo: 'Inspección Inicial TTM',
         url: orden.foto_odometro_url
-      };
+      });
+    }
+
+    if (orden.diagnostico_json?.evidencias_piezas && Array.isArray(orden.diagnostico_json.evidencias_piezas)) {
+      orden.diagnostico_json.evidencias_piezas.forEach((p: any) => {
+        if (p.fotoViejo) {
+          list.push({
+            titulo: `Pieza Desmontada: ${p.nombre}`,
+            tipo: 'Evidencia: Repuesto Usado',
+            url: p.fotoViejo
+          });
+        }
+        if (p.fotoNuevo) {
+          list.push({
+            titulo: `Pieza Instalada: ${p.nombre}`,
+            tipo: 'Evidencia: Repuesto Nuevo',
+            url: p.fotoNuevo
+          });
+        }
+      });
+    } else {
+      if (orden.foto_repuesto_viejo_url) {
+        list.push({
+          titulo: 'Repuesto Usado Desmontado',
+          tipo: 'Evidencia Técnica',
+          url: orden.foto_repuesto_viejo_url
+        });
+      }
+      if (orden.foto_repuesto_nuevo_url) {
+        list.push({
+          titulo: 'Repuesto Nuevo Instalado',
+          tipo: 'Evidencia Técnica',
+          url: orden.foto_repuesto_nuevo_url
+        });
+      }
+    }
+
+    if (list.length === 0) {
+      return [...FOTOS_EVIDENCIAS_DEMO];
     }
     return list;
-  }, [orden.foto_odometro_url]);
+  }, [orden.foto_odometro_url, orden.foto_repuesto_viejo_url, orden.foto_repuesto_nuevo_url, orden.diagnostico_json]);
 
   // Paso Activo para el Stepper de 4 Pasos: Confirmado -> En Ruta -> Reparando -> Listo
   const pasoActivo = useMemo(() => {
@@ -935,12 +1054,36 @@ export function ClienteServicioClient({ id }: { id: string }) {
     setGuardandoAprobacion(true);
     try {
       const supabase = createClient();
+      const repuestosAprobados = repuestosDetallados.filter((r) => r.seleccionado !== false);
+      const repuestosDescartados = repuestosDetallados.filter((r) => r.seleccionado === false);
+
       await supabase
         .from('ordenes')
-        .update({ estado: 'APROBADO' })
+        .update({
+          estado: 'APROBADO',
+          ganancia_estimada: totalCotizado,
+          diagnostico_json: {
+            ...(orden.diagnostico_json || {}),
+            repuestos_aprobados: repuestosAprobados,
+            repuestos_descartados: repuestosDescartados,
+            total_aprobado: totalCotizado,
+            mano_obra_aprobada: manoDeObra
+          }
+        })
         .eq('id', id);
 
-      setOrden((prev) => ({ ...prev, estado: 'APROBADO' }));
+      setOrden((prev) => ({
+        ...prev,
+        estado: 'APROBADO',
+        ganancia_estimada: totalCotizado,
+        diagnostico_json: {
+          ...(prev.diagnostico_json || {}),
+          repuestos_aprobados: repuestosAprobados,
+          repuestos_descartados: repuestosDescartados,
+          total_aprobado: totalCotizado,
+          mano_obra_aprobada: manoDeObra
+        }
+      }));
       setModalAprobarPresupuesto(false);
 
       // Pequeño confeti de confirmación
@@ -1700,69 +1843,144 @@ export function ClienteServicioClient({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Desglose Financiero con Detalle de Repuestos */}
+            {/* Desglose Financiero con Detalle de Repuestos y Personalización */}
             <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 space-y-3.5 text-xs">
               
               {/* 1. Detalle de Cada Repuesto a Instalar */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
-                  <span className="font-extrabold text-[#0A1525] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-[#1E56B0]" />
-                    <span>Repuestos Certificados a Instalar ({repuestosDetallados.length})</span>
-                  </span>
-                  <span className="font-mono font-bold text-[#1E56B0] text-xs">
-                    Subtotal: ${repuestosTotal.toFixed(2)} USD
-                  </span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-200 gap-2">
+                  <div>
+                    <span className="font-extrabold text-[#0A1525] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-[#1E56B0]" />
+                      <span>Repuestos a Instalar ({repuestosActivos.length} de {repuestosDetallados.length})</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
+                      Puedes marcar/desmarcar repuestos o añadir piezas adicionales
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setModalAgregarPieza(true)}
+                      className="h-7 px-2.5 rounded-lg bg-[#0A1525] hover:bg-slate-800 text-[#CCFF00] font-black text-[10px] flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 stroke-[3]" />
+                      <span>+ Añadir pieza / servicio</span>
+                    </button>
+                    <span className="font-mono font-black text-[#1E56B0] text-xs">
+                      ${repuestosTotal.toFixed(2)} USD
+                    </span>
+                  </div>
                 </div>
 
+                {/* Banner informativo si el cliente excluyó piezas */}
+                {repuestosDetallados.length > repuestosActivos.length && (
+                  <div className="p-2 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-[11px] text-amber-800 font-semibold">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Has excluido {repuestosDetallados.length - repuestosActivos.length} pieza(s). No se cobrarán ni instalarán.</span>
+                  </div>
+                )}
+
                 <div className="space-y-2.5">
-                  {repuestosDetallados.map((rep) => (
-                    <div
-                      key={rep.id}
-                      className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-2 transition-all hover:border-[#1E56B0]"
-                    >
-                      <div className="flex items-start gap-3">
-                        <img
-                          src={rep.foto_url}
-                          alt={rep.nombre}
-                          className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0 shadow-2xs"
-                        />
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <div className="flex items-start justify-between gap-1.5">
-                            <h4 className="font-black text-xs text-[#0A1525] leading-snug">
-                              {rep.nombre}
-                            </h4>
-                            <span className="font-mono font-black text-xs text-[#0A1525] shrink-0">
-                              ${rep.precio_total.toFixed(2)}
-                            </span>
+                  {repuestosDetallados.map((rep) => {
+                    const estaIncluido = rep.seleccionado !== false;
+                    return (
+                      <div
+                        key={rep.id}
+                        className={`p-3 rounded-2xl border transition-all ${
+                          estaIncluido
+                            ? 'bg-white border-slate-200 shadow-2xs hover:border-[#1E56B0]'
+                            : 'bg-slate-100/70 border-dashed border-slate-300 opacity-75'
+                        } space-y-2`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <img
+                            src={rep.foto_url}
+                            alt={rep.nombre}
+                            className={`w-14 h-14 rounded-xl object-cover border shrink-0 ${
+                              estaIncluido ? 'border-slate-200 shadow-2xs' : 'border-slate-300 grayscale'
+                            }`}
+                          />
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div>
+                                <h4 className={`font-black text-xs leading-snug ${
+                                  estaIncluido ? 'text-[#0A1525]' : 'line-through text-slate-400'
+                                }`}>
+                                  {rep.nombre}
+                                </h4>
+                                {rep.esPersonalizado && (
+                                  <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-100 text-purple-800 border border-purple-200">
+                                    Añadido por ti
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`font-mono font-black text-xs shrink-0 ${
+                                estaIncluido ? 'text-[#0A1525]' : 'line-through text-slate-400'
+                              }`}>
+                                ${rep.precio_total.toFixed(2)}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#1E56B0] border border-blue-100">
+                                {rep.marca}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {rep.referencia}
+                              </span>
+                            </div>
+
+                            <p className="text-[10px] text-slate-500 font-medium truncate pt-0.5">
+                              {rep.compatibilidad}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Botones de Acción para Quitar o Volver a Incluir */}
+                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10px]">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleSeleccionarRepuesto(rep.id)}
+                              className={`flex items-center gap-1 font-black px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                                estaIncluido
+                                  ? 'bg-emerald-50 text-emerald-800 hover:bg-rose-50 hover:text-rose-700'
+                                  : 'bg-blue-50 text-[#1E56B0] hover:bg-blue-100'
+                              }`}
+                            >
+                              {estaIncluido ? (
+                                <>
+                                  <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>✓ Incluido (Toca para quitar)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Square className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>+ Volver a incluir</span>
+                                </>
+                              )}
+                            </button>
+
+                            {rep.esPersonalizado && (
+                              <button
+                                type="button"
+                                onClick={() => handleEliminarRepuestoPersonalizado(rep.id)}
+                                className="text-rose-500 hover:text-rose-700 p-1 rounded-md hover:bg-rose-50 transition-colors"
+                                title="Eliminar ítem"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#1E56B0] border border-blue-100">
-                              {rep.marca}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {rep.referencia}
-                            </span>
-                          </div>
-
-                          <p className="text-[10px] text-slate-500 font-medium truncate pt-0.5">
-                            {rep.compatibilidad}
-                          </p>
+                          <span className="font-semibold text-slate-500">
+                            Cant: <strong className="text-[#0A1525]">{rep.cantidad}</strong> (${rep.precio_unitario.toFixed(2)} c/u)
+                          </span>
                         </div>
                       </div>
-
-                      <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10px]">
-                        <span className="text-emerald-700 font-extrabold flex items-center gap-1">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                          <span>{rep.estado_pieza}</span>
-                        </span>
-                        <span className="font-semibold text-slate-500">
-                          Cant: <strong className="text-[#0A1525]">{rep.cantidad}</strong> (${rep.precio_unitario.toFixed(2)} c/u)
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1772,7 +1990,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   <div className="space-y-0.5">
                     <span className="text-slate-700 font-bold block text-xs">Mano de Obra Certificada</span>
                     <span className="text-[10px] text-slate-400 block">
-                      Instalación en sitio, ajuste de torque según manual y prueba OBD2
+                      Instalación profesional en sitio, torque según manual y prueba técnica
                     </span>
                   </div>
                   <span className="font-mono font-bold text-[#0A1525] text-xs">
@@ -2633,7 +2851,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
                     <span className="font-extrabold text-[#0A1525] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-[#1E56B0]" />
-                      <span>Repuestos Certificados a Instalar ({repuestosDetallados.length})</span>
+                      <span>Repuestos Certificados a Instalar ({repuestosActivos.length})</span>
                     </span>
                     <span className="font-mono font-bold text-[#1E56B0]">
                       ${repuestosTotal.toFixed(2)} USD
@@ -2641,7 +2859,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   </div>
 
                   <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                    {repuestosDetallados.map((rep) => (
+                    {repuestosActivos.map((rep) => (
                       <div
                         key={rep.id}
                         className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-2"
@@ -2747,6 +2965,142 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   className="w-full h-10 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors"
                 >
                   Rechazar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL: PERSONALIZAR COTIZACIÓN (AÑADIR REPUESTO/SERVICIO) */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {modalAgregarPieza && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-lg bg-white rounded-3xl p-6 space-y-4 border border-[#CBD5E1] shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setModalAgregarPieza(false)}
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shadow-md shrink-0">
+                  <Plus className="w-6 h-6 stroke-[3]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1E56B0]">
+                    Personaliza tu Servicio
+                  </span>
+                  <h3 className="text-lg font-black text-[#0A1525] tracking-tight">
+                    Añadir Repuesto o Servicio
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 font-medium">
+                Selecciona una pieza recomendada con 1 toque o escribe un requerimiento para que el taller móvil lo incluya.
+              </p>
+
+              {/* Sugerencias Rápidas de 1 Clic */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#0A1525] block">
+                  Sugerencias frecuentes para tu vehículo
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { nombre: 'Bujías de Iridio (Juego de 4)', precio: 28, marca: 'NGK Laser Iridium' },
+                    { nombre: 'Filtro de Aceite Sintético', precio: 12, marca: 'Mann Filter / Bosch' },
+                    { nombre: 'Filtro de Aire de Motor', precio: 14, marca: 'Filtec OEM' },
+                    { nombre: 'Filtro de Cabina A/C', precio: 12, marca: 'Carbon Activo' },
+                    { nombre: 'Refrigerante 50/50 (1 Galón)', precio: 15, marca: 'Prestone / Motul' },
+                    { nombre: 'Limpieza Inyectores / Admisión', precio: 25, marca: 'Servicio Químico Pro' },
+                    { nombre: 'Líquido de Frenos DOT 4 Extra', precio: 10, marca: 'Motul Brake Fluid' },
+                    { nombre: 'Correa Única / Accesorios', precio: 22, marca: 'Gates / Continental' }
+                  ].map((sug, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleAgregarRepuestoPersonalizado(sug.nombre, sug.precio, sug.marca)}
+                      className="p-2.5 rounded-xl border border-slate-200 hover:border-[#1E56B0] hover:bg-blue-50/50 text-left transition-all flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="min-w-0 pr-1">
+                        <span className="text-xs font-bold text-[#0A1525] block truncate group-hover:text-[#1E56B0]">
+                          {sug.nombre}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          {sug.marca}
+                        </span>
+                      </div>
+                      <span className="text-xs font-black font-mono text-[#1E56B0] shrink-0 bg-white px-2 py-0.5 rounded-md border border-slate-100 shadow-2xs">
+                        +${sug.precio}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Formulario para Pieza Personalizada */}
+              <div className="pt-3 border-t border-slate-200 space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#0A1525] block">
+                  O escribe una pieza personalizada:
+                </span>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Nombre de la pieza o trabajo:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Estopera de cigüeñal, Bujes de barra..."
+                      value={nuevaPiezaNombre}
+                      onChange={(e) => setNuevaPiezaNombre(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-[#1E56B0]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Marca / Detalle:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej: OEM / Genuino"
+                        value={nuevaPiezaMarca}
+                        onChange={(e) => setNuevaPiezaMarca(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-[#1E56B0]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Precio aprox ($ USD):
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Ej: 20"
+                        value={nuevaPiezaPrecio}
+                        onChange={(e) => setNuevaPiezaPrecio(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-[#1E56B0]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleAgregarRepuestoPersonalizado()}
+                  className="w-full h-11 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-95"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Añadir a mi Cotización</span>
                 </button>
               </div>
             </motion.div>
