@@ -101,6 +101,11 @@ export async function middleware(request: NextRequest) {
 
   // 4. Ruta /aliados (MECANICO o ADMIN)
   if (pathname.startsWith('/aliados')) {
+    // Si es un enlace directo de servicio (/aliados/servicio/[id]), permitir acceso directo
+    if (pathname.startsWith('/aliados/servicio/')) {
+      return response;
+    }
+
     if (role !== 'MECANICO' && role !== 'ADMIN') {
       if (!role) {
         return NextResponse.redirect(

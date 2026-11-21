@@ -660,13 +660,19 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 const IconComp = paso.icon;
 
                 return (
-                  <div key={paso.id} className="relative z-10 flex flex-col items-center">
+                  <button
+                    key={paso.id}
+                    type="button"
+                    onClick={() => setFaseActual(paso.id)}
+                    className="relative z-10 flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
+                    title={`Ir a ${paso.nombre}`}
+                  >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isCurrent
                         ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-md font-black scale-110'
                         : isPast
-                          ? 'bg-[#1E56B0] text-white'
-                          : 'bg-white text-slate-400 border border-slate-300'
+                          ? 'bg-[#1E56B0] text-white hover:bg-blue-700'
+                          : 'bg-white text-slate-400 border border-slate-300 hover:border-slate-500'
                         }`}
                     >
                       {isPast ? (
@@ -681,7 +687,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                     >
                       {paso.nombre}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
