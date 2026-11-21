@@ -598,13 +598,13 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col selection:bg-[#CCFF00] selection:text-[#0A1525] relative pb-24 font-sans">
-      
+
       {/* ======================================================== */}
       {/* 1. HEADER DE CONTEXTO (Sticky, Alto Contraste)          */}
       {/* ======================================================== */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] px-4 py-3 shadow-xs">
         <div className="flex items-center justify-between gap-3">
-          
+
           <Link
             href="/aliados/portal"
             className="w-11 h-11 rounded-2xl bg-[#F8FAFC] border border-[#CBD5E1] text-[#0A1525] hover:bg-slate-100 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-2xs"
@@ -643,10 +643,10 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
         {!esCanceladoORechazado && (
           <div className="mt-3 pt-3 border-t border-slate-100">
             <div className="flex items-center justify-between relative">
-              
+
               {/* Barra de progreso de fondo */}
               <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-1 bg-slate-200 z-0" />
-              
+
               {/* Barra de progreso activa */}
               <motion.div
                 initial={false}
@@ -662,13 +662,12 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 return (
                   <div key={paso.id} className="relative z-10 flex flex-col items-center">
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        isCurrent
-                          ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-md font-black scale-110'
-                          : isPast
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isCurrent
+                        ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-md font-black scale-110'
+                        : isPast
                           ? 'bg-[#1E56B0] text-white'
                           : 'bg-white text-slate-400 border border-slate-300'
-                      }`}
+                        }`}
                     >
                       {isPast ? (
                         <Check className="w-4 h-4 stroke-[3]" />
@@ -677,9 +676,8 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                       )}
                     </div>
                     <span
-                      className={`text-[9px] font-black tracking-tight mt-1 transition-colors ${
-                        isCurrent ? 'text-[#0A1525]' : isPast ? 'text-[#1E56B0]' : 'text-slate-400'
-                      }`}
+                      className={`text-[9px] font-black tracking-tight mt-1 transition-colors ${isCurrent ? 'text-[#0A1525]' : isPast ? 'text-[#1E56B0]' : 'text-slate-400'
+                        }`}
                     >
                       {paso.nombre}
                     </span>
@@ -795,681 +793,673 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
         ) : (
           <AnimatePresence mode="wait">
 
-          {/* ======================================================== */}
-          {/* FASE 1: LLEGADA Y DIAGNÓSTICO INICIAL                    */}
-          {/* ======================================================== */}
-          {faseActual === 1 && (
-            <motion.div
-              key="fase-1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4"
-            >
-              <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                  Fase 1 • Llegada y Diagnóstico en Sitio
-                </span>
-                <p className="text-xs font-semibold text-[#0A1525]">
-                  Registra el kilometraje inicial, completa la inspección e indica las piezas requeridas.
-                </p>
-              </div>
-
-              {/* Candado de Odómetro Inicial */}
-              <section className="bg-white rounded-3xl p-5 border-2 border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-xl bg-[#0A1525] text-white flex items-center justify-center">
-                      <Gauge className="w-5 h-5 text-[#CCFF00]" />
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-black text-[#0A1525]">
-                        Odómetro Inicial *
-                      </h2>
-                      <p className="text-[11px] text-slate-500 font-semibold">
-                        Último registrado: {KILOMETRAJE_ANTERIOR.toLocaleString()} km
-                      </p>
-                    </div>
-                  </div>
-                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
-                    kmInicialValido && fotoInicialValida ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {kmInicialValido && fotoInicialValida ? 'Listo' : 'Requerido'}
+            {/* ======================================================== */}
+            {/* FASE 1: LLEGADA Y DIAGNÓSTICO INICIAL                    */}
+            {/* ======================================================== */}
+            {faseActual === 1 && (
+              <motion.div
+                key="fase-1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                    Fase 1 • Llegada y Diagnóstico en Sitio
                   </span>
+                  <p className="text-xs font-semibold text-[#0A1525]">
+                    Registra el kilometraje inicial, completa la inspección e indica las piezas requeridas.
+                  </p>
                 </div>
 
-                {/* Input de Kilometraje Inicial */}
-                <div>
-                  <label className="text-xs font-black text-[#0A1525] block mb-1">
-                    Kilometraje Actual del Tablero (km) *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={kmInicial}
-                      onChange={(e) => setKmInicial(e.target.value)}
-                      placeholder={`Ej: ${KILOMETRAJE_ANTERIOR + 85}`}
-                      className="w-full h-14 px-4 text-xl font-mono font-black text-center rounded-2xl border-2 border-slate-300 focus:border-[#1E56B0] focus:outline-none bg-[#F8FAFC]"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-bold text-xs text-slate-400">
-                      KM
-                    </span>
-                  </div>
-                  {kmInicial.trim() !== '' && !kmInicialValido && (
-                    <p className="text-rose-600 text-xs font-bold mt-1">
-                      El kilometraje debe ser mayor a {KILOMETRAJE_ANTERIOR.toLocaleString()} km.
-                    </p>
-                  )}
-                </div>
-
-                {/* Botón de Foto Odómetro Inicial */}
-                <input
-                  type="file"
-                  ref={fileInputOdometroInicialRef}
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleSubirArchivo(f, 'odometro_inicial', setFotoOdometroInicial);
-                  }}
-                />
-
-                {subiendoFotoTipo === 'odometro_inicial' ? (
-                  <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-2">
-                    <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
-                    <span className="text-xs font-bold text-[#0A1525]">Subiendo odómetro inicial...</span>
-                  </div>
-                ) : !fotoOdometroInicial ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInputOdometroInicialRef.current?.click()}
-                    className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50 hover:border-[#1E56B0] flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[#1E56B0] shadow-2xs">
-                      <Camera className="w-5 h-5 stroke-[2.2]" />
-                    </div>
-                    <span className="text-xs font-black text-[#0A1525]">Tomar Foto del Odómetro Inicial</span>
-                    <span className="text-[10px] text-slate-400">Enfoca con claridad los números</span>
-                  </button>
-                ) : (
-                  <div className="p-3 bg-[#CCFF00]/20 border-2 border-emerald-500 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={fotoOdometroInicial}
-                        alt="Odómetro"
-                        className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
-                        onClick={() => setModalFotoZoom(fotoOdometroInicial)}
-                      />
+                {/* Candado de Odómetro Inicial */}
+                <section className="bg-white rounded-3xl p-5 border-2 border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-[#0A1525] text-white flex items-center justify-center">
+                        <Gauge className="w-5 h-5 text-[#CCFF00]" />
+                      </div>
                       <div>
-                        <span className="text-xs font-black text-[#0A1525] block">✓ Odómetro Registrado</span>
-                        <span className="text-[10px] text-slate-500">Guardado en bucket evidencias</span>
+                        <h2 className="text-sm font-black text-[#0A1525]">
+                          Odómetro Inicial *
+                        </h2>
+                        <p className="text-[11px] text-slate-500 font-semibold">
+                          Último registrado: {KILOMETRAJE_ANTERIOR.toLocaleString()} km
+                        </p>
                       </div>
                     </div>
+                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${kmInicialValido && fotoInicialValida ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                      {kmInicialValido && fotoInicialValida ? 'Listo' : 'Requerido'}
+                    </span>
+                  </div>
+
+                  {/* Input de Kilometraje Inicial */}
+                  <div>
+                    <label className="text-xs font-black text-[#0A1525] block mb-1">
+                      Kilometraje Actual del Tablero (km) *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={kmInicial}
+                        onChange={(e) => setKmInicial(e.target.value)}
+                        placeholder={`Ej: ${KILOMETRAJE_ANTERIOR + 85}`}
+                        className="w-full h-14 px-4 text-xl font-mono font-black text-center rounded-2xl border-2 border-slate-300 focus:border-[#1E56B0] focus:outline-none bg-[#F8FAFC]"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-bold text-xs text-slate-400">
+                        KM
+                      </span>
+                    </div>
+                    {kmInicial.trim() !== '' && !kmInicialValido && (
+                      <p className="text-rose-600 text-xs font-bold mt-1">
+                        El kilometraje debe ser mayor a {KILOMETRAJE_ANTERIOR.toLocaleString()} km.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Botón de Foto Odómetro Inicial */}
+                  <input
+                    type="file"
+                    ref={fileInputOdometroInicialRef}
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleSubirArchivo(f, 'odometro_inicial', setFotoOdometroInicial);
+                    }}
+                  />
+
+                  {subiendoFotoTipo === 'odometro_inicial' ? (
+                    <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
+                      <span className="text-xs font-bold text-[#0A1525]">Subiendo odómetro inicial...</span>
+                    </div>
+                  ) : !fotoOdometroInicial ? (
                     <button
                       type="button"
                       onClick={() => fileInputOdometroInicialRef.current?.click()}
-                      className="text-xs font-bold text-slate-600 hover:text-black underline cursor-pointer p-1"
+                      className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50 hover:border-[#1E56B0] flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
                     >
-                      Cambiar
+                      <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[#1E56B0] shadow-2xs">
+                        <Camera className="w-5 h-5 stroke-[2.2]" />
+                      </div>
+                      <span className="text-xs font-black text-[#0A1525]">Tomar Foto del Odómetro Inicial</span>
+                      <span className="text-[10px] text-slate-400">Enfoca con claridad los números</span>
                     </button>
-                  </div>
-                )}
-              </section>
-
-              {/* Checklist Táctil */}
-              <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-[#1E56B0]" />
-                    <h3 className="text-sm font-black text-[#0A1525]">Checklist de Inspección (25 Puntos)</h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const allOk: Record<string, 'OK' | 'CAMBIO'> = {};
-                      CHECKLIST_CATEGORIES.forEach((cat) => cat.items.forEach((item) => { allOk[item.id] = 'OK'; }));
-                      setChecklistRespuestas(allOk);
-                    }}
-                    className="text-[11px] font-bold text-[#1E56B0] hover:underline cursor-pointer"
-                  >
-                    Marcar Todo OK
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {CHECKLIST_CATEGORIES.map((cat) => (
-                    <div key={cat.id} className="border border-slate-200 rounded-2xl overflow-hidden">
+                  ) : (
+                    <div className="p-3 bg-[#CCFF00]/20 border-2 border-emerald-500 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={fotoOdometroInicial}
+                          alt="Odómetro"
+                          className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
+                          onClick={() => setModalFotoZoom(fotoOdometroInicial)}
+                        />
+                        <div>
+                          <span className="text-xs font-black text-[#0A1525] block">✓ Odómetro Registrado</span>
+                          <span className="text-[10px] text-slate-500">Guardado en bucket evidencias</span>
+                        </div>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setCategoriaAbierta(categoriaAbierta === cat.id ? '' : cat.id)}
-                        className="w-full p-3 bg-slate-50 flex items-center justify-between text-left text-xs font-bold text-[#0A1525] cursor-pointer"
+                        onClick={() => fileInputOdometroInicialRef.current?.click()}
+                        className="text-xs font-bold text-slate-600 hover:text-black underline cursor-pointer p-1"
                       >
-                        <span>{cat.titulo}</span>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${categoriaAbierta === cat.id ? 'rotate-180' : ''}`} />
+                        Cambiar
                       </button>
-
-                      {categoriaAbierta === cat.id && (
-                        <div className="p-3 space-y-2.5 bg-white divide-y divide-slate-100">
-                          {cat.items.map((item) => {
-                            const res = checklistRespuestas[item.id];
-                            return (
-                              <div key={item.id} className="pt-2 first:pt-0 flex items-center justify-between gap-2">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-bold text-[#0A1525] truncate">{item.nombre}</p>
-                                  <p className="text-[10px] text-slate-400 truncate">{item.descripcion}</p>
-                                </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => setChecklistRespuestas((p) => ({ ...p, [item.id]: 'OK' }))}
-                                    className={`h-7 px-2.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
-                                      res === 'OK' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                                    }`}
-                                  >
-                                    OK
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setChecklistRespuestas((p) => ({ ...p, [item.id]: 'CAMBIO' }))}
-                                    className={`h-7 px-2.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
-                                      res === 'CAMBIO' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'
-                                    }`}
-                                  >
-                                    CAMBIO
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
                     </div>
-                  ))}
-                </div>
-              </section>
+                  )}
+                </section>
 
-              {/* Piezas Requeridas */}
-              <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-2">
-                <label className="text-xs font-black text-[#0A1525] flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 text-[#1E56B0]" />
-                  <span>Piezas y Repuestos Requeridos *</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={piezasRequeridas}
-                  onChange={(e) => setPiezasRequeridas(e.target.value)}
-                  placeholder="Ej: Juego de bujías de iridio, filtro de aire..."
-                  className="w-full p-3 text-xs font-semibold rounded-2xl border border-slate-300 focus:border-[#1E56B0] focus:outline-none bg-[#F8FAFC]"
-                />
-              </section>
+                {/* Checklist Táctil */}
+                <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-[#1E56B0]" />
+                      <h3 className="text-sm font-black text-[#0A1525]">Checklist de Inspección (25 Puntos)</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allOk: Record<string, 'OK' | 'CAMBIO'> = {};
+                        CHECKLIST_CATEGORIES.forEach((cat) => cat.items.forEach((item) => { allOk[item.id] = 'OK'; }));
+                        setChecklistRespuestas(allOk);
+                      }}
+                      className="text-[11px] font-bold text-[#1E56B0] hover:underline cursor-pointer"
+                    >
+                      Marcar Todo OK
+                    </button>
+                  </div>
 
-              {/* Botón Acción Fase 1 */}
-              <button
-                type="button"
-                disabled={enviandoDiagnostico}
-                onClick={handleEnviarDiagnostico}
-                className={`w-full h-14 rounded-2xl font-black text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${
-                  puedeEnviarDiagnostico
+                  <div className="space-y-2">
+                    {CHECKLIST_CATEGORIES.map((cat) => (
+                      <div key={cat.id} className="border border-slate-200 rounded-2xl overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaAbierta(categoriaAbierta === cat.id ? '' : cat.id)}
+                          className="w-full p-3 bg-slate-50 flex items-center justify-between text-left text-xs font-bold text-[#0A1525] cursor-pointer"
+                        >
+                          <span>{cat.titulo}</span>
+                          <ChevronDown className={`w-4 h-4 transition-transform ${categoriaAbierta === cat.id ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {categoriaAbierta === cat.id && (
+                          <div className="p-3 space-y-2.5 bg-white divide-y divide-slate-100">
+                            {cat.items.map((item) => {
+                              const res = checklistRespuestas[item.id];
+                              return (
+                                <div key={item.id} className="pt-2 first:pt-0 flex items-center justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold text-[#0A1525] truncate">{item.nombre}</p>
+                                    <p className="text-[10px] text-slate-400 truncate">{item.descripcion}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => setChecklistRespuestas((p) => ({ ...p, [item.id]: 'OK' }))}
+                                      className={`h-7 px-2.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${res === 'OK' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
+                                        }`}
+                                    >
+                                      OK
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setChecklistRespuestas((p) => ({ ...p, [item.id]: 'CAMBIO' }))}
+                                      className={`h-7 px-2.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${res === 'CAMBIO' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'
+                                        }`}
+                                    >
+                                      CAMBIO
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Piezas Requeridas */}
+                <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-2">
+                  <label className="text-xs font-black text-[#0A1525] flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-[#1E56B0]" />
+                    <span>Piezas y Repuestos Requeridos *</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={piezasRequeridas}
+                    onChange={(e) => setPiezasRequeridas(e.target.value)}
+                    placeholder="Ej: Juego de bujías de iridio, filtro de aire..."
+                    className="w-full p-3 text-xs font-semibold rounded-2xl border border-slate-300 focus:border-[#1E56B0] focus:outline-none bg-[#F8FAFC]"
+                  />
+                </section>
+
+                {/* Botón Acción Fase 1 */}
+                <button
+                  type="button"
+                  disabled={enviandoDiagnostico}
+                  onClick={handleEnviarDiagnostico}
+                  className={`w-full h-14 rounded-2xl font-black text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${puedeEnviarDiagnostico
                     ? 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525]'
                     : 'bg-slate-200 text-slate-500'
-                }`}
-              >
-                {enviandoDiagnostico ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <span>Enviar Diagnóstico a Operadora</span>
-                    <ChevronRight className="w-4 h-4 stroke-[3]" />
-                  </>
-                )}
-              </button>
-            </motion.div>
-          )}
-
-          {/* ======================================================== */}
-          {/* FASE 2: SALA DE ESPERA (CLIENTE APRUEBA)                 */}
-          {/* ======================================================== */}
-          {faseActual === 2 && (
-            <motion.div
-              key="fase-2"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4 text-center py-6"
-            >
-              <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg space-y-5">
-                
-                {/* Reloj de arena animado */}
-                <div className="w-20 h-20 rounded-3xl bg-amber-50 border-2 border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
-                  <motion.div
-                    animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.05, 1] }}
-                    transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
-                  >
-                    <Hourglass className="w-10 h-10 stroke-[2.2]" />
-                  </motion.div>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
-                    Candado Financiero Activo
-                  </span>
-                  <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
-                    Esperando aprobación del cliente...
-                  </h2>
-                  <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
-                    La operadora está cotizando y formalizando el presupuesto. Por protocolo de calidad y finanzas, <strong>no debes montar ningún repuesto</strong> hasta que el cliente apruebe y pague.
-                  </p>
-                </div>
-
-                {/* Resumen de lo enviado */}
-                <div className="bg-[#F8FAFC] border border-slate-200 rounded-2xl p-4 text-left space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between text-slate-500 font-bold">
-                    <span>Estado en Sistema:</span>
-                    <span className="font-mono text-[#1E56B0] uppercase">{estadoOrden}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-500">
-                    <span>Piezas solicitadas:</span>
-                    <span className="font-bold text-[#0A1525] truncate max-w-[170px]">{piezasRequeridas}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-emerald-700 font-bold pt-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Escuchando respuesta en tiempo real...</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ======================================================== */}
-          {/* FASE 3: ESPERA DEL RUNNER                                */}
-          {/* ======================================================== */}
-          {faseActual === 3 && (
-            <motion.div
-              key="fase-3"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4"
-            >
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-lg space-y-4 text-center">
-                
-                <div className="w-16 h-16 rounded-3xl bg-blue-50 text-[#1E56B0] border border-blue-200 flex items-center justify-center mx-auto shadow-xs">
-                  <motion.div
-                    animate={{ x: [-2, 2, -2] }}
-                    transition={{ repeat: Infinity, duration: 1.2 }}
-                  >
-                    <Bike className="w-9 h-9 stroke-[2.2]" />
-                  </motion.div>
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-sky-800 bg-sky-100 px-3 py-1 rounded-full border border-sky-200">
-                    Logística en Ruta
-                  </span>
-                  <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
-                    Tu repuesto está en camino
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    El runner asignado va en ruta a tu ubicación para entregarte las piezas.
-                  </p>
-                </div>
-
-                {/* Tarjeta del Runner */}
-                <div className="bg-[#0A1525] text-white rounded-2xl p-4 text-left flex items-center justify-between gap-3 shadow-md">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={runnerInfo.avatar}
-                      alt={runnerInfo.nombre}
-                      className="w-12 h-12 rounded-xl object-cover border-2 border-[#CCFF00]"
-                    />
-                    <div>
-                      <h4 className="text-sm font-black text-white">{runnerInfo.nombre}</h4>
-                      <p className="text-xs text-slate-300">{runnerInfo.vehiculo}</p>
-                      <span className="text-[10px] text-[#CCFF00] font-mono font-bold block">
-                        {runnerInfo.tiempoEstimado}
-                      </span>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`tel:${runnerInfo.telefono}`}
-                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-[#CCFF00] hover:text-[#0A1525] text-white flex items-center justify-center transition-colors shrink-0"
-                  >
-                    <Phone className="w-4 h-4" />
-                  </a>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-800 text-left font-medium">
-                  🔒 <strong>Aún bloqueado para montar:</strong> Espera la entrega física del repuesto para iniciar la instalación.
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ======================================================== */}
-          {/* FASE 4: INSTALACIÓN Y EVIDENCIAS                         */}
-          {/* ======================================================== */}
-          {faseActual === 4 && (
-            <motion.div
-              key="fase-4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4"
-            >
-              <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
-                  ✓ Repuestos Entregados • Habilitado para Montar
-                </span>
-                <h3 className="text-sm font-black text-[#0A1525] pt-1">
-                  Instalación y Evidencias Fotográficas Obligatorias
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Instala los componentes y sube ambas fotos para validar la garantía oficial TTM.
-                </p>
-              </div>
-
-              {/* Botón 1: Subir Foto Repuesto Viejo */}
-              <input
-                type="file"
-                ref={fileInputRepuestoViejoRef}
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleSubirArchivo(f, 'repuesto_viejo', setFotoRepuestoViejo);
-                }}
-              />
-
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-[#0A1525]">
-                    1. Foto del Repuesto Viejo (Desmontado) *
-                  </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    fotoRepuestoViejo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {fotoRepuestoViejo ? '✓ Cargado' : 'Pendiente'}
-                  </span>
-                </div>
-
-                {subiendoFotoTipo === 'repuesto_viejo' ? (
-                  <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
-                    <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
-                    <span className="text-xs font-bold text-[#0A1525]">Subiendo repuesto viejo...</span>
-                  </div>
-                ) : !fotoRepuestoViejo ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRepuestoViejoRef.current?.click()}
-                    className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                  >
-                    <Camera className="w-6 h-6 text-[#1E56B0]" />
-                    <span className="text-xs font-black text-[#0A1525]">Subir Foto Repuesto Viejo</span>
-                    <span className="text-[10px] text-slate-400">Pieza defectuosa extraída</span>
-                  </button>
-                ) : (
-                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={fotoRepuestoViejo}
-                        alt="Repuesto Viejo"
-                        className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
-                        onClick={() => setModalFotoZoom(fotoRepuestoViejo)}
-                      />
-                      <div>
-                        <span className="text-xs font-black text-[#0A1525] block">✓ Repuesto Viejo Verificado</span>
-                        <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRepuestoViejoRef.current?.click()}
-                      className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
-                    >
-                      Cambiar
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Botón 2: Subir Foto Repuesto Nuevo */}
-              <input
-                type="file"
-                ref={fileInputRepuestoNuevoRef}
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleSubirArchivo(f, 'repuesto_nuevo', setFotoRepuestoNuevo);
-                }}
-              />
-
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-[#0A1525]">
-                    2. Foto del Repuesto Nuevo (Instalado) *
-                  </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    fotoRepuestoNuevo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {fotoRepuestoNuevo ? '✓ Cargado' : 'Pendiente'}
-                  </span>
-                </div>
-
-                {subiendoFotoTipo === 'repuesto_nuevo' ? (
-                  <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
-                    <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
-                    <span className="text-xs font-bold text-[#0A1525]">Subiendo repuesto nuevo...</span>
-                  </div>
-                ) : !fotoRepuestoNuevo ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRepuestoNuevoRef.current?.click()}
-                    className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                  >
-                    <Camera className="w-6 h-6 text-[#1E56B0]" />
-                    <span className="text-xs font-black text-[#0A1525]">Subir Foto Repuesto Nuevo</span>
-                    <span className="text-[10px] text-slate-400">Pieza nueva montada en el auto</span>
-                  </button>
-                ) : (
-                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={fotoRepuestoNuevo}
-                        alt="Repuesto Nuevo"
-                        className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
-                        onClick={() => setModalFotoZoom(fotoRepuestoNuevo)}
-                      />
-                      <div>
-                        <span className="text-xs font-black text-[#0A1525] block">✓ Repuesto Nuevo Verificado</span>
-                        <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRepuestoNuevoRef.current?.click()}
-                      className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
-                    >
-                      Cambiar
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Botón Acción Fase 4 */}
-              <button
-                type="button"
-                disabled={!fotosInstalacionCompletas || guardandoFase4}
-                onClick={handleTerminarTrabajo}
-                className={`w-full h-14 rounded-2xl font-black text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${
-                  fotosInstalacionCompletas
-                    ? 'bg-[#0A1525] hover:bg-[#1E56B0] text-white shadow-lg'
-                    : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                {guardandoFase4 ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 text-[#CCFF00]" />
-                    <span>Falla Corregida / Trabajo Terminado</span>
-                  </>
-                )}
-              </button>
-            </motion.div>
-          )}
-
-          {/* ======================================================== */}
-          {/* FASE 5: CIERRE Y LIQUIDACIÓN                             */}
-          {/* ======================================================== */}
-          {faseActual === 5 && (
-            <motion.div
-              key="fase-5"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4"
-            >
-              {/* Banner si el cliente rechazó la cotización */}
-              {esCotizacionRechazada && (
-                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-left space-y-2">
-                  <div className="flex items-center gap-2 text-amber-900 font-black text-xs uppercase tracking-wider">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    <span>Cotización Rechazada por Cliente</span>
-                  </div>
-                  <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                    El cliente decidió no realizar la reparación con repuestos. Conforme al protocolo, se exonera la prueba de ruta y se liquida únicamente la <strong>tarifa base de diagnóstico ($15.00 USD)</strong>.
-                  </p>
-                </div>
-              )}
-
-              <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full inline-block">
-                  Fase Final • Cierre y Liquidación
-                </span>
-                <h3 className="text-sm font-black text-[#0A1525] pt-1">
-                  {esCotizacionRechazada ? 'Cierre de Diagnóstico Inicial' : 'Odómetro Final Post-Prueba de Ruta'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {esCotizacionRechazada
-                    ? 'Confirmación y liquidación del honorario de diagnóstico ($15.00 USD).'
-                    : `Registra el kilometraje tras probar el auto (debe ser mayor al inicial de ${kmBase.toLocaleString()} km).`}
-                </p>
-              </div>
-
-              {/* Input Odómetro Final (solo obligatorio si hubo reparación) */}
-              {!esCotizacionRechazada && (
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-4">
-                <div>
-                  <label className="text-xs font-black text-[#0A1525] block mb-1">
-                    Kilometraje Final del Odómetro (km) *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={kmFinal}
-                      onChange={(e) => setKmFinal(e.target.value)}
-                      placeholder={`Ej: ${kmBase + 3}`}
-                      className="w-full h-14 px-4 text-xl font-mono font-black text-center rounded-2xl border-2 border-slate-300 focus:border-[#1E56B0] focus:outline-none bg-[#F8FAFC]"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-bold text-xs text-slate-400">
-                      KM
-                    </span>
-                  </div>
-                  {kmFinal.trim() !== '' && !kmFinalValido && (
-                    <p className="text-rose-600 text-xs font-bold mt-1">
-                      El kilometraje final debe ser estrictamente mayor al inicial ({kmBase.toLocaleString()} km).
-                    </p>
+                    }`}
+                >
+                  {enviandoDiagnostico ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Enviar Diagnóstico a Operadora</span>
+                      <ChevronRight className="w-4 h-4 stroke-[3]" />
+                    </>
                   )}
+                </button>
+              </motion.div>
+            )}
+
+            {/* ======================================================== */}
+            {/* FASE 2: SALA DE ESPERA (CLIENTE APRUEBA)                 */}
+            {/* ======================================================== */}
+            {faseActual === 2 && (
+              <motion.div
+                key="fase-2"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4 text-center py-6"
+              >
+                <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg space-y-5">
+
+                  {/* Reloj de arena animado */}
+                  <div className="w-20 h-20 rounded-3xl bg-amber-50 border-2 border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
+                    <motion.div
+                      animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.05, 1] }}
+                      transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
+                    >
+                      <Hourglass className="w-10 h-10 stroke-[2.2]" />
+                    </motion.div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+                      Candado Financiero Activo
+                    </span>
+                    <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
+                      Esperando aprobación del cliente...
+                    </h2>
+                    <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
+                      La operadora está cotizando y formalizando el presupuesto. Por protocolo de calidad y finanzas, <strong>no debes montar ningún repuesto</strong> hasta que el cliente apruebe y pague.
+                    </p>
+                  </div>
+
+                  {/* Resumen de lo enviado */}
+                  <div className="bg-[#F8FAFC] border border-slate-200 rounded-2xl p-4 text-left space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between text-slate-500 font-bold">
+                      <span>Estado en Sistema:</span>
+                      <span className="font-mono text-[#1E56B0] uppercase">{estadoOrden}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span>Piezas solicitadas:</span>
+                      <span className="font-bold text-[#0A1525] truncate max-w-[170px]">{piezasRequeridas}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-emerald-700 font-bold pt-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Escuchando respuesta en tiempo real...</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ======================================================== */}
+            {/* FASE 3: ESPERA DEL RUNNER                                */}
+            {/* ======================================================== */}
+            {faseActual === 3 && (
+              <motion.div
+                key="fase-3"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-lg space-y-4 text-center">
+
+                  <div className="w-16 h-16 rounded-3xl bg-blue-50 text-[#1E56B0] border border-blue-200 flex items-center justify-center mx-auto shadow-xs">
+                    <motion.div
+                      animate={{ x: [-2, 2, -2] }}
+                      transition={{ repeat: Infinity, duration: 1.2 }}
+                    >
+                      <Bike className="w-9 h-9 stroke-[2.2]" />
+                    </motion.div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-sky-800 bg-sky-100 px-3 py-1 rounded-full border border-sky-200">
+                      Logística en Ruta
+                    </span>
+                    <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
+                      Tu repuesto está en camino
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      El runner asignado va en ruta a tu ubicación para entregarte las piezas.
+                    </p>
+                  </div>
+
+                  {/* Tarjeta del Runner */}
+                  <div className="bg-[#0A1525] text-white rounded-2xl p-4 text-left flex items-center justify-between gap-3 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={runnerInfo.avatar}
+                        alt={runnerInfo.nombre}
+                        className="w-12 h-12 rounded-xl object-cover border-2 border-[#CCFF00]"
+                      />
+                      <div>
+                        <h4 className="text-sm font-black text-white">{runnerInfo.nombre}</h4>
+                        <p className="text-xs text-slate-300">{runnerInfo.vehiculo}</p>
+                        <span className="text-[10px] text-[#CCFF00] font-mono font-bold block">
+                          {runnerInfo.tiempoEstimado}
+                        </span>
+                      </div>
+                    </div>
+
+                    <a
+                      href={`tel:${runnerInfo.telefono}`}
+                      className="w-10 h-10 rounded-xl bg-white/10 hover:bg-[#CCFF00] hover:text-[#0A1525] text-white flex items-center justify-center transition-colors shrink-0"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </a>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-800 text-left font-medium">
+                    🔒 <strong>Aún bloqueado para montar:</strong> Espera la entrega física del repuesto para iniciar la instalación.
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ======================================================== */}
+            {/* FASE 4: INSTALACIÓN Y EVIDENCIAS                         */}
+            {/* ======================================================== */}
+            {faseActual === 4 && (
+              <motion.div
+                key="fase-4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
+                    ✓ Repuestos Entregados • Habilitado para Montar
+                  </span>
+                  <h3 className="text-sm font-black text-[#0A1525] pt-1">
+                    Instalación y Evidencias Fotográficas Obligatorias
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Instala los componentes y sube ambas fotos para validar la garantía oficial TTM.
+                  </p>
                 </div>
 
-                {/* Botón Foto Odómetro Final */}
+                {/* Botón 1: Subir Foto Repuesto Viejo */}
                 <input
                   type="file"
-                  ref={fileInputOdometroFinalRef}
+                  ref={fileInputRepuestoViejoRef}
                   accept="image/*"
                   capture="environment"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) handleSubirArchivo(f, 'odometro_final', setFotoOdometroFinal);
+                    if (f) handleSubirArchivo(f, 'repuesto_viejo', setFotoRepuestoViejo);
                   }}
                 />
 
-                {subiendoFotoTipo === 'odometro_final' ? (
-                  <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
-                    <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
-                    <span className="text-xs font-bold text-[#0A1525]">Subiendo odómetro final...</span>
+                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-[#0A1525]">
+                      1. Foto del Repuesto Viejo (Desmontado) *
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${fotoRepuestoViejo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                      {fotoRepuestoViejo ? '✓ Cargado' : 'Pendiente'}
+                    </span>
                   </div>
-                ) : !fotoOdometroFinal ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInputOdometroFinalRef.current?.click()}
-                    className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
-                  >
-                    <Camera className="w-6 h-6 text-[#1E56B0]" />
-                    <span className="text-xs font-black text-[#0A1525]">Tomar Foto del Odómetro Final</span>
-                    <span className="text-[10px] text-slate-400">Validación de prueba de ruta</span>
-                  </button>
-                ) : (
-                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={fotoOdometroFinal}
-                        alt="Odómetro Final"
-                        className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
-                        onClick={() => setModalFotoZoom(fotoOdometroFinal)}
-                      />
-                      <div>
-                        <span className="text-xs font-black text-[#0A1525] block">✓ Odómetro Final Registrado</span>
-                        <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
-                      </div>
+
+                  {subiendoFotoTipo === 'repuesto_viejo' ? (
+                    <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
+                      <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
+                      <span className="text-xs font-bold text-[#0A1525]">Subiendo repuesto viejo...</span>
                     </div>
+                  ) : !fotoRepuestoViejo ? (
                     <button
                       type="button"
-                      onClick={() => fileInputOdometroFinalRef.current?.click()}
-                      className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
+                      onClick={() => fileInputRepuestoViejoRef.current?.click()}
+                      className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
                     >
-                      Cambiar
+                      <Camera className="w-6 h-6 text-[#1E56B0]" />
+                      <span className="text-xs font-black text-[#0A1525]">Subir Foto Repuesto Viejo</span>
+                      <span className="text-[10px] text-slate-400">Pieza defectuosa extraída</span>
                     </button>
+                  ) : (
+                    <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={fotoRepuestoViejo}
+                          alt="Repuesto Viejo"
+                          className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
+                          onClick={() => setModalFotoZoom(fotoRepuestoViejo)}
+                        />
+                        <div>
+                          <span className="text-xs font-black text-[#0A1525] block">✓ Repuesto Viejo Verificado</span>
+                          <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRepuestoViejoRef.current?.click()}
+                        className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón 2: Subir Foto Repuesto Nuevo */}
+                <input
+                  type="file"
+                  ref={fileInputRepuestoNuevoRef}
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleSubirArchivo(f, 'repuesto_nuevo', setFotoRepuestoNuevo);
+                  }}
+                />
+
+                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-[#0A1525]">
+                      2. Foto del Repuesto Nuevo (Instalado) *
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${fotoRepuestoNuevo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                      {fotoRepuestoNuevo ? '✓ Cargado' : 'Pendiente'}
+                    </span>
+                  </div>
+
+                  {subiendoFotoTipo === 'repuesto_nuevo' ? (
+                    <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
+                      <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
+                      <span className="text-xs font-bold text-[#0A1525]">Subiendo repuesto nuevo...</span>
+                    </div>
+                  ) : !fotoRepuestoNuevo ? (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRepuestoNuevoRef.current?.click()}
+                      className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
+                    >
+                      <Camera className="w-6 h-6 text-[#1E56B0]" />
+                      <span className="text-xs font-black text-[#0A1525]">Subir Foto Repuesto Nuevo</span>
+                      <span className="text-[10px] text-slate-400">Pieza nueva montada en el auto</span>
+                    </button>
+                  ) : (
+                    <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={fotoRepuestoNuevo}
+                          alt="Repuesto Nuevo"
+                          className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
+                          onClick={() => setModalFotoZoom(fotoRepuestoNuevo)}
+                        />
+                        <div>
+                          <span className="text-xs font-black text-[#0A1525] block">✓ Repuesto Nuevo Verificado</span>
+                          <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRepuestoNuevoRef.current?.click()}
+                        className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón Acción Fase 4 */}
+                <button
+                  type="button"
+                  disabled={!fotosInstalacionCompletas || guardandoFase4}
+                  onClick={handleTerminarTrabajo}
+                  className={`w-full h-14 rounded-2xl font-black text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${fotosInstalacionCompletas
+                    ? 'bg-[#0A1525] hover:bg-[#1E56B0] text-white shadow-lg'
+                    : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                    }`}
+                >
+                  {guardandoFase4 ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 text-[#CCFF00]" />
+                      <span>Falla Corregida / Trabajo Terminado</span>
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
+
+            {/* ======================================================== */}
+            {/* FASE 5: CIERRE Y LIQUIDACIÓN                             */}
+            {/* ======================================================== */}
+            {faseActual === 5 && (
+              <motion.div
+                key="fase-5"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                {/* Banner si el cliente rechazó la cotización */}
+                {esCotizacionRechazada && (
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-left space-y-2">
+                    <div className="flex items-center gap-2 text-amber-900 font-black text-xs uppercase tracking-wider">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      <span>Cotización Rechazada por Cliente</span>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                      El cliente decidió no realizar la reparación con repuestos. Conforme al protocolo, se exonera la prueba de ruta y se liquida únicamente la <strong>tarifa base de diagnóstico ($15.00 USD)</strong>.
+                    </p>
                   </div>
                 )}
-              </div>
-              )}
 
-              {/* Botón Gigante en Verde Lima: Solicitar Liquidación */}
-              <button
-                type="button"
-                disabled={!puedePedirLiquidacion || enviandoLiquidacion}
-                onClick={handleSolicitarLiquidacion}
-                className={`w-full h-16 rounded-2xl font-black text-base transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${
-                  puedePedirLiquidacion
+                <div className="bg-white rounded-2xl p-4 border border-[#CBD5E1] shadow-2xs space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full inline-block">
+                    Fase Final • Cierre y Liquidación
+                  </span>
+                  <h3 className="text-sm font-black text-[#0A1525] pt-1">
+                    {esCotizacionRechazada ? 'Cierre de Diagnóstico Inicial' : 'Odómetro Final Post-Prueba de Ruta'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {esCotizacionRechazada
+                      ? 'Confirmación y liquidación del honorario de diagnóstico ($15.00 USD).'
+                      : `Registra el kilometraje tras probar el auto (debe ser mayor al inicial de ${kmBase.toLocaleString()} km).`}
+                  </p>
+                </div>
+
+                {/* Input Odómetro Final (solo obligatorio si hubo reparación) */}
+                {!esCotizacionRechazada && (
+                  <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-4">
+                    <div>
+                      <label className="text-xs font-black text-[#0A1525] block mb-1">
+                        Kilometraje Final del Odómetro (km) *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={kmFinal}
+                          onChange={(e) => setKmFinal(e.target.value)}
+                          placeholder={`Ej: ${kmBase + 3}`}
+                          className="w-full h-14 px-4 text-xl font-mono font-black text-center rounded-2xl border-2 border-slate-300 focus:border-[#1E56B0] focus:outline-none bg-[#F8FAFC]"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-bold text-xs text-slate-400">
+                          KM
+                        </span>
+                      </div>
+                      {kmFinal.trim() !== '' && !kmFinalValido && (
+                        <p className="text-rose-600 text-xs font-bold mt-1">
+                          El kilometraje final debe ser estrictamente mayor al inicial ({kmBase.toLocaleString()} km).
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Botón Foto Odómetro Final */}
+                    <input
+                      type="file"
+                      ref={fileInputOdometroFinalRef}
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleSubirArchivo(f, 'odometro_final', setFotoOdometroFinal);
+                      }}
+                    />
+
+                    {subiendoFotoTipo === 'odometro_final' ? (
+                      <div className="h-28 rounded-2xl border-2 border-dashed border-[#1E56B0] bg-blue-50/50 flex flex-col items-center justify-center gap-1.5">
+                        <Loader2 className="w-6 h-6 text-[#1E56B0] animate-spin" />
+                        <span className="text-xs font-bold text-[#0A1525]">Subiendo odómetro final...</span>
+                      </div>
+                    ) : !fotoOdometroFinal ? (
+                      <button
+                        type="button"
+                        onClick={() => fileInputOdometroFinalRef.current?.click()}
+                        className="w-full h-28 rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#1E56B0] bg-slate-50 hover:bg-blue-50/40 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98"
+                      >
+                        <Camera className="w-6 h-6 text-[#1E56B0]" />
+                        <span className="text-xs font-black text-[#0A1525]">Tomar Foto del Odómetro Final</span>
+                        <span className="text-[10px] text-slate-400">Validación de prueba de ruta</span>
+                      </button>
+                    ) : (
+                      <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={fotoOdometroFinal}
+                            alt="Odómetro Final"
+                            className="w-16 h-16 rounded-xl object-cover border border-emerald-400 cursor-pointer"
+                            onClick={() => setModalFotoZoom(fotoOdometroFinal)}
+                          />
+                          <div>
+                            <span className="text-xs font-black text-[#0A1525] block">✓ Odómetro Final Registrado</span>
+                            <span className="text-[10px] text-slate-500">Guardado en evidencias</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fileInputOdometroFinalRef.current?.click()}
+                          className="text-xs font-bold text-slate-600 underline cursor-pointer p-1"
+                        >
+                          Cambiar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Botón Gigante en Verde Lima: Solicitar Liquidación */}
+                <button
+                  type="button"
+                  disabled={!puedePedirLiquidacion || enviandoLiquidacion}
+                  onClick={handleSolicitarLiquidacion}
+                  className={`w-full h-16 rounded-2xl font-black text-base transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${puedePedirLiquidacion
                     ? 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] shadow-[#CCFF00]/30 border border-[#0A1525]/10'
                     : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                {enviandoLiquidacion ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-[#0A1525]" />
-                ) : (
-                  <>
-                    <ShieldCheck className="w-5 h-5 text-[#0A1525]" />
-                    <span>Solicitar Liquidación (${gananciaLiquidacion.toFixed(2)} USD)</span>
-                  </>
-                )}
-              </button>
-            </motion.div>
-          )}
+                    }`}
+                >
+                  {enviandoLiquidacion ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-[#0A1525]" />
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-5 h-5 text-[#0A1525]" />
+                      <span>Solicitar Liquidación (${gananciaLiquidacion.toFixed(2)} USD)</span>
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
 
-        </AnimatePresence>
+          </AnimatePresence>
         )}
       </main>
 

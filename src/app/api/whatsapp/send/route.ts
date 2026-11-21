@@ -46,11 +46,9 @@ export async function POST(request: NextRequest) {
       .from('whatsapp_mensajes')
       .insert([
         {
-          chat_id: finalChatId || null,
           telefono: cleanPhone,
           mensaje: textoMensaje,
-          es_de_taller: true,
-          leido: true
+          es_de_taller: true
         }
       ])
       .select()
@@ -65,9 +63,8 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('whatsapp_chats')
         .update({
-          ultimo_mensaje: textoMensaje,
-          estado: 'HUMANO', // Al responder la operadora, se consolida como atención humana
-          updated_at: new Date().toISOString()
+          estado_bot: 'HUMANO', // Al responder la operadora, se consolida como atención humana
+          actualizado_en: new Date().toISOString()
         })
         .eq('id', finalChatId);
     }

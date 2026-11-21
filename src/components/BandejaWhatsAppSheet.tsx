@@ -28,14 +28,18 @@ export type BotEstado = 'INICIANDO' | 'PREGUNTANDO_CARRO' | 'PREGUNTANDO_FALLA' 
 export interface WhatsAppChat {
   id: string;
   telefono: string;
-  nombre: string | null;
+  nombre?: string | null;
+  nombre_cliente?: string | null;
   vehiculo?: string | null;
+  vehiculo_info?: string | null;
   falla?: string | null;
-  estado: BotEstado;
+  estado?: BotEstado;
+  estado_bot?: BotEstado;
   ultimo_mensaje?: string | null;
   unread_count?: number;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  actualizado_en?: string;
 }
 
 export interface WhatsAppMensaje {
@@ -79,10 +83,8 @@ export default function BandejaWhatsAppSheet({
       const supabase = createClient();
 
       // 1. Intentar cargar desde whatsapp_chats
-      const { data: chatsData, error: chatsError } = await supabase
-        .from('whatsapp_chats')
-        .select('*')
-        .order('updated_at', { ascending: false });
+      let chatsQuery = supabase.from('whatsapp_chats').select('*');
+      const { data: chatsData, error: chatsError } = await chatsQuery;
 
       // 2. Cargar mensajes desde whatsapp_mensajes
       const { data: msgsData, error: msgsError } = await supabase
@@ -230,15 +232,20 @@ export default function BandejaWhatsAppSheet({
 
     // 1. Agregar desde tabla `chats`
     chats.forEach((chat) => {
+      const nombreFinal = chat.nombre_cliente || chat.nombre || `Usuario +${chat.telefono.slice(-4)}`;
+      const estadoFinal = (chat.estado_bot || chat.estado || 'INICIANDO') as BotEstado;
+      const vehiculoFinal = chat.vehiculo_info || chat.vehiculo || undefined;
+      const fechaFinal = chat.actualizado_en || chat.updated_at || chat.created_at || new Date().toISOString();
+
       mapa.set(chat.telefono, {
         chat,
         telefono: chat.telefono,
-        nombre: chat.nombre || `Usuario +${chat.telefono.slice(-4)}`,
-        vehiculo: chat.vehiculo || undefined,
+        nombre: nombreFinal,
+        vehiculo: vehiculoFinal,
         falla: chat.falla || undefined,
-        estado: chat.estado || 'INICIANDO',
+        estado: estadoFinal,
         ultimoMensajeTexto: chat.ultimo_mensaje || 'Conversación iniciada',
-        ultimoMensajeFecha: chat.updated_at || chat.created_at,
+        ultimoMensajeFecha: fechaFinal,
         esDeTaller: false,
         noLeidos: chat.unread_count || 0,
         mensajes: [],
@@ -350,12 +357,12 @@ export default function BandejaWhatsAppSheet({
       const supabase = createClient();
       await supabase
         .from('whatsapp_chats')
-        .update({ estado: 'HUMANO', updated_at: new Date().toISOString() })
+        .update({ estado_bot: 'HUMANO', actualizado_en: new Date().toISOString() })
         .eq('telefono', conversacionActiva.telefono);
 
       setChats((prev) =>
         prev.map((c) =>
-          c.telefono === conversacionActiva.telefono ? { ...c, estado: 'HUMANO' } : c
+          c.telefono === conversacionActiva.telefono ? { ...c, estado_bot: 'HUMANO', estado: 'HUMANO' } : c
         )
       );
     } catch (e) {

@@ -50,33 +50,16 @@ async function procesarMensajeEntrante(rawPhone: string, textoBruto: string, con
     .eq('telefono', telefono)
     .maybeSingle();
 
-  // Helper para guardar mensajes y opcionalmente replicar en mensajes_whatsapp (compatibilidad)
-  const guardarMensaje = async (chatId: string, txt: string, esTaller: boolean, leido: boolean = false) => {
+  // Helper para guardar mensajes
+  const guardarMensaje = async (txt: string, esTaller: boolean) => {
     try {
       await supabase.from('whatsapp_mensajes').insert([
         {
-          chat_id: chatId,
           telefono,
           mensaje: txt,
-          es_de_taller: esTaller,
-          leido
+          es_de_taller: esTaller
         }
       ]);
-
-      // Compatibilidad con tabla previa
-      try {
-        await supabase.from('mensajes_whatsapp').insert([
-          {
-            telefono_remitente: telefono,
-            nombre_remitente: esTaller ? 'TuTallerMóvil' : (chatExistente?.nombre || contactProfileName || 'Cliente WhatsApp'),
-            mensaje: txt,
-            es_de_taller: esTaller,
-            leido
-          }
-        ]);
-      } catch {
-        // Silencioso si la tabla previa no existe
-      }
     } catch (e) {
       console.warn('Aviso guardando mensaje en Supabase:', e);
     }
@@ -91,141 +74,152 @@ async function procesarMensajeEntrante(rawPhone: string, textoBruto: string, con
       .insert([
         {
           telefono,
-          nombre: contactProfileName || null,
-          estado: 'INICIANDO',
-          ultimo_mensaje: texto,
-          unread_count: 1
+          nombre_cliente: contactProfileName || null,
+          estado_bot: 'INICIANDO',
+          actualizado_en: new Date().toISOString()
         }
       ])
       .select()
       .single();
 
-    const chatId = nuevoChat?.id || null;
-
     // Guardar el mensaje entrante del usuario
-    if (chatId) {
-      await guardarMensaje(chatId, texto, false, false);
-    }
+    await guardarMensaje(texto, false);
 
     // Respuesta automatizada del Bot:
-    const respuestaBot = '¡Hola! Bienvenido a TuTallerMóvil. Para enviarte un mecánico, ¿cuál es tu nombre?';
-    await enviarMensajeWhatsApp(telefono, respuestaBot);
+    const saludoBot =
+      '¡Hola! Bienvenido a TuTallerMóvil 🚗🔧\n' +
+      'Para enviarte un mecánico especialista hasta tu ubicación, ¿cuál es tu nombre completo?';
 
-    // Guardar mensaje saliente del Bot y actualizar chat
-    if (chatId) {
-      await guardarMensaje(chatId, respuestaBot, true, true);
-      await supabase
-        .from('whatsapp_chats')
-        .update({
-          ultimo_mensaje: respuestaBot,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', chatId);
-    }
+    await enviarMensajeWhatsApp(telefono, saludoBot);
+    await guardarMensaje(saludoBot, true);
 
+    console.log(`🤖 [BOT INICIANDO] Chat creado para +${telefono}. Saludo enviado.`);
     return;
   }
 
+  // ==========================================================================
+  // SI EL CHAT EXISTE: EVALUAR MÁQUINA DE ESTADOS
+  // ==========================================================================
+  const estadoActual = (chatExistente.estado_bot || chatExistente.estado || 'INICIANDO').toUpperCase();
   const chatId = chatExistente.id;
-  const estadoActual = chatExistente.estado || 'INICIANDO';
 
-  // Guardar primero el mensaje entrante que envió el usuario
-  await guardarMensaje(chatId, texto, false, false);
+  // Guardar siempre el mensaje entrante recibido
+  await guardarMensaje(texto, false);
 
   // ==========================================================================
-  // CASO B: Estado INICIANDO -> Guarda el nombre, cambia a PREGUNTANDO_CARRO
+  // CASO B: Estado INICIANDO -> El usuario respondió su nombre
   // ==========================================================================
   if (estadoActual === 'INICIANDO') {
-    const nombreUsuario = texto;
-    const respuestaBot = '¿Cuál es el modelo y año de tu vehículo?';
+    const nombreCapturado = texto;
 
     await supabase
       .from('whatsapp_chats')
       .update({
-        nombre: nombreUsuario,
-        estado: 'PREGUNTANDO_CARRO',
-        ultimo_mensaje: respuestaBot,
-        unread_count: (chatExistente.unread_count || 0) + 1,
-        updated_at: new Date().toISOString()
+        nombre_cliente: nombreCapturado,
+        estado_bot: 'PREGUNTANDO_CARRO',
+        actualizado_en: new Date().toISOString()
       })
       .eq('id', chatId);
 
+    const respuestaBot =
+      `¡Mucho gusto, ${nombreCapturado}! 👋\n\n` +
+      '¿Cuál es la marca, modelo y año de tu vehículo?\n' +
+      '(Ejemplo: *Toyota Corolla 2018* o *Ford Fiesta 2012*)';
+
     await enviarMensajeWhatsApp(telefono, respuestaBot);
-    await guardarMensaje(chatId, respuestaBot, true, true);
+    await guardarMensaje(respuestaBot, true);
+
+    console.log(`🤖 [BOT PREGUNTANDO_CARRO] Nombre guardado: "${nombreCapturado}". Preguntando vehículo.`);
     return;
   }
 
   // ==========================================================================
-  // CASO C: Estado PREGUNTANDO_CARRO -> Guarda vehículo, cambia a PREGUNTANDO_FALLA
+  // CASO C: Estado PREGUNTANDO_CARRO -> El usuario respondió su vehículo
   // ==========================================================================
   if (estadoActual === 'PREGUNTANDO_CARRO') {
-    const vehiculoUsuario = texto;
-    const respuestaBot = '¿Qué falla presenta tu carro?';
+    const vehiculoCapturado = texto;
 
     await supabase
       .from('whatsapp_chats')
       .update({
-        vehiculo: vehiculoUsuario,
-        estado: 'PREGUNTANDO_FALLA',
-        ultimo_mensaje: respuestaBot,
-        unread_count: (chatExistente.unread_count || 0) + 1,
-        updated_at: new Date().toISOString()
+        vehiculo_info: vehiculoCapturado,
+        estado_bot: 'PREGUNTANDO_FALLA',
+        actualizado_en: new Date().toISOString()
       })
       .eq('id', chatId);
 
+    const respuestaBot =
+      `Excelente, un *${vehiculoCapturado}* 🚙.\n\n` +
+      'Cuéntame, ¿qué falla o síntoma presenta el carro?\n' +
+      '(Ejemplo: *Frenos chirriando, bote de refrigerante, bota humo blanco, no enciende o requiere mantenimiento*)';
+
     await enviarMensajeWhatsApp(telefono, respuestaBot);
-    await guardarMensaje(chatId, respuestaBot, true, true);
+    await guardarMensaje(respuestaBot, true);
+
+    console.log(`🤖 [BOT PREGUNTANDO_FALLA] Vehículo guardado: "${vehiculoCapturado}". Preguntando falla.`);
     return;
   }
 
   // ==========================================================================
-  // CASO D: Estado PREGUNTANDO_FALLA -> Guarda falla, pasa a HUMANO e inserta orden
+  // CASO D: Estado PREGUNTANDO_FALLA -> Usuario respondió la falla
+  // Handoff: pasa a HUMANO e inserta la orden formal en `ordenes` (LEAD_NUEVO)
   // ==========================================================================
   if (estadoActual === 'PREGUNTANDO_FALLA') {
-    const fallaUsuario = texto;
-    const respuestaBot = '¡Gracias! He registrado tu solicitud. Un operador humano se conectará contigo en este mismo chat en un momento.';
+    const fallaCapturada = texto;
 
-    // 1. Cambiar estado a HUMANO y guardar falla en whatsapp_chats
+    // 1. Actualizar el chat a estado HUMANO
     await supabase
       .from('whatsapp_chats')
       .update({
-        falla: fallaUsuario,
-        estado: 'HUMANO',
-        ultimo_mensaje: respuestaBot,
-        unread_count: (chatExistente.unread_count || 0) + 1,
-        updated_at: new Date().toISOString()
+        falla: fallaCapturada,
+        estado_bot: 'HUMANO',
+        actualizado_en: new Date().toISOString()
       })
       .eq('id', chatId);
 
-    // 2. Insertar nueva orden en la tabla 'ordenes' (con estado LEAD_NUEVO)
-    try {
-      const nombreFinal = chatExistente.nombre || contactProfileName || 'Cliente WhatsApp';
-      const vehiculoFinal = chatExistente.vehiculo || 'No especificado';
+    // 2. Extraer marca y modelo para el registro de la orden
+    const vehiculoRaw = chatExistente.vehiculo_info || chatExistente.vehiculo || 'Automóvil Particular';
+    const partes = vehiculoRaw.split(' ');
+    const marca = partes[0] || 'Particular';
+    const modelo = partes.slice(1).join(' ') || vehiculoRaw;
 
-      const { error: errOrden } = await supabase.from('ordenes').insert([
-        {
-          cliente_nombre: `${nombreFinal} (WhatsApp)`,
-          cliente_telefono: telefono,
-          vehiculo_modelo: vehiculoFinal,
-          falla_reportada: fallaUsuario,
-          sector: 'Caracas (Atención WhatsApp)',
-          estado: 'LEAD_NUEVO',
-          ganancia_estimada: 30.00
-        }
-      ]);
+    // 3. Insertar orden formal en la tabla `ordenes`
+    try {
+      const { data: nuevaOrden, error: errOrden } = await supabase
+        .from('ordenes')
+        .insert([
+          {
+            cliente_nombre: chatExistente.nombre_cliente || chatExistente.nombre || contactProfileName || 'Cliente WhatsApp',
+            cliente_telefono: `+${telefono}`,
+            vehiculo_marca: marca,
+            vehiculo_modelo: modelo,
+            vehiculo_anio: 2020,
+            falla_reportada: fallaCapturada,
+            sector: 'Caracas (WhatsApp Bot)',
+            estado: 'LEAD_NUEVO'
+          }
+        ])
+        .select()
+        .single();
 
       if (errOrden) {
-        console.error('Error insertando orden desde WhatsApp Bot:', errOrden.message);
+        console.error('⚠️ Error insertando orden desde WhatsApp:', errOrden);
       } else {
-        console.log(`✨ [ORDEN CREADA POR CHATBOT] Cliente: ${nombreFinal} | Carro: ${vehiculoFinal} | Falla: ${fallaUsuario}`);
+        console.log(`🎉 [ORDEN CREADA DESDE BOT] ID: ${nuevaOrden?.id} | Cliente: ${nuevaOrden?.cliente_nombre}`);
       }
-    } catch (e) {
-      console.error('Excepción creando orden desde WhatsApp:', e);
+    } catch (errOrdenCatch) {
+      console.warn('Aviso insertando orden en tabla ordenes:', errOrdenCatch);
     }
 
-    // 3. Enviar confirmación al cliente y guardar en el historial
+    // 4. Mensaje de despedida y transferencia a la operadora humana
+    const respuestaBot =
+      '¡Listo! 📋 He registrado tu solicitud con éxito.\n\n' +
+      '👨‍🔧 Un operador humano de nuestra **Torre de Despacho** se conectará contigo en este mismo chat en un momento para coordinar la llegada del mecánico.';
+
     await enviarMensajeWhatsApp(telefono, respuestaBot);
-    await guardarMensaje(chatId, respuestaBot, true, true);
+    await guardarMensaje(respuestaBot, true);
+
+    console.log(`✅ [HANDOFF A HUMANO] Falla guardada: "${fallaCapturada}". Chat transferido a operador humano.`);
     return;
   }
 
@@ -236,9 +230,7 @@ async function procesarMensajeEntrante(rawPhone: string, textoBruto: string, con
     await supabase
       .from('whatsapp_chats')
       .update({
-        ultimo_mensaje: texto,
-        unread_count: (chatExistente.unread_count || 0) + 1,
-        updated_at: new Date().toISOString()
+        actualizado_en: new Date().toISOString()
       })
       .eq('id', chatId);
 
