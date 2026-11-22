@@ -1043,32 +1043,48 @@ export function ClienteServicioClient({ id }: { id: string }) {
     return list;
   }, [orden.foto_odometro_url, orden.foto_repuesto_viejo_url, orden.foto_repuesto_nuevo_url, orden.diagnostico_json, orden.mecanico_id]);
 
-  // Paso Activo para el Stepper de 4 Pasos: Confirmado -> En Ruta -> Reparando -> Listo
+  // Pasos del Progreso Operativo: Confirmado -> Asignando -> En Ruta -> Reparando -> Listo
+  const pasosProgreso = useMemo(() => [
+    { id: 0, label: 'Confirmado', icon: CheckCircle2 },
+    { id: 1, label: 'Asignando', icon: Clock },
+    { id: 2, label: 'En Ruta', icon: Navigation },
+    { id: 3, label: 'Reparando', icon: Wrench },
+    { id: 4, label: 'Listo', icon: ShieldCheck }
+  ], []);
+
+  // Paso Activo para el Stepper: Si no hay especialista asignado, está en 'Asignando'
   const pasoActivo = useMemo(() => {
+    if (!orden.mecanico_id) {
+      if (orden.estado === 'PENDIENTE' && !orden.id) return 0;
+      return 1; // Asignando especialista
+    }
+
     switch (orden.estado) {
+      case 'LEAD_NUEVO':
       case 'PENDIENTE':
       case 'SOLICITADO':
-      case 'COTIZADO':
-      case 'ESPERANDO_APROBACION':
-        return 0; // Confirmado
+        return 1; // Asignando
       case 'ASIGNADO':
       case 'EN_RUTA_TALLER':
       case 'DIAGNOSTICO_AGENDADO':
+        return 2; // En Ruta
+      case 'EN_INSPECCION':
+      case 'COTIZADO':
+      case 'ESPERANDO_APROBACION':
       case 'REPUESTOS_EN_RUTA':
-        return 1; // En Ruta
       case 'EN_EJECUCION':
       case 'EN_REPARACION':
+        return 3; // Reparando
       case 'TRABAJO_TERMINADO':
-        return 2; // Reparando
       case 'PENDIENTE_PAGO':
       case 'PAGO_REPORTADO':
       case 'PAGADO':
       case 'FINALIZADO':
-        return 3; // Listo
+        return 4; // Listo
       default:
-        return 1;
+        return orden.mecanico_id ? 2 : 1;
     }
-  }, [orden.estado]);
+  }, [orden.estado, orden.mecanico_id, orden.id]);
 
   // Renderizado condicional del personal activo
   const tieneMecanico = useMemo(() => {
@@ -1664,40 +1680,35 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     Progreso Operativo
                   </span>
                   <span className="text-xs font-mono font-bold text-[#1E56B0]">
-                    Paso {pasoActivo + 1} de 4
+                    Paso {pasoActivo + 1} de {pasosProgreso.length}
                   </span>
                 </div>
 
-                <div className="relative flex items-center justify-between px-2">
+                <div className="relative flex items-center justify-between px-1 sm:px-2">
                   {/* Barra de Fondo */}
-                  <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1.5 bg-slate-200 rounded-full z-0" />
+                  <div className="absolute left-5 right-5 sm:left-6 sm:right-6 top-1/2 -translate-y-1/2 h-1.5 bg-slate-200 rounded-full z-0" />
 
                   {/* Barra de Progreso Dinámica con Animación Fluida */}
                   <motion.div
                     initial={{ width: '0%' }}
                     animate={{
-                      width: `${(pasoActivo / 3) * 100}%`
+                      width: `${(pasoActivo / (pasosProgreso.length - 1)) * 100}%`
                     }}
                     transition={{ duration: 0.9, ease: 'easeOut' }}
-                    className="absolute left-6 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-[#1E56B0] via-[#3B82F6] to-[#CCFF00] rounded-full z-0 shadow-xs"
-                    style={{ maxWidth: 'calc(100% - 48px)' }}
+                    className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-[#1E56B0] via-[#3B82F6] to-[#CCFF00] rounded-full z-0 shadow-xs"
+                    style={{ maxWidth: 'calc(100% - 40px)' }}
                   />
 
-                  {/* 4 Pasos */}
-                  {[
-                    { id: 0, label: 'Confirmado', icon: CheckCircle2 },
-                    { id: 1, label: 'En Ruta', icon: Navigation },
-                    { id: 2, label: 'Reparando', icon: Wrench },
-                    { id: 3, label: 'Listo', icon: ShieldCheck }
-                  ].map((paso) => {
+                  {/* 5 Pasos: Confirmado -> Asignando -> En Ruta -> Reparando -> Listo */}
+                  {pasosProgreso.map((paso) => {
                     const isPassed = pasoActivo > paso.id;
                     const isActive = pasoActivo === paso.id;
                     const IconComponent = paso.icon;
 
                     return (
-                      <div key={paso.id} className="relative z-10 flex flex-col items-center gap-1.5">
+                      <div key={paso.id} className="relative z-10 flex flex-col items-center gap-1.5 min-w-0">
                         <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
                             isActive
                               ? 'bg-[#CCFF00] text-[#0A1525] ring-4 ring-[#CCFF00]/40 shadow-lg scale-110'
                               : isPassed
@@ -1706,15 +1717,15 @@ export function ClienteServicioClient({ id }: { id: string }) {
                           }`}
                         >
                           {isActive ? (
-                            <IconComponent className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
+                            <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0A1525] stroke-[2.5]" />
                           ) : isPassed ? (
-                            <Check className="w-4 h-4 stroke-[3]" />
+                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
                           ) : (
-                            <IconComponent className="w-4 h-4 stroke-[2]" />
+                            <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2]" />
                           )}
                         </div>
                         <span
-                          className={`text-[10px] font-extrabold tracking-tight text-center ${
+                          className={`text-[9px] sm:text-[10px] font-extrabold tracking-tight text-center leading-tight truncate max-w-[58px] sm:max-w-none ${
                             isActive
                               ? 'text-[#0A1525] font-black'
                               : isPassed
