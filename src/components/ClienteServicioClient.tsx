@@ -232,7 +232,7 @@ const DATOS_DEFAULT: OrdenCliente = {
   ganancia_estimada: 65.0,
   foto_odometro_url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
   created_at: '2026-11-17T12:00:00.000Z',
-  mecanico_id: 'mec-0842',
+  mecanico_id: null,
   runner_id: null,
   kilometraje_actual: 85400,
   vehiculo_id: 'veh-corolla-01',
