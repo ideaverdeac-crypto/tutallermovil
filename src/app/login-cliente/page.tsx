@@ -46,7 +46,11 @@ function LoginClienteContent() {
     if (errorParam === 'oauth') {
       setErrorMsg('No se pudo completar la autenticación con Google. Por favor intenta de nuevo.');
     }
-  }, [tabParam, errorParam]);
+    const statusParam = searchParams.get('status');
+    if (statusParam === 'password_actualizada') {
+      setExitoMsg('¡Contraseña actualizada exitosamente! Ingresa con tu nueva clave.');
+    }
+  }, [tabParam, errorParam, searchParams]);
 
   // Campos de formulario
   const [email, setEmail] = useState('');
@@ -83,8 +87,8 @@ function LoginClienteContent() {
     try {
       const supabase = createClient();
       const destino = typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback?next=/cliente/dashboard`
-        : 'https://tutallermovil.vercel.app/auth/callback';
+        ? `${window.location.origin}/auth/callback?next=/recuperar-password`
+        : 'https://tutallermovil.vercel.app/auth/callback?next=/recuperar-password';
 
       const { error } = await supabase.auth.resetPasswordForEmail(emailRecuperar.trim(), {
         redirectTo: destino
@@ -578,21 +582,55 @@ function LoginClienteContent() {
                   )}
 
                   {recuperarExito ? (
-                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-3">
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-3.5">
                       <div className="flex items-center gap-2 font-black text-sm text-emerald-800">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                        <span>¡Correo de recuperación enviado!</span>
+                        <span>¡Instrucciones enviadas!</span>
                       </div>
-                      <p className="leading-relaxed">
-                        Hemos enviado un enlace a <strong>{emailRecuperar}</strong>. Revisa tu bandeja de entrada o la carpeta de spam para ingresar tu nueva contraseña.
+                      <p className="leading-relaxed text-slate-700">
+                        Si <strong>{emailRecuperar}</strong> está registrado en el sistema, hemos enviado un enlace directo para restablecer tu clave.
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => setModalRecuperarOpen(false)}
-                        className="w-full h-11 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer mt-2"
+
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-900 text-[11px]">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>¡Importante! Revisa SPAM y Correo no deseado</span>
+                        </div>
+                        <p className="text-[11px] text-amber-800 leading-normal">
+                          Los correos automatizados suelen filtrarse en <strong>Spam</strong>, <strong>No deseado</strong> o <strong>Promociones</strong>. Puede tardar entre 1 y 5 minutos.
+                        </p>
+                      </div>
+
+                      {/* Botón WhatsApp de Alta Prioridad */}
+                      <a
+                        href={`https://wa.me/584142314194?text=Hola%20TuTallerM%C3%B3vil%2C%20solicito%20asistencia%20para%20recuperar%20el%20acceso%20a%20mi%20cuenta%20de%20cliente%3A%20${encodeURIComponent(emailRecuperar)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        Volver a Iniciar Sesión
-                      </button>
+                        <span>¿No te llega? Recuperar por WhatsApp</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </a>
+
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRecuperarExito(false);
+                            setEmailRecuperar('');
+                          }}
+                          className="flex-1 h-10 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                        >
+                          Probar otro correo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setModalRecuperarOpen(false)}
+                          className="flex-1 h-10 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer"
+                        >
+                          Cerrar
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <form onSubmit={handleRecuperarPassword} className="space-y-4">
@@ -612,7 +650,7 @@ function LoginClienteContent() {
                           />
                         </div>
                         <p className="text-[11px] text-slate-500 mt-1">
-                          Te enviaremos un correo con un link directo y seguro para definir una nueva clave.
+                          Te enviaremos un correo con un link directo y seguro para definir una nueva clave. (Revisa también tu bandeja de Spam).
                         </p>
                       </div>
 
