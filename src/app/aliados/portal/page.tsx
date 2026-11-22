@@ -243,6 +243,7 @@ export default function PortalAliadosPage() {
       if (rawSesion) {
         try {
           const parsed = JSON.parse(rawSesion);
+          if (parsed.id) setMecanicoId(parsed.id);
           if (parsed.codigo_aliado) setCodigoAliado(parsed.codigo_aliado);
           if (parsed.nombre) setNombreMecanico(parsed.nombre);
           if (parsed.foto) setFotoPerfil(parsed.foto);
@@ -250,6 +251,19 @@ export default function PortalAliadosPage() {
           if (parsed.telefono) setTelefonoMecanico(parsed.telefono);
           if (parsed.zona) setZonaCobertura(parsed.zona);
         } catch (e) {}
+      }
+
+      // Si aún no tenemos mecanicoId pero sí código aliado o nombre, resolver UUID desde perfiles
+      const cleanCode = (matchCode?.[2] || '').replace('#', '').trim();
+      if (cleanCode) {
+        supabaseClient
+          .from('perfiles')
+          .select('id, codigo_aliado, nombre_completo')
+          .or(`codigo_aliado.ilike.%${cleanCode}%,codigo_aliado.ilike.%TTM-${cleanCode}%`)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.id) setMecanicoId(data.id);
+          }, () => {});
       }
 
       // Fallback: si no hay nombre pero hay mecánicos guardados en ttm_aliados_mecanicos
@@ -435,9 +449,14 @@ export default function PortalAliadosPage() {
   // Clasificación de órdenes
   const ordenesAsignadas = useMemo(() => {
     return ordenesConDistancia.filter((o) => {
+      const cleanCode = (codigoAliado || '').replace('#', '').trim().toUpperCase();
       const perteneceAMi = Boolean(
         (mecanicoId && o.mecanico_id === mecanicoId) ||
-        (codigoAliado && (o.mecanico_id === codigoAliado || o.mecanico_id === codigoAliado.replace('#', '')))
+        (cleanCode && (
+          String(o.mecanico_id || '').toUpperCase() === cleanCode ||
+          String(o.mecanico_id || '').toUpperCase() === `#${cleanCode}` ||
+          String(o.mecanico_id || '').toUpperCase().includes(cleanCode)
+        ))
       );
       return (
         perteneceAMi &&
@@ -455,6 +474,14 @@ export default function PortalAliadosPage() {
   }, [ordenesAsignadas]);
 
   const tieneOrdenActiva = Boolean(ordenActivaEnCurso);
+
+  // Auto-sincronizar estado operativo según órdenes activas
+  useEffect(() => {
+    if (tieneOrdenActiva) {
+      setEstado('EN_SERVICIO');
+      setFiltroServicios('asignados');
+    }
+  }, [tieneOrdenActiva]);
 
   // Estados que indican que la orden ya avanzó en el pipeline
   const ESTADOS_AVANZADOS = useMemo(() => [
@@ -488,10 +515,14 @@ export default function PortalAliadosPage() {
     });
   }, [ordenesConDistancia, ESTADOS_AVANZADOS, ESTADOS_INICIALES]);
 
+  // Los servicios disponibles NO deben ser los mismos que en servicio.
+  // En EN_SERVICIO o pestaña asignados solo sale la orden que el mecánico aceptó.
   const ordenesFiltradas = useMemo(() => {
-    if (filtroServicios === 'asignados') return ordenesAsignadas;
+    if (estado === 'EN_SERVICIO' || filtroServicios === 'asignados') {
+      return ordenesAsignadas;
+    }
     return ordenesDisponibles;
-  }, [filtroServicios, ordenesAsignadas, ordenesDisponibles]);
+  }, [estado, filtroServicios, ordenesAsignadas, ordenesDisponibles]);
 
   // Compresión ligera de imagen en canvas para optimizar almacenamiento y velocidad en móvil
   const comprimirImagen = (dataUrl: string, maxDimension = 480, calidad = 0.85): Promise<string> => {
@@ -762,9 +793,11 @@ export default function PortalAliadosPage() {
         .eq('id', ordenId);
 
       if (!error) {
-        setToastAceptado('✓ Servicio completado y marcado como FINALIZADO. Ya puedes tomar una nueva orden.');
+        setToastAceptado('✓ Servicio completado y marcado como FINALIZADO. Has vuelto a estar DISPONIBLE.');
         setTimeout(() => setToastAceptado(null), 4500);
         setModalBloqueoOrden(false);
+        setEstado('DISPONIBLE');
+        setFiltroServicios('disponibles');
         setOrdenes((prev) =>
           prev.map((o) => (o.id === ordenId ? { ...o, estado: 'FINALIZADO' } : o))
         );
@@ -863,8 +896,11 @@ export default function PortalAliadosPage() {
         .eq('id', orden.id);
 
       if (!updErr) {
-        setToastAceptado('✓ ¡Servicio aceptado! La orden se movió a tu lista de servicios en curso y al tablero de despacho.');
+        setToastAceptado('✓ ¡Servicio aceptado! Tu estado ahora es EN SERVICIO.');
         setTimeout(() => setToastAceptado(null), 4500);
+
+        setEstado('EN_SERVICIO');
+        setFiltroServicios('asignados');
 
         // Feedback inmediato en la UI
         setOrdenes((prev) =>
@@ -874,7 +910,6 @@ export default function PortalAliadosPage() {
               : o
           )
         );
-        setFiltroServicios('asignados');
         await cargarOrdenes(true);
       } else {
         console.error('Error al aceptar servicio:', updErr);
@@ -1145,7 +1180,14 @@ export default function PortalAliadosPage() {
               {/* DISPONIBLE */}
               <button
                 type="button"
-                onClick={() => setEstado('DISPONIBLE')}
+                onClick={() => {
+                  if (tieneOrdenActiva) {
+                    alert('Tienes un servicio activo en ejecución. Debes finalizarlo antes de volver a DISPONIBLE.');
+                    return;
+                  }
+                  setEstado('DISPONIBLE');
+                  setFiltroServicios('disponibles');
+                }}
                 className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${estado === 'DISPONIBLE'
                   ? 'bg-[#CCFF00] text-[#0A1525] shadow-xs'
                   : 'text-slate-500 hover:text-[#0A1525]'
@@ -1158,7 +1200,15 @@ export default function PortalAliadosPage() {
               {/* EN SERVICIO */}
               <button
                 type="button"
-                onClick={() => setEstado('EN_SERVICIO')}
+                onClick={() => {
+                  if (!tieneOrdenActiva) {
+                    setToastAceptado('ℹ El estado EN SERVICIO se activa automáticamente cuando aceptas una orden disponible de la bolsa.');
+                    setTimeout(() => setToastAceptado(null), 4500);
+                    return;
+                  }
+                  setEstado('EN_SERVICIO');
+                  setFiltroServicios('asignados');
+                }}
                 className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${estado === 'EN_SERVICIO'
                   ? 'bg-[#1E56B0] text-white shadow-xs'
                   : 'text-slate-500 hover:text-[#0A1525]'
@@ -1171,7 +1221,13 @@ export default function PortalAliadosPage() {
               {/* INACTIVO */}
               <button
                 type="button"
-                onClick={() => setEstado('INACTIVO')}
+                onClick={() => {
+                  if (tieneOrdenActiva) {
+                    alert('Tienes un servicio activo en ejecución. Debes finalizarlo antes de ponerte INACTIVO.');
+                    return;
+                  }
+                  setEstado('INACTIVO');
+                }}
                 className={`h-11 px-4 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${estado === 'INACTIVO'
                   ? 'bg-slate-500 text-white shadow-xs'
                   : 'text-slate-500 hover:text-[#0A1525]'
@@ -1349,11 +1405,22 @@ export default function PortalAliadosPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#0A1525]">
-                Bolsa de Servicios Disponibles
+                {estado === 'EN_SERVICIO' || filtroServicios === 'asignados'
+                  ? 'Mi Servicio en Atención'
+                  : 'Bolsa de Servicios Disponibles'}
               </h2>
               {!cargando && (
-                <span className="bg-[#CCFF00] text-[#0A1525] font-extrabold text-xs px-2.5 py-0.5 rounded-full">
-                  {ordenesFiltradas.length} {filtroServicios === 'asignados' ? 'en curso' : 'disponibles'}
+                <span
+                  className={`font-extrabold text-xs px-2.5 py-0.5 rounded-full ${
+                    estado === 'EN_SERVICIO' || filtroServicios === 'asignados'
+                      ? 'bg-[#1E56B0] text-white'
+                      : 'bg-[#CCFF00] text-[#0A1525]'
+                  }`}
+                >
+                  {ordenesFiltradas.length}{' '}
+                  {estado === 'EN_SERVICIO' || filtroServicios === 'asignados'
+                    ? 'en curso'
+                    : 'disponibles'}
                 </span>
               )}
             </div>
@@ -1370,32 +1437,59 @@ export default function PortalAliadosPage() {
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <button
               type="button"
-              onClick={() => setFiltroServicios('disponibles')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'disponibles'
-                ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs'
-                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
-                }`}
+              onClick={() => {
+                if (estado === 'EN_SERVICIO' && tieneOrdenActiva) {
+                  setFiltroServicios('disponibles');
+                } else {
+                  setEstado('DISPONIBLE');
+                  setFiltroServicios('disponibles');
+                }
+              }}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                filtroServicios === 'disponibles' && estado !== 'EN_SERVICIO'
+                  ? 'bg-[#0A1525] text-[#CCFF00] shadow-xs'
+                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+              }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-[#CCFF00]" />
               <span>Solicitudes Disponibles (Sin Asignar)</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'disponibles' ? 'bg-[#CCFF00] text-[#0A1525]' : 'bg-emerald-50 text-emerald-700'
-                }`}>
+              <span
+                className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                  filtroServicios === 'disponibles' && estado !== 'EN_SERVICIO'
+                    ? 'bg-[#CCFF00] text-[#0A1525]'
+                    : 'bg-emerald-50 text-emerald-700'
+                }`}
+              >
                 {ordenesDisponibles.length}
               </span>
             </button>
 
             <button
               type="button"
-              onClick={() => setFiltroServicios('asignados')}
-              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${filtroServicios === 'asignados'
-                ? 'bg-[#1E56B0] text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
-                }`}
+              onClick={() => {
+                if (!tieneOrdenActiva) {
+                  setToastAceptado('ℹ No tienes órdenes activas asignadas. Acepta una orden disponible de la bolsa.');
+                  setTimeout(() => setToastAceptado(null), 4000);
+                  return;
+                }
+                setEstado('EN_SERVICIO');
+                setFiltroServicios('asignados');
+              }}
+              className={`h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                estado === 'EN_SERVICIO' || filtroServicios === 'asignados'
+                  ? 'bg-[#1E56B0] text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-50'
+              }`}
             >
               <ClipboardCheck className="w-3.5 h-3.5" />
-              <span>Mis Servicios Asignados</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${filtroServicios === 'asignados' ? 'bg-white/20 text-[#CCFF00]' : 'bg-blue-50 text-[#1E56B0]'
-                }`}>
+              <span>Mis Servicios Asignados (En Servicio)</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                  estado === 'EN_SERVICIO' || filtroServicios === 'asignados'
+                    ? 'bg-white/20 text-[#CCFF00]'
+                    : 'bg-blue-50 text-[#1E56B0]'
+                }`}
+              >
                 {ordenesAsignadas.length}
               </span>
             </button>
@@ -1439,15 +1533,29 @@ export default function PortalAliadosPage() {
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-base sm:text-lg font-black text-[#0A1525]">
-                  {ordenesFiltradas.length === 0
-                    ? 'Tu portal está listo. Aquí aparecerán los servicios'
-                    : (filtroServicios === 'asignados' ? 'Sin servicios asignados' : 'Sin solicitudes disponibles')}
+                  {estado === 'EN_SERVICIO' || filtroServicios === 'asignados'
+                    ? 'Sin servicios en atención actualmente'
+                    : 'Sin solicitudes disponibles en tu zona'}
                 </h3>
                 <p className="text-xs sm:text-sm text-[#475569] font-medium max-w-sm mx-auto">
-                  {filtroServicios === 'asignados'
-                    ? 'Cuando aceptes una solicitud de la bolsa o la central te asigne una orden, la gestionarás desde aquí.'
+                  {estado === 'EN_SERVICIO' || filtroServicios === 'asignados'
+                    ? 'No tienes ninguna orden activa asignada. Pasa al estado DISPONIBLE y pulsa "Aceptar Servicio" en cualquiera de las solicitudes disponibles.'
                     : 'En esta sección se listan las solicitudes en tiempo real en tu zona de Caracas. Mantén tu GPS y sonido activos.'}
                 </p>
+                {(estado === 'EN_SERVICIO' || filtroServicios === 'asignados') && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEstado('DISPONIBLE');
+                        setFiltroServicios('disponibles');
+                      }}
+                      className="h-10 px-4 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                    >
+                      Ver Solicitudes Disponibles para Aceptar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
