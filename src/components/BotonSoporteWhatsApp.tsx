@@ -19,11 +19,12 @@ export function WhatsAppIcon({ className = 'w-5 h-5' }: { className?: string }) 
 
 export default function BotonSoporteWhatsApp({
   mensaje = 'Hola, necesito ayuda con mi servicio',
-  telefono = '584141234567',
+  telefono = '584142314194',
   modo = 'fab',
   className = '',
 }: BotonSoporteWhatsAppProps) {
-  const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+  const telefonoLimpio = telefono.replace(/\D/g, '') || '584142314194';
+  const url = `https://wa.me/${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`;
 
   if (modo === 'header') {
     return (
