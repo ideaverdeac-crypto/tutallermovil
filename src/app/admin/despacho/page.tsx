@@ -2920,22 +2920,7 @@ export default function TableroDespachoPage() {
                                     </button>
                                   )}
 
-                                  {/* Botón de asignación táctica en columna lead nuevo */}
-                                  {columna.id === 'LEAD_NUEVO' && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOrdenParaRadar(orden);
-                                        setSheetRadarMecanicosOpen(true);
-                                      }}
-                                      className="h-8 px-2.5 rounded-lg bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center gap-1.5 transition-all opacity-90 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shadow-2xs"
-                                      title="Abrir Radar de Mecánicos para asignación manual"
-                                    >
-                                      <UserPlus className="w-3.5 h-3.5" />
-                                      <span>Asignar</span>
-                                    </button>
-                                  )}
+
 
                                   {/* Botón Circular: fondo #1E56B0, hover #CCFF00 para avanzar rápidamente con fade-in */}
                                   {columna.estadoSiguiente && (
