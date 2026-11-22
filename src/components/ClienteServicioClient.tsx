@@ -341,7 +341,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
       const supabase = createClient();
       const { data: mecProfile } = await supabase
         .from('perfiles')
-        .select('id, nombre_completo, telefono, rol')
+        .select('id, nombre_completo, telefono, rol, codigo_aliado, avatar_url')
         .eq('id', mecanicoId)
         .maybeSingle();
 
@@ -353,8 +353,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
           especialidad: 'Mecánico Certificado TTM',
           rating: 4.9,
           ranking: 'Top #1 TTM',
-          foto: 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=400&q=80',
-          codigo: `TTM-${mecProfile.id.slice(0, 4).toUpperCase()}`
+          foto: mecProfile.avatar_url || 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=400&q=80',
+          codigo: mecProfile.codigo_aliado ? mecProfile.codigo_aliado.replace('#', '') : `TTM-${mecProfile.id.slice(0, 4).toUpperCase()}`
         });
       }
     } catch (errMec) {

@@ -59,13 +59,16 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
     let nombreDefault = 'Especialista Certificado';
     let inicialesDefault = 'EC';
 
-    if (cleanSearch.includes('B0B2') || cleanSearch.includes('5432')) {
+    if (cleanSearch.includes('8976') || cleanSearch.includes('PETRO')) {
+      nombreDefault = 'Jose Antino Petro';
+      inicialesDefault = 'JA';
+    } else if (cleanSearch.includes('B0B2') || cleanSearch.includes('5432')) {
       nombreDefault = 'Miguel Ángel Torres';
       inicialesDefault = 'MT';
     } else if (cleanSearch.includes('1928')) {
       nombreDefault = 'Alejandro Rivas';
       inicialesDefault = 'AR';
-    } else if (cleanSearch.includes('0842') || cleanSearch.includes('CAR-8492')) {
+    } else if (cleanSearch.includes('0842') || cleanSearch.includes('CAR-8492') || cleanSearch.includes('MENDOZA')) {
       nombreDefault = 'Carlos Mendoza';
       inicialesDefault = 'CM';
     }
@@ -82,8 +85,8 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
       cedula: 'Identidad Verificada TTM',
       telefono: '',
       foto: null,
-      vehiculo: 'Moto Yamaha FZ • Color Negro • Placa AB123CD',
-      ordenActiva: 'Atendiendo a: Chevrolet Aveo LT • Cuadrante: Chacao',
+      vehiculo: 'Unidad Móvil de Asistencia TTM',
+      ordenActiva: 'Disponible • En guardia operativa',
       especialidades: [
         'Diagnóstico OBD2',
         'Frenos e Hidráulica',
@@ -101,15 +104,21 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
     async function buscarMecanico() {
       try {
         const supabase = createClient();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanSearch);
 
-        // 1. Buscar en Supabase perfiles
-        const { data, error } = await supabase
+        let query = supabase
           .from('perfiles')
-          .select('id, rol, nombre_completo, telefono, codigo_aliado, avatar_url, cedula_rif, created_at')
-          .or(
-            `codigo_aliado.ilike.%${cleanSearch}%,id.ilike.%${cleanSearch}%,nombre_completo.ilike.%${cleanSearch}%`
-          )
-          .limit(1);
+          .select('id, rol, nombre_completo, telefono, codigo_aliado, avatar_url, created_at');
+
+        if (isUuid) {
+          query = query.eq('id', cleanSearch);
+        } else {
+          query = query.or(
+            `codigo_aliado.ilike.%${cleanSearch}%,codigo_aliado.ilike.%TTM-${cleanSearch}%,nombre_completo.ilike.%${cleanSearch}%`
+          );
+        }
+
+        const { data, error } = await query.limit(1);
 
         if (montado && data && data.length > 0) {
           const m = data[0];
@@ -121,7 +130,24 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
               : nom.slice(0, 2).toUpperCase();
 
           const fotoLocalDirecta = typeof window !== 'undefined' ? localStorage.getItem('ttm_aliado_foto') : null;
-          const fotoFinal = m.avatar_url || (cleanSearch.includes('8976') ? fotoLocalDirecta : null);
+          const fotoFinal = m.avatar_url || (cleanSearch.includes('8976') || nom.toLowerCase().includes('petro') ? fotoLocalDirecta : null);
+
+          // Buscar orden activa si existe
+          let ordenActivaStr = 'Disponible • En guardia operativa';
+          try {
+            const { data: ords } = await supabase
+              .from('ordenes')
+              .select('id, vehiculo_marca, vehiculo_modelo, sector, estado')
+              .eq('mecanico_id', m.id)
+              .in('estado', ['ASIGNADO', 'EN_INSPECCION', 'EN_EJECUCION'])
+              .limit(1);
+
+            if (ords && ords.length > 0) {
+              const o = ords[0];
+              const veh = [o.vehiculo_marca, o.vehiculo_modelo].filter(Boolean).join(' ') || o.vehiculo_modelo || 'Vehículo';
+              ordenActivaStr = `Atendiendo a: ${veh} • Cuadrante: ${o.sector || 'Caracas'}`;
+            }
+          } catch {}
 
           setMecanico((prev) => ({
             ...prev,
@@ -131,7 +157,8 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
             credencial: m.codigo_aliado || idOficial,
             telefono: m.telefono || prev.telefono,
             foto: fotoFinal,
-            cedula: m.cedula_rif || prev.cedula
+            cedula: m.telefono ? `Tel: ${m.telefono}` : 'Identidad Verificada TTM',
+            ordenActiva: ordenActivaStr
           }));
           setCargando(false);
           return;
@@ -170,7 +197,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
                   credencial: match.codigo_aliado || idOficial,
                   telefono: match.telefono || prev.telefono,
                   foto: match.foto || match.avatar_url || fotoLocalDirecta || null,
-                  cedula: match.detalles?.cedula_rif || prev.cedula,
+                  cedula: match.telefono ? `Tel: ${match.telefono}` : 'Identidad Verificada TTM',
                   vehiculo: match.detalles?.vehiculo_traslado
                     ? `${match.detalles.vehiculo_traslado} • ${match.detalles.placa_vehiculo || 'CARACAS'}`
                     : prev.vehiculo,
