@@ -1368,10 +1368,10 @@ export function ClienteServicioClient({ id }: { id: string }) {
             </motion.div>
 
             {/* ======================================================== */}
-            {/* 2. SÍNTOMAS Y VEHÍCULO (BENTO CARDS EN GRID 3 COLUMNAS)   */}
+            {/* 2. SÍNTOMAS Y VEHÍCULO (BENTO CARDS VERTICALES FULL-WIDTH) */}
             {/* ======================================================== */}
             <motion.div variants={itemVariants}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 gap-3.5">
                 {/* Tarjeta 1: Síntomas Reportados */}
                 <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
                   <div className="flex items-center gap-2.5">
@@ -1445,7 +1445,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 </div>
 
                 {/* Tarjeta 3: Estado del Vehículo (Bento Box - Diagnóstico 25 Puntos) */}
-                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3 md:col-span-2 lg:col-span-1">
+                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50">
