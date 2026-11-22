@@ -430,18 +430,23 @@ export default function PortalAliadosPage() {
 
   // Clasificación de órdenes
   const ordenesAsignadas = useMemo(() => {
-    return ordenesConDistancia.filter((o) =>
-      ((mecanicoId && o.mecanico_id === mecanicoId) ||
-        (codigoAliado && o.mecanico_id === codigoAliado) ||
-        ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)) &&
-      !['FINALIZADO', 'CANCELADO'].includes(o.estado)
-    );
+    return ordenesConDistancia.filter((o) => {
+      const perteneceAMi = Boolean(
+        (mecanicoId && o.mecanico_id === mecanicoId) ||
+        (codigoAliado && (o.mecanico_id === codigoAliado || o.mecanico_id === codigoAliado.replace('#', '')))
+      );
+      return (
+        perteneceAMi &&
+        ['ASIGNADO', 'EN_INSPECCION', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado) &&
+        !['FINALIZADO', 'CANCELADO'].includes(o.estado)
+      );
+    });
   }, [ordenesConDistancia, mecanicoId, codigoAliado]);
 
   // REGLA DE NEGOCIO P0: El mecánico solo puede tomar UNA orden por vez hasta terminarla
   const ordenActivaEnCurso = useMemo(() => {
     return ordenesAsignadas.find((o) =>
-      ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)
+      ['ASIGNADO', 'EN_INSPECCION', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(o.estado)
     );
   }, [ordenesAsignadas]);
 
@@ -650,7 +655,7 @@ export default function PortalAliadosPage() {
     }
   };
 
-  // 4 y 5. Acción de Aceptar con Supabase RPC y manejo de Race Conditions
+  // 4 y 5. Acción de Aceptar Servicio (Mecánico en ruta / en sitio)
   const handleAceptarServicio = async (orden: OrdenSupabase) => {
     // REGLA P0: El mecánico solo puede tomar UNA orden por vez hasta terminarla
     if (tieneOrdenActiva) {
@@ -663,44 +668,92 @@ export default function PortalAliadosPage() {
 
     try {
       const supabase = createClient();
-      const idMecanicoAsignar = mecanicoId || codigoAliado || 'mecanico_autenticado';
+      const isUuid = (val?: string | null) =>
+        Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
 
-      const { data, error } = await supabase.rpc('aceptar_servicio_disponible', {
-        p_orden_id: orden.id,
-        p_mecanico_id: idMecanicoAsignar
-      });
+      // Resolver UUID válido para la columna mecanico_id (tipo UUID en Postgres)
+      let resolvedUuid = isUuid(mecanicoId) ? mecanicoId : null;
 
-      if (data === true) {
-        setToastAceptado(`¡Servicio aceptado! La orden se añadió a tus servicios asignados.`);
+      if (!resolvedUuid) {
+        // Intentar buscar UUID en perfiles por código aliado o sesión
+        try {
+          const codeLimpio = (codigoAliado || '').replace('#', '').trim();
+          const { data: pData } = await supabase
+            .from('perfiles')
+            .select('id')
+            .or(`codigo_aliado.ilike.%${codeLimpio}%,nombre_completo.ilike.%${nombreMecanico}%`)
+            .limit(1);
+
+          if (pData && pData.length > 0 && isUuid(pData[0].id)) {
+            resolvedUuid = pData[0].id;
+            if (resolvedUuid) setMecanicoId(resolvedUuid);
+          }
+        } catch (e) {}
+      }
+
+      // Si aún no hay UUID, buscar cualquier mecánico registrado en perfiles
+      if (!resolvedUuid) {
+        try {
+          const { data: mData } = await supabase
+            .from('perfiles')
+            .select('id')
+            .eq('rol', 'MECANICO')
+            .limit(1);
+          if (mData && mData.length > 0 && isUuid(mData[0].id)) {
+            resolvedUuid = mData[0].id;
+          }
+        } catch (e) {}
+      }
+
+      // Preparar payload de actualización seguro para Supabase
+      const updatePayload: Record<string, any> = {
+        estado: 'ASIGNADO'
+      };
+      if (resolvedUuid) {
+        updatePayload.mecanico_id = resolvedUuid;
+      }
+
+      // Verificar en la BD si la orden no fue tomada por otro mecánico
+      const { data: ordenActual } = await supabase
+        .from('ordenes')
+        .select('id, estado, mecanico_id')
+        .eq('id', orden.id)
+        .maybeSingle();
+
+      if (
+        ordenActual &&
+        ordenActual.mecanico_id &&
+        resolvedUuid &&
+        ordenActual.mecanico_id !== resolvedUuid &&
+        ['ASIGNADO', 'EN_INSPECCION', 'EN_EJECUCION'].includes(ordenActual.estado)
+      ) {
+        alert('Este servicio ya fue asignado previamente a otro especialista.');
+        await cargarOrdenes(true);
+        return;
+      }
+
+      const { error: updErr } = await supabase
+        .from('ordenes')
+        .update(updatePayload)
+        .eq('id', orden.id);
+
+      if (!updErr) {
+        setToastAceptado('✓ ¡Servicio aceptado! La orden se movió a tu lista de servicios en curso y al tablero de despacho.');
         setTimeout(() => setToastAceptado(null), 4500);
-        // Actualizar localmente para feedback inmediato
+
+        // Feedback inmediato en la UI
         setOrdenes((prev) =>
           prev.map((o) =>
             o.id === orden.id
-              ? { ...o, estado: 'ASIGNADO', mecanico_id: idMecanicoAsignar }
+              ? { ...o, estado: 'ASIGNADO', mecanico_id: resolvedUuid }
               : o
           )
         );
         setFiltroServicios('asignados');
+        await cargarOrdenes(true);
       } else {
-        // Fallback directo por update en base de datos si la orden está en estado diferente a DISPONIBLE
-        const { error: updErr } = await supabase
-          .from('ordenes')
-          .update({
-            estado: 'ASIGNADO',
-            mecanico_id: idMecanicoAsignar
-          })
-          .eq('id', orden.id);
-
-        if (!updErr) {
-          setToastAceptado(`¡Servicio asignado a tu perfil con éxito!`);
-          setTimeout(() => setToastAceptado(null), 4500);
-          await cargarOrdenes(true);
-          setFiltroServicios('asignados');
-        } else {
-          alert('Lo sentimos, otro mecánico acaba de aceptar este servicio');
-          await cargarOrdenes(true);
-        }
+        console.error('Error al aceptar servicio:', updErr);
+        alert('No se pudo asignar el servicio: ' + (updErr.message || 'Verifica tu conexión'));
       }
     } catch (err) {
       console.error('Excepción al aceptar servicio:', err);
