@@ -23,7 +23,12 @@ import {
   Clock,
   User,
   Sparkles,
-  X
+  X,
+  Activity,
+  Radio,
+  Check,
+  RotateCcw,
+  FileText
 } from 'lucide-react';
 import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import { SolicitarExpedienteModal } from '@/components/SolicitarExpedienteModal';
@@ -51,6 +56,25 @@ interface VehiculoGaraje {
     piezas_requeridas?: string;
     items?: Record<string, string>;
   } | null;
+}
+
+export interface OrdenServicioCliente {
+  id: string;
+  cliente_nombre?: string;
+  cliente_telefono?: string;
+  cliente_email?: string;
+  vehiculo_marca?: string;
+  vehiculo_modelo?: string;
+  vehiculo_placa?: string;
+  falla_reportada?: string;
+  sector?: string;
+  estado: string;
+  created_at?: string;
+  mecanico_id?: string;
+  mecanico_nombre?: string;
+  tipo_servicio?: string;
+  precio_estimado?: number;
+  ganancia_estimada?: number;
 }
 
 const VEHICULOS_DEFAULT: VehiculoGaraje[] = [
@@ -132,6 +156,39 @@ const VEHICULOS_DEFAULT: VehiculoGaraje[] = [
   }
 ];
 
+function getEstadoBadge(estado: string) {
+  switch (estado) {
+    case 'LEAD_NUEVO':
+      return { label: 'Solicitud Recibida', bg: 'bg-amber-100 text-amber-900 border-amber-200', dot: 'bg-amber-500' };
+    case 'ASIGNADO':
+      return { label: 'Mecánico Asignado', bg: 'bg-blue-100 text-blue-900 border-blue-200', dot: 'bg-blue-600' };
+    case 'EN_RUTA_TALLER':
+    case 'EN_RUTA':
+      return { label: 'Mecánico en Camino', bg: 'bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/20', dot: 'bg-[#0A1525]' };
+    case 'DIAGNOSTICO_AGENDADO':
+    case 'EN_EJECUCION':
+      return { label: 'En Diagnóstico / Sitio', bg: 'bg-purple-100 text-purple-900 border-purple-200', dot: 'bg-purple-600' };
+    case 'COTIZADO':
+    case 'ESPERANDO_APROBACION':
+      return { label: 'Presupuesto por Aprobar', bg: 'bg-orange-100 text-orange-900 border-orange-200', dot: 'bg-orange-600' };
+    case 'APROBADO':
+    case 'REPUESTOS_EN_RUTA':
+      return { label: 'Repuestos en Ruta', bg: 'bg-sky-100 text-sky-900 border-sky-200', dot: 'bg-sky-600' };
+    case 'EN_REPARACION':
+      return { label: 'Reparación en Proceso', bg: 'bg-indigo-100 text-indigo-900 border-indigo-200', dot: 'bg-indigo-600' };
+    case 'TRABAJO_TERMINADO':
+    case 'PENDIENTE_PAGO':
+      return { label: 'Trabajo Listo • Pendiente Pago', bg: 'bg-emerald-100 text-emerald-900 border-emerald-200', dot: 'bg-emerald-600' };
+    case 'PAGO_REPORTADO':
+      return { label: 'Validando Pago', bg: 'bg-cyan-100 text-cyan-900 border-cyan-200', dot: 'bg-cyan-600' };
+    case 'PAGADO':
+    case 'FINALIZADO':
+      return { label: 'Completado & Certificado', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' };
+    default:
+      return { label: (estado || 'ACTIVO').replace(/_/g, ' '), bg: 'bg-slate-100 text-slate-800 border-slate-200', dot: 'bg-slate-400' };
+  }
+}
+
 export default function ClienteDashboardPage() {
   const router = useRouter();
 
@@ -155,6 +212,100 @@ export default function ClienteDashboardPage() {
   const [modalChecklistOpen, setModalChecklistOpen] = useState(false);
   const [modalExpedienteOpen, setModalExpedienteOpen] = useState(false);
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<VehiculoGaraje | null>(null);
+
+  // Órdenes de servicio y visualización de Servicios Activos
+  const [ordenesCliente, setOrdenesCliente] = useState<OrdenServicioCliente[]>([]);
+  const [modalServiciosActivosOpen, setModalServiciosActivosOpen] = useState(false);
+  const [tabServiciosModal, setTabServiciosModal] = useState<'activos' | 'historial'>('activos');
+
+  const serviciosActivos = ordenesCliente.filter(o => 
+    !['FINALIZADO', 'CANCELADO'].includes(o.estado)
+  );
+  const serviciosHistorial = ordenesCliente.filter(o => 
+    ['FINALIZADO', 'CANCELADO'].includes(o.estado)
+  );
+
+  // Recargar órdenes desde Supabase y LocalStorage
+  const recargarOrdenes = async (emailParam?: string, telParam?: string) => {
+    try {
+      const supabase = createClient();
+      const eMail = emailParam || usuario.email;
+      const tel = telParam || usuario.telefono;
+      const lista: OrdenServicioCliente[] = [];
+
+      if (eMail || tel) {
+        const query = eMail && tel
+          ? `cliente_email.ilike.%${eMail}%,cliente_telefono.eq.${tel}`
+          : eMail
+            ? `cliente_email.ilike.%${eMail}%`
+            : `cliente_telefono.eq.${tel}`;
+
+        const { data: ordenesData } = await supabase
+          .from('ordenes')
+          .select('*')
+          .or(query)
+          .order('created_at', { ascending: false });
+
+        if (ordenesData) {
+          ordenesData.forEach((ord: any) => {
+            lista.push({
+              id: ord.id,
+              cliente_nombre: ord.cliente_nombre,
+              cliente_telefono: ord.cliente_telefono,
+              cliente_email: ord.cliente_email,
+              vehiculo_marca: ord.vehiculo_marca,
+              vehiculo_modelo: ord.vehiculo_modelo,
+              vehiculo_placa: ord.vehiculo_placa || ord.placa_flota,
+              falla_reportada: ord.falla_reportada,
+              sector: ord.sector,
+              estado: ord.estado || 'LEAD_NUEVO',
+              created_at: ord.created_at,
+              mecanico_id: ord.mecanico_id,
+              mecanico_nombre: ord.mecanico_nombre,
+              tipo_servicio: ord.tipo_servicio,
+              precio_estimado: ord.precio_estimado,
+              ganancia_estimada: ord.ganancia_estimada
+            });
+          });
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem('ttm_ordenes_recientes');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((ord: any) => {
+              if (!lista.some(o => o.id === ord.id)) {
+                lista.push({
+                  id: ord.id,
+                  cliente_nombre: ord.cliente_nombre,
+                  cliente_telefono: ord.cliente_telefono,
+                  cliente_email: ord.cliente_email,
+                  vehiculo_marca: ord.vehiculo_marca,
+                  vehiculo_modelo: ord.vehiculo_modelo,
+                  vehiculo_placa: ord.vehiculo_placa,
+                  falla_reportada: ord.falla_reportada,
+                  sector: ord.sector,
+                  estado: ord.estado || 'LEAD_NUEVO',
+                  created_at: ord.created_at,
+                  mecanico_id: ord.mecanico_id,
+                  mecanico_nombre: ord.mecanico_nombre,
+                  tipo_servicio: ord.tipo_servicio,
+                  precio_estimado: ord.precio_estimado,
+                  ganancia_estimada: ord.ganancia_estimada
+                });
+              }
+            });
+          }
+        }
+      }
+
+      setOrdenesCliente(lista);
+    } catch (e) {
+      console.warn('Error recargando órdenes:', e);
+    }
+  };
 
   // Modal para registrar un nuevo vehículo en el Garaje
   const [modalNuevoVehiculo, setModalNuevoVehiculo] = useState(false);
@@ -293,6 +444,9 @@ export default function ClienteDashboardPage() {
           }
         }
 
+        // Cargar órdenes de servicio del cliente (Supabase y localStorage)
+        await recargarOrdenes(emailUsuario, telefonoUsuario);
+
       } catch (err) {
         console.warn('Error inicializando garaje:', err);
         setVehiculos([]);
@@ -388,12 +542,37 @@ export default function ClienteDashboardPage() {
           </div>
 
           {/* Acciones de Cabecera */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <BotonSoporteWhatsApp 
               modo="header" 
               mensaje="Hola, necesito ayuda con mi garaje o servicio en TuTallerMóvil"
               className="hidden sm:inline-flex"
             />
+
+            {/* BOTÓN SERVICIOS ACTIVOS */}
+            <button
+              type="button"
+              onClick={() => {
+                setTabServiciosModal('activos');
+                setModalServiciosActivosOpen(true);
+              }}
+              className="h-10 px-3 sm:px-4 rounded-xl bg-slate-900 hover:bg-[#1E56B0] text-white text-xs font-black flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 relative border border-slate-700/60"
+              title="Ver servicios y reparaciones activas"
+            >
+              <div className="relative flex items-center justify-center">
+                <Activity className="w-4 h-4 text-[#CCFF00]" />
+                {serviciosActivos.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#CCFF00] animate-ping" />
+                )}
+              </div>
+              <span className="hidden sm:inline">Servicios Activos</span>
+              <span className="sm:hidden">Activos</span>
+              {serviciosActivos.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[#CCFF00] text-[#0A1525] text-[10px] font-mono font-black">
+                  {serviciosActivos.length}
+                </span>
+              )}
+            </button>
 
             <button
               type="button"
@@ -459,20 +638,38 @@ export default function ClienteDashboardPage() {
             </div>
 
             {/* Quick Stats Bento */}
-            <div className="grid grid-cols-3 gap-3 shrink-0">
-              <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 text-center min-w-[90px]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setTabServiciosModal('activos');
+                  setModalServiciosActivosOpen(true);
+                }}
+                className="bg-white/10 hover:bg-white/20 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-[#CCFF00]/40 text-center min-w-[85px] sm:min-w-[100px] transition-all cursor-pointer group"
+                title="Ver tus servicios en curso"
+              >
+                <span className="text-[10px] text-slate-300 font-bold uppercase block flex items-center justify-center gap-1">
+                  <Activity className="w-3 h-3 text-[#CCFF00]" />
+                  <span>En Curso</span>
+                </span>
+                <span className="text-xl sm:text-2xl font-mono font-black text-[#CCFF00] group-hover:scale-105 transition-transform inline-block">
+                  {serviciosActivos.length}
+                </span>
+              </button>
+
+              <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 text-center min-w-[85px] sm:min-w-[90px]">
                 <span className="text-[10px] text-slate-300 font-bold uppercase block">Vehículos</span>
-                <span className="text-xl sm:text-2xl font-mono font-black text-[#CCFF00]">
+                <span className="text-xl sm:text-2xl font-mono font-black text-white">
                   {vehiculos.length}
                 </span>
               </div>
-              <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 text-center min-w-[90px]">
+              <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 text-center min-w-[85px] sm:min-w-[90px]">
                 <span className="text-[10px] text-slate-300 font-bold uppercase block">Inspecciones</span>
                 <span className="text-xl sm:text-2xl font-mono font-black text-white">
                   25 Pts
                 </span>
               </div>
-              <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 text-center min-w-[90px]">
+              <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 text-center min-w-[85px] sm:min-w-[90px]">
                 <span className="text-[10px] text-slate-300 font-bold uppercase block">Garantía QA</span>
                 <span className="text-xl sm:text-2xl font-mono font-black text-emerald-400">
                   90 Días
@@ -481,6 +678,57 @@ export default function ClienteDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* BANNER DE SEGUIMIENTO EN VIVO: SERVICIO ACTIVO EN CURSO */}
+        {serviciosActivos.length > 0 && (
+          <div className="bg-[#0A1525] rounded-3xl p-5 sm:p-6 border-2 border-[#CCFF00]/50 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[#CCFF00]/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-start sm:items-center gap-3.5 relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center shrink-0 shadow-lg shadow-[#CCFF00]/30">
+                <Radio className="w-6 h-6 stroke-[2.5] animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-[#CCFF00] text-[#0A1525] px-2.5 py-0.5 rounded-full shadow-2xs">
+                    ● En Curso • {serviciosActivos[0].estado.replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">
+                    #{serviciosActivos[0].id.slice(0, 8)}
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                  {serviciosActivos[0].vehiculo_modelo} {serviciosActivos[0].vehiculo_placa ? `[${serviciosActivos[0].vehiculo_placa}]` : ''}
+                </h3>
+                <p className="text-xs text-slate-300 max-w-xl">
+                  {serviciosActivos[0].falla_reportada || 'Servicio técnico automotriz en progreso'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 relative z-10">
+              <Link
+                href={`/cliente/servicio/${serviciosActivos[0].id}`}
+                className="h-11 px-5 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black flex items-center gap-2 transition-all shadow-md active:scale-95"
+              >
+                <span>Ver Seguimiento en Vivo</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              {serviciosActivos.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTabServiciosModal('activos');
+                    setModalServiciosActivosOpen(true);
+                  }}
+                  className="h-11 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Ver todos ({serviciosActivos.length})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Sección: Mis Vehículos */}
         <div className="space-y-4">
@@ -975,12 +1223,235 @@ export default function ClienteDashboardPage() {
         )}
       </AnimatePresence>
 
+      {/* MODAL: SERVICIOS ACTIVOS Y SEGUIMIENTO EN VIVO */}
+      <AnimatePresence>
+        {modalServiciosActivosOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 sm:p-6 relative my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden space-y-4"
+            >
+              {/* Botón Cerrar Pinned */}
+              <button
+                type="button"
+                onClick={() => setModalServiciosActivosOpen(false)}
+                className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Cabecera */}
+              <div className="flex items-center gap-3 pr-8 shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs shrink-0">
+                  <Activity className="w-6 h-6 text-[#CCFF00]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-[#0A1525] tracking-tight">
+                      Tus Servicios en TuTallerMóvil
+                    </h3>
+                    {serviciosActivos.length > 0 && (
+                      <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-[#CCFF00] text-[#0A1525] px-2.5 py-0.5 rounded-full shadow-2xs">
+                        ● {serviciosActivos.length} Activo{serviciosActivos.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Seguimiento en vivo, estatus operativo y asignación de especialistas
+                  </p>
+                </div>
+              </div>
+
+              {/* Pestañas de Filtrado */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-2xl shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setTabServiciosModal('activos')}
+                  className={`py-2 px-3 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    tabServiciosModal === 'activos'
+                      ? 'bg-white text-[#0A1525] shadow-xs'
+                      : 'text-slate-500 hover:text-[#0A1525]'
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5 text-[#1E56B0]" />
+                  <span>En Curso ({serviciosActivos.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTabServiciosModal('historial')}
+                  className={`py-2 px-3 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    tabServiciosModal === 'historial'
+                      ? 'bg-white text-[#0A1525] shadow-xs'
+                      : 'text-slate-500 hover:text-[#0A1525]'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Historial Pasado ({serviciosHistorial.length})</span>
+                </button>
+              </div>
+
+              {/* Contenido scrolleable */}
+              <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+                {tabServiciosModal === 'activos' ? (
+                  serviciosActivos.length === 0 ? (
+                    <div className="p-8 text-center space-y-3 bg-slate-50 rounded-2xl border border-slate-200">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#1E56B0] flex items-center justify-center mx-auto">
+                        <CheckCircle2 className="w-6 h-6 text-[#1E56B0]" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-black text-[#0A1525]">
+                          No tienes servicios en curso en este momento
+                        </h4>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                          Todos tus servicios anteriores han sido completados o archivados. ¿Necesitas un mecánico hoy?
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalServiciosActivosOpen(false);
+                          setModalSolicitarOpen(true);
+                        }}
+                        className="h-10 px-4 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black inline-flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
+                      >
+                        <Wrench className="w-3.5 h-3.5 text-[#CCFF00]" />
+                        <span>Solicitar Mecánico Ahora</span>
+                      </button>
+                    </div>
+                  ) : (
+                    serviciosActivos.map((ord) => {
+                      const badge = getEstadoBadge(ord.estado);
+                      return (
+                        <div
+                          key={ord.id}
+                          className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs hover:border-[#1E56B0] transition-all space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${badge.bg}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} animate-pulse`} />
+                                  <span>{badge.label}</span>
+                                </span>
+                                <span className="font-mono text-[10px] text-slate-400">
+                                  #{ord.id.slice(0, 8)}
+                                </span>
+                              </div>
+                              <h4 className="text-sm font-black text-[#0A1525] pt-1 truncate">
+                                {ord.vehiculo_modelo || 'Vehículo Particular'}
+                              </h4>
+                              {ord.vehiculo_placa && (
+                                <span className="font-mono text-xs font-extrabold text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">
+                                  {ord.vehiculo_placa}
+                                </span>
+                              )}
+                            </div>
+
+                            <Link
+                              href={`/cliente/servicio/${ord.id}`}
+                              className="h-10 px-4 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 shrink-0 border border-[#0A1525]/10"
+                            >
+                              <span>Seguimiento</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </Link>
+                          </div>
+
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1">
+                            <div className="flex items-center justify-between text-[11px] text-slate-500">
+                              <span className="font-bold text-slate-700">Falla / Servicio:</span>
+                              {ord.created_at && (
+                                <span className="font-mono">{new Date(ord.created_at).toLocaleDateString('es-VE')}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-700 font-medium">
+                              {ord.falla_reportada || 'Servicio técnico a domicilio'}
+                            </p>
+                            {ord.sector && (
+                              <p className="text-[11px] text-slate-500 font-medium">
+                                Ubicación: <strong className="text-slate-800">{ord.sector}</strong>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )
+                ) : (
+                  serviciosHistorial.length === 0 ? (
+                    <div className="p-8 text-center space-y-2 bg-slate-50 rounded-2xl border border-slate-200">
+                      <Clock className="w-8 h-8 text-slate-400 mx-auto" />
+                      <p className="text-xs text-slate-500">
+                        No hay servicios archivados o finalizados aún.
+                      </p>
+                    </div>
+                  ) : (
+                    serviciosHistorial.map((ord) => (
+                      <div
+                        key={ord.id}
+                        className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ✓ Finalizado / Garantía 90 Días
+                            </span>
+                            <h4 className="text-xs font-black text-[#0A1525] pt-1">
+                              {ord.vehiculo_modelo} {ord.vehiculo_placa ? `[${ord.vehiculo_placa}]` : ''}
+                            </h4>
+                          </div>
+                          <Link
+                            href={`/cliente/servicio/${ord.id}`}
+                            className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1"
+                          >
+                            <span>Ver Detalles</span>
+                            <ExternalLink className="w-3 h-3 text-slate-500" />
+                          </Link>
+                        </div>
+                        <p className="text-xs text-slate-600">
+                          {ord.falla_reportada}
+                        </p>
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => recargarOrdenes()}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1E56B0] hover:underline cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Actualizar estado</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setModalServiciosActivosOpen(false)}
+                  className="h-9 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Modal de Solicitud de Mecánico como Invitado o Cliente */}
       <SolicitarMecanicoModal
         open={modalSolicitarOpen}
         onOpenChange={setModalSolicitarOpen}
         initialTipoServicio={tipoServicioModal}
         vehiculosRegistrados={vehiculos}
+        onSuccessToast={() => recargarOrdenes()}
         onVehiculoCreado={(nuevo) => {
           setVehiculos((prev) => {
             if (prev.some((v) => v.placa === nuevo.placa)) return prev;
