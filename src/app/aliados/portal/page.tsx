@@ -105,6 +105,7 @@ export default function PortalAliadosPage() {
   const [modalBloqueoOrden, setModalBloqueoOrden] = useState<boolean>(false);
   const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
   const [mecanicoId, setMecanicoId] = useState<string>('');
+  const [ordenAceptadaId, setOrdenAceptadaId] = useState<string | null>(null);
 
   // Sincronizar pestañas desde el MobileBottomNav global PWA
   useEffect(() => {
@@ -229,6 +230,9 @@ export default function PortalAliadosPage() {
       const telGuardado = localStorage.getItem('ttm_aliado_telefono');
       if (telGuardado) setTelefonoMecanico(telGuardado);
 
+      const ordenGuardada = localStorage.getItem('ttm_orden_activa_id');
+      if (ordenGuardada) setOrdenAceptadaId(ordenGuardada);
+
       const zonaGuardada = localStorage.getItem('ttm_aliado_zona');
       if (zonaGuardada) setZonaCobertura(zonaGuardada);
 
@@ -253,16 +257,21 @@ export default function PortalAliadosPage() {
         } catch (e) {}
       }
 
-      // Si aún no tenemos mecanicoId pero sí código aliado o nombre, resolver UUID desde perfiles
+      // Resolver UUID desde perfiles de forma exacta
       const cleanCode = (matchCode?.[2] || '').replace('#', '').trim();
       if (cleanCode) {
         supabaseClient
           .from('perfiles')
-          .select('id, codigo_aliado, nombre_completo')
-          .or(`codigo_aliado.ilike.%${cleanCode}%,codigo_aliado.ilike.%TTM-${cleanCode}%`)
+          .select('id, codigo_aliado, nombre_completo, avatar_url')
+          .ilike('codigo_aliado', `%${cleanCode}%`)
           .maybeSingle()
           .then(({ data }) => {
-            if (data?.id) setMecanicoId(data.id);
+            if (data?.id) {
+              setMecanicoId(data.id);
+              if (data.nombre_completo) setNombreMecanico(data.nombre_completo);
+              if (data.codigo_aliado) setCodigoAliado(data.codigo_aliado);
+              if (data.avatar_url) setFotoPerfil(data.avatar_url);
+            }
           }, () => {});
       }
 
@@ -451,6 +460,7 @@ export default function PortalAliadosPage() {
     return ordenesConDistancia.filter((o) => {
       const cleanCode = (codigoAliado || '').replace('#', '').trim().toUpperCase();
       const perteneceAMi = Boolean(
+        (ordenAceptadaId && o.id === ordenAceptadaId) ||
         (mecanicoId && o.mecanico_id === mecanicoId) ||
         (cleanCode && (
           String(o.mecanico_id || '').toUpperCase() === cleanCode ||
@@ -464,7 +474,7 @@ export default function PortalAliadosPage() {
         !['FINALIZADO', 'CANCELADO'].includes(o.estado)
       );
     });
-  }, [ordenesConDistancia, mecanicoId, codigoAliado]);
+  }, [ordenesConDistancia, mecanicoId, codigoAliado, ordenAceptadaId]);
 
   // REGLA DE NEGOCIO P0: El mecánico solo puede tomar UNA orden por vez hasta terminarla
   const ordenActivaEnCurso = useMemo(() => {
@@ -508,12 +518,13 @@ export default function PortalAliadosPage() {
   // REGLA SOLICITADA: En este apartado solo tienen que salir las órdenes sin mecánico asignado y no avanzadas
   const ordenesDisponibles = useMemo(() => {
     return ordenesConDistancia.filter((o) => {
+      const esAceptadaPorMi = Boolean(ordenAceptadaId && o.id === ordenAceptadaId);
       const sinMecanico = !o.mecanico_id || String(o.mecanico_id).trim() === '';
       const noAvanzada = !ESTADOS_AVANZADOS.includes(o.estado);
       const esEstadoInicial = ESTADOS_INICIALES.includes(o.estado) || !o.estado;
-      return sinMecanico && noAvanzada && esEstadoInicial;
+      return !esAceptadaPorMi && sinMecanico && noAvanzada && esEstadoInicial;
     });
-  }, [ordenesConDistancia, ESTADOS_AVANZADOS, ESTADOS_INICIALES]);
+  }, [ordenesConDistancia, ESTADOS_AVANZADOS, ESTADOS_INICIALES, ordenAceptadaId]);
 
   // Los servicios disponibles NO deben ser los mismos que en servicio.
   // En EN_SERVICIO o pestaña asignados solo sale la orden que el mecánico aceptó.
@@ -796,6 +807,11 @@ export default function PortalAliadosPage() {
         setToastAceptado('✓ Servicio completado y marcado como FINALIZADO. Has vuelto a estar DISPONIBLE.');
         setTimeout(() => setToastAceptado(null), 4500);
         setModalBloqueoOrden(false);
+        setOrdenAceptadaId(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('ttm_orden_activa_id');
+          localStorage.setItem('ttm_aliado_estado', 'DISPONIBLE');
+        }
         setEstado('DISPONIBLE');
         setFiltroServicios('disponibles');
         setOrdenes((prev) =>
@@ -833,32 +849,49 @@ export default function PortalAliadosPage() {
       let resolvedUuid = isUuid(mecanicoId) ? mecanicoId : null;
 
       if (!resolvedUuid) {
-        // Intentar buscar UUID en perfiles por código aliado o sesión
-        try {
-          const codeLimpio = (codigoAliado || '').replace('#', '').trim();
-          const { data: pData } = await supabase
-            .from('perfiles')
-            .select('id')
-            .or(`codigo_aliado.ilike.%${codeLimpio}%,nombre_completo.ilike.%${nombreMecanico}%`)
-            .limit(1);
+        const codeLimpio = (codigoAliado || '').replace('#', '').trim();
+        if (codeLimpio) {
+          try {
+            const { data: pData } = await supabase
+              .from('perfiles')
+              .select('id, codigo_aliado, nombre_completo')
+              .ilike('codigo_aliado', `%${codeLimpio}%`)
+              .maybeSingle();
 
-          if (pData && pData.length > 0 && isUuid(pData[0].id)) {
-            resolvedUuid = pData[0].id;
-            if (resolvedUuid) setMecanicoId(resolvedUuid);
+            const pid = pData?.id;
+            if (pid && isUuid(pid)) {
+              resolvedUuid = pid;
+              setMecanicoId(pid);
+              if (typeof window !== 'undefined') localStorage.setItem('ttm_aliado_id', pid);
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (!resolvedUuid && nombreMecanico) {
+        try {
+          const { data: nData } = await supabase
+            .from('perfiles')
+            .select('id, codigo_aliado, nombre_completo')
+            .ilike('nombre_completo', `%${nombreMecanico.trim()}%`)
+            .maybeSingle();
+
+          const nid = nData?.id;
+          if (nid && isUuid(nid)) {
+            resolvedUuid = nid;
+            setMecanicoId(nid);
+            if (typeof window !== 'undefined') localStorage.setItem('ttm_aliado_id', nid);
           }
         } catch (e) {}
       }
 
-      // Si aún no hay UUID, buscar cualquier mecánico registrado en perfiles
+      // Si aún no hay UUID, buscar en sesión auth activa
       if (!resolvedUuid) {
         try {
-          const { data: mData } = await supabase
-            .from('perfiles')
-            .select('id')
-            .eq('rol', 'MECANICO')
-            .limit(1);
-          if (mData && mData.length > 0 && isUuid(mData[0].id)) {
-            resolvedUuid = mData[0].id;
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id && isUuid(user.id)) {
+            resolvedUuid = user.id;
+            setMecanicoId(resolvedUuid);
           }
         } catch (e) {}
       }
@@ -890,6 +923,15 @@ export default function PortalAliadosPage() {
         return;
       }
 
+      // Bloquear y registrar localmente la orden aceptada de inmediato
+      setOrdenAceptadaId(orden.id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ttm_orden_activa_id', orden.id);
+        localStorage.setItem('ttm_aliado_estado', 'EN_SERVICIO');
+      }
+      setEstado('EN_SERVICIO');
+      setFiltroServicios('asignados');
+
       const { error: updErr } = await supabase
         .from('ordenes')
         .update(updatePayload)
@@ -899,14 +941,11 @@ export default function PortalAliadosPage() {
         setToastAceptado('✓ ¡Servicio aceptado! Tu estado ahora es EN SERVICIO.');
         setTimeout(() => setToastAceptado(null), 4500);
 
-        setEstado('EN_SERVICIO');
-        setFiltroServicios('asignados');
-
         // Feedback inmediato en la UI
         setOrdenes((prev) =>
           prev.map((o) =>
             o.id === orden.id
-              ? { ...o, estado: 'ASIGNADO', mecanico_id: resolvedUuid }
+              ? { ...o, estado: 'ASIGNADO', mecanico_id: resolvedUuid || o.mecanico_id }
               : o
           )
         );
@@ -1569,10 +1608,22 @@ export default function PortalAliadosPage() {
                   .filter(Boolean)
                   .join(' ') || orden.vehiculo_modelo || 'Vehículo';
 
-                const estaAsignado =
+                const cleanCode = (codigoAliado || '').replace('#', '').trim().toUpperCase();
+                const esMiOrden = Boolean(
+                  (ordenAceptadaId && orden.id === ordenAceptadaId) ||
                   (mecanicoId && orden.mecanico_id === mecanicoId) ||
-                  (codigoAliado && orden.mecanico_id === codigoAliado) ||
-                  ['ASIGNADO', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO'].includes(orden.estado);
+                  (cleanCode && (
+                    String(orden.mecanico_id || '').toUpperCase() === cleanCode ||
+                    String(orden.mecanico_id || '').toUpperCase() === `#${cleanCode}` ||
+                    String(orden.mecanico_id || '').toUpperCase().includes(cleanCode)
+                  ))
+                );
+
+                const estaAsignadaEnGeneral = Boolean(
+                  esMiOrden ||
+                  (orden.mecanico_id && String(orden.mecanico_id).trim() !== '') ||
+                  ['ASIGNADO', 'EN_INSPECCION', 'REPUESTOS_EN_RUTA', 'EN_EJECUCION', 'PENDIENTE_PAGO', 'LIQUIDACION_PENDIENTE'].includes(orden.estado)
+                );
 
                 return (
                   <motion.div
@@ -1582,7 +1633,7 @@ export default function PortalAliadosPage() {
                     viewport={{ once: true, margin: '-20px' }}
                     transition={{ duration: 0.35, delay: index * 0.05, ease: 'easeOut' }}
                     whileHover={{ scale: 1.008 }}
-                    className={`bg-white border-2 rounded-2xl p-5 sm:p-6 shadow-sm transition-all ${estaAsignado
+                    className={`bg-white border-2 rounded-2xl p-5 sm:p-6 shadow-sm transition-all ${esMiOrden
                       ? 'border-[#1E56B0]/40 hover:border-[#1E56B0] shadow-blue-50/50'
                       : 'border-[#CBD5E1] hover:border-[#0A1525]'
                       }`}
@@ -1596,10 +1647,15 @@ export default function PortalAliadosPage() {
                             {shortId}
                           </span>
 
-                          {estaAsignado ? (
+                          {esMiOrden ? (
                             <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#1E56B0] border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-[#1E56B0] animate-pulse"></span>
-                              {orden.estado === 'EN_EJECUCION' ? 'EN EJECUCIÓN' : 'ASIGNADO A TI'}
+                              {orden.estado === 'EN_EJECUCION' ? 'EN EJECUCIÓN' : 'ASIGNADO A TI (EN RUTA)'}
+                            </span>
+                          ) : estaAsignadaEnGeneral ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                              <Lock className="w-3 h-3 text-slate-500" />
+                              TOMADO POR OTRO ESPECIALISTA
                             </span>
                           ) : (
                             <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -1665,12 +1721,12 @@ export default function PortalAliadosPage() {
                           </span>
                         </div>
 
-                        {estaAsignado ? (
+                        {esMiOrden ? (
                           <div className="flex items-center gap-2 w-full lg:w-auto">
                             {/* Botón directo a Ejecutar Servicio y Checklist Odómetro */}
                             <Link
                               href={`/aliados/servicio/${orden.id}`}
-                              className="flex-1 lg:w-44 h-12 text-sm font-black rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer bg-[#0A1525] hover:bg-[#1E56B0] text-white active:scale-95"
+                              className="flex-1 lg:w-44 h-12 text-sm font-black rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer bg-[#0A1525] hover:bg-[#1E56B0] text-white active:scale-95"
                             >
                               <ClipboardCheck className="w-4 h-4 text-[#CCFF00]" />
                               <span>Ejecutar</span>
@@ -1693,13 +1749,18 @@ export default function PortalAliadosPage() {
                               <span className="hidden sm:inline">Finalizar</span>
                             </button>
                           </div>
+                        ) : estaAsignadaEnGeneral ? (
+                          <div className="w-full lg:w-48 h-12 text-xs font-bold rounded-xl bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center gap-2 cursor-not-allowed">
+                            <Lock className="w-4 h-4 text-slate-400" />
+                            <span>Servicio Asignado</span>
+                          </div>
                         ) : (
                           /* Botón Aceptar Servicio para solicitudes libres */
                           <motion.button
                             type="button"
-                            disabled={isAccepting}
-                            whileHover={{ scale: isAccepting ? 1 : 1.02 }}
-                            whileTap={{ scale: isAccepting ? 1 : 0.98 }}
+                            disabled={isAccepting || tieneOrdenActiva}
+                            whileHover={{ scale: isAccepting || tieneOrdenActiva ? 1 : 1.02 }}
+                            whileTap={{ scale: isAccepting || tieneOrdenActiva ? 1 : 0.98 }}
                             onClick={() => {
                               if (tieneOrdenActiva) {
                                 setModalBloqueoOrden(true);
