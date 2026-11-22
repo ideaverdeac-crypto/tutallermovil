@@ -15,6 +15,11 @@ export function getAuthRedirectUrl(nextParam?: string | null): string {
     origin = 'https://tutallermovil.vercel.app';
   }
 
+  // Si window.location por error reporta un origin inválido o vacío
+  if (!origin || origin === 'null') {
+    origin = 'https://tutallermovil.vercel.app';
+  }
+
   const url = new URL('/auth/callback', origin);
   if (nextParam) {
     url.searchParams.set('next', nextParam);

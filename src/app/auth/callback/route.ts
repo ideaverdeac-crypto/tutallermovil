@@ -12,9 +12,14 @@ export async function GET(request: Request) {
   // Obtener host para redirección respetando proxies en Vercel
   const forwardedHost = request.headers.get('x-forwarded-host');
   const isLocalEnv = process.env.NODE_ENV === 'development';
-  const redirectBase = !isLocalEnv && forwardedHost
+  let redirectBase = !isLocalEnv && forwardedHost
     ? `https://${forwardedHost}`
     : requestUrl.origin;
+
+  // Protección anti-localhost en producción
+  if (!isLocalEnv && (redirectBase.includes('localhost') || redirectBase.includes('127.0.0.1'))) {
+    redirectBase = process.env.NEXT_PUBLIC_SITE_URL || 'https://tutallermovil.vercel.app';
+  }
 
   if (code) {
     try {
