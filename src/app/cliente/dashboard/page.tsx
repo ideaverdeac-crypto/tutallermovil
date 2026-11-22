@@ -879,7 +879,7 @@ export default function ClienteDashboardPage() {
                     {/* Acciones de la Tarjeta */}
                     {esNuevoVehiculo ? (
                       /* ACCIONES PARA VEHÍCULO NUEVO (HISTORIAL EN CERO) */
-                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <div className="pt-2 border-t border-slate-100">
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
@@ -906,16 +906,6 @@ export default function ClienteDashboardPage() {
                             <ClipboardCheck className="w-3.5 h-3.5 text-[#0A1525] stroke-[2.5]" />
                             <span className="truncate">Inspección Técnica</span>
                           </button>
-                        </div>
-
-                        <div className="text-center pt-1">
-                          <Link
-                            href={`/historial/${v.placa}?garaje=true`}
-                            className="text-[11px] font-bold text-slate-500 hover:text-[#1E56B0] inline-flex items-center gap-1 transition-colors"
-                          >
-                            <span>Ver Ficha e Historial en Cero</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </Link>
                         </div>
                       </div>
                     ) : (
