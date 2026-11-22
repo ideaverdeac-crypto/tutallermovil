@@ -386,8 +386,8 @@ interface MecanicoAvatarSquircleProps {
 }
 
 function MecanicoAvatarSquircle({
-  initials = 'CM',
-  fotoUrl = FOTO_MECANICO_OFICIAL,
+  initials = 'TM',
+  fotoUrl = '',
   size = 'sm',
   status = 'verified',
   className = '',
@@ -405,7 +405,11 @@ function MecanicoAvatarSquircle({
     lg: 'w-6 h-6 -bottom-1 -right-1 ring-[3px]'
   }[size];
 
-  const fotoParaMostrar = fotoUrl || FOTO_MECANICO_OFICIAL;
+  // Si fotoUrl es la foto de stock repetida o está vacía, no mostrarla y usar iniciales limpias
+  const tieneFotoReal =
+    fotoUrl &&
+    fotoUrl.trim() !== '' &&
+    !fotoUrl.includes('photo-1534528741775-53994a69daeb');
 
   return (
     <div
@@ -413,15 +417,19 @@ function MecanicoAvatarSquircle({
       className={`relative ${sizeClasses} bg-[#0A1525] border border-slate-300/80 flex items-center justify-center font-black tracking-wider text-[#CCFF00] shadow-sm select-none shrink-0 overflow-visible ${onClick ? 'cursor-pointer hover:border-[#1E56B0] hover:scale-105 transition-all' : ''
         } ${className}`}
     >
-      {/* Fotografía Oficial del Mecánico en el Círculo */}
-      <img
-        src={fotoParaMostrar}
-        alt={initials}
-        className="w-full h-full rounded-full object-cover"
-        onError={(e) => {
-          (e.currentTarget as HTMLElement).style.display = 'none';
-        }}
-      />
+      {/* Fotografía Real o Iniciales en Squircle */}
+      {tieneFotoReal ? (
+        <img
+          src={fotoUrl}
+          alt={initials}
+          className="w-full h-full rounded-full object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLElement).style.display = 'none';
+          }}
+        />
+      ) : (
+        <span className="font-mono font-black">{initials}</span>
+      )}
 
       {/* Indicador inferior derecho con aro blanco idéntico a las referencias del usuario */}
       {status === 'verified' ? (
@@ -450,9 +458,9 @@ function MecanicoAvatarSquircle({
 
 // Badge interactivo del mecánico asignado con la foto oficial en el círculo
 function MecanicoAsignadoBadge({
-  nombre = 'Carlos Mendoza',
-  credencial = '#TTM-0842',
-  fotoUrl = FOTO_MECANICO_OFICIAL,
+  nombre = 'Especialista',
+  credencial = '#TTM-0000',
+  fotoUrl = '',
   onClick
 }: {
   nombre?: string;
@@ -541,7 +549,7 @@ export default function TableroDespachoPage() {
         especialidad: 'Especialista Pendiente',
         unidad: 'Despacho Pendiente',
         rating: '-',
-        foto: FOTO_MECANICO_OFICIAL,
+        foto: '',
         telefono: '',
         distancia: '',
         disponible: true
@@ -557,7 +565,7 @@ export default function TableroDespachoPage() {
       especialidad: 'Especialista en Ruta',
       unidad: 'Unidad Móvil',
       rating: '5.0 ★',
-      foto: FOTO_MECANICO_OFICIAL,
+      foto: '',
       telefono: '',
       distancia: 'En zona',
       disponible: true
@@ -1078,7 +1086,7 @@ export default function TableroDespachoPage() {
             especialidad: 'Especialista Mecánico Certificado',
             unidad: 'Unidad Móvil de Asistencia',
             rating: '5.0 ★',
-            foto: m.avatar_url || FOTO_MECANICO_OFICIAL,
+            foto: m.avatar_url || '',
             telefono: m.telefono || '',
             distancia: 'En zona (disponible)',
             disponible: true
@@ -1089,40 +1097,81 @@ export default function TableroDespachoPage() {
       // Sincronizar con mecánicos guardados localmente (fallback offline o registro reciente)
       if (typeof window !== 'undefined') {
         try {
-          const rawMecs = localStorage.getItem('ttm_aliados_mecanicos') || localStorage.getItem('ttm_aliados_registrados');
-          if (rawMecs) {
-            const parsed = JSON.parse(rawMecs);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((lm: any) => {
-                if (lm.rol === 'MECANICO' || !lm.rol) {
-                  const yaExiste = mecanicosEncontrados.some(
-                    (m) => m.id === lm.id || (lm.codigo_aliado && m.credencial === lm.codigo_aliado)
-                  );
-                  if (!yaExiste) {
-                    const nombres = (lm.nombre || lm.nombre_completo || 'Mecánico').trim().split(' ');
-                    const iniciales = nombres.length > 1
-                      ? `${nombres[0][0]}${nombres[1][0]}`.toUpperCase()
-                      : nombres[0].slice(0, 2).toUpperCase();
-                    mecanicosEncontrados.unshift({
-                      id: lm.id || `mec_loc_${Date.now()}`,
-                      nombre: lm.nombre || lm.nombre_completo || 'Especialista Mecánico',
-                      iniciales,
-                      credencial: lm.codigo_aliado || '#TTM-REG',
-                      especialidad: lm.detalles?.especialidad_principal || 'Mecánica General & Diagnóstico',
-                      unidad: lm.detalles?.vehiculo_traslado
-                        ? `${lm.detalles.vehiculo_traslado} • ${lm.detalles.placa_vehiculo || 'CARACAS'}`
-                        : 'Unidad Móvil',
-                      rating: '5.0 ★',
-                      foto: lm.foto || FOTO_MECANICO_OFICIAL,
-                      telefono: lm.telefono || '',
-                      distancia: lm.detalles?.zona_residencia ? `Base: ${lm.detalles.zona_residencia}` : 'En zona',
-                      disponible: true
-                    });
-                  }
+          const keys = ['ttm_aliados_mecanicos', 'ttm_aliados_registrados', 'ttm_aliado_sesion'];
+          const listaLocal: any[] = [];
+          keys.forEach((k) => {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                  listaLocal.push(...parsed);
+                } else if (parsed && typeof parsed === 'object') {
+                  listaLocal.push(parsed);
                 }
-              });
+              } catch {}
             }
-          }
+          });
+
+          listaLocal.forEach((lm: any) => {
+            if (lm.rol === 'MECANICO' || !lm.rol) {
+              const nombreLocal = (lm.nombre || lm.nombre_completo || '').trim();
+              if (!nombreLocal) return;
+
+              const idx = mecanicosEncontrados.findIndex(
+                (m) =>
+                  m.id === lm.id ||
+                  (lm.codigo_aliado && m.credencial === lm.codigo_aliado) ||
+                  (lm.telefono && m.telefono && lm.telefono === m.telefono)
+              );
+
+              const nombres = nombreLocal.split(' ');
+              const iniciales = nombres.length > 1
+                ? `${nombres[0][0]}${nombres[1][0]}`.toUpperCase()
+                : nombres[0].slice(0, 2).toUpperCase();
+
+              if (idx !== -1) {
+                // Si el registro local contiene el nombre real auténtico, sobreescribir cualquier dato placeholder
+                mecanicosEncontrados[idx].nombre = nombreLocal;
+                mecanicosEncontrados[idx].iniciales = iniciales;
+                if (lm.telefono) mecanicosEncontrados[idx].telefono = lm.telefono;
+                if (lm.detalles?.especialidad_principal) {
+                  mecanicosEncontrados[idx].especialidad = lm.detalles.especialidad_principal;
+                }
+                if (lm.foto || lm.avatar_url) {
+                  mecanicosEncontrados[idx].foto = lm.foto || lm.avatar_url;
+                }
+
+                // Sincronizar a Supabase en segundo plano para que quede grabado de forma definitiva
+                supabase
+                  .from('perfiles')
+                  .update({
+                    nombre_completo: nombreLocal,
+                    telefono: lm.telefono || mecanicosEncontrados[idx].telefono,
+                    rol: 'MECANICO',
+                    perfil_completado: true
+                  })
+                  .eq('id', mecanicosEncontrados[idx].id)
+                  .then();
+              } else {
+                mecanicosEncontrados.unshift({
+                  id: lm.id || `mec_loc_${Date.now()}`,
+                  nombre: nombreLocal,
+                  iniciales,
+                  credencial: lm.codigo_aliado || '#TTM-REG',
+                  especialidad: lm.detalles?.especialidad_principal || 'Mecánica General & Diagnóstico',
+                  unidad: lm.detalles?.vehiculo_traslado
+                    ? `${lm.detalles.vehiculo_traslado} • ${lm.detalles.placa_vehiculo || 'CARACAS'}`
+                    : 'Unidad Móvil',
+                  rating: '5.0 ★',
+                  foto: lm.foto || lm.avatar_url || '',
+                  telefono: lm.telefono || '',
+                  distancia: lm.detalles?.zona_residencia ? `Base: ${lm.detalles.zona_residencia}` : 'En zona',
+                  disponible: true
+                });
+              }
+            }
+          });
         } catch (e) {
           console.warn('Error leyendo mecánicos locales:', e);
         }
