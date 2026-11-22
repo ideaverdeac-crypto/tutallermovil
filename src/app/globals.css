@@ -201,6 +201,14 @@
 @layer base {
   * {
     border-color: var(--border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  html, body {
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, a, input, select, textarea {
+    touch-action: manipulation;
   }
   body {
     background-color: #050505;
@@ -212,6 +220,14 @@
   ::selection {
     background-color: #CCFF00;
     color: #050505;
+  }
+
+  /* Safe Area Utilitarios Móviles PWA */
+  .safe-area-bottom {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
   /* Focus visible con glow lima */

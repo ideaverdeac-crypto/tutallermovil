@@ -106,7 +106,20 @@ export default function PortalAliadosPage() {
   const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
   const [mecanicoId, setMecanicoId] = useState<string>('');
 
-  // Estados de Perfil de Aliado
+  // Sincronizar pestañas desde el MobileBottomNav global PWA
+  useEffect(() => {
+    const handleSwitchTab = (e: any) => {
+      const tab = e.detail;
+      if (tab === 'servicios' || tab === 'feed') setActiveTab('inicio');
+      else if (tab === 'billetera') setActiveTab('billetera');
+      else if (tab === 'perfil') {
+        setActiveTab('perfil');
+        handleAbrirEditarPerfil();
+      }
+    };
+    window.addEventListener('ttm:switch-tab', handleSwitchTab);
+    return () => window.removeEventListener('ttm:switch-tab', handleSwitchTab);
+  }, []);
   const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-5385');
   const [nombreMecanico, setNombreMecanico] = useState<string>('jose antonio');
   const [fotoPerfil, setFotoPerfil] = useState<string>('https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80');
@@ -1367,56 +1380,6 @@ export default function PortalAliadosPage() {
         </section>
 
       </main>
-
-      {/* 5. Navegación Móvil (Bottom Nav Fija) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#CBD5E1] shadow-xl py-2 px-6 backdrop-blur-md bg-white/95 md:hidden">
-        <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('inicio')}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'inicio' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-              }`}
-          >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-[10px]">Inicio</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('historial')}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'historial' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-              }`}
-          >
-            <HistoryIcon className="w-5 h-5" />
-            <span className="text-[10px]">Historial</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('billetera')}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'billetera' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-              }`}
-          >
-            <Wallet className="w-5 h-5" />
-            <span className="text-[10px]">Billetera</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('perfil');
-              handleAbrirEditarPerfil();
-            }}
-            className={`flex flex-col items-center justify-center gap-1 py-1 cursor-pointer transition-colors ${activeTab === 'perfil' ? 'text-[#1E56B0] font-bold' : 'text-slate-400 hover:text-slate-600'
-              }`}
-          >
-            <UserIcon className="w-5 h-5" />
-            <span className="text-[10px]">Perfil</span>
-          </button>
-
-        </div>
-      </nav>
 
       {/* Inputs Ocultos de Archivo y Cámara Nativa */}
       <input

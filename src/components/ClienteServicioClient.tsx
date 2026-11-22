@@ -2802,17 +2802,21 @@ export function ClienteServicioClient({ id }: { id: string }) {
       </AnimatePresence>
 
       {/* ======================================================== */}
-      {/* MODAL 1: VERIFICAR CARNET QR DEL MECÁNICO                */}
+      {/* MODAL 1: VERIFICAR CARNET QR DEL MECÁNICO (Estilo Bottom Sheet en móvil) */}
       {/* ======================================================== */}
       <AnimatePresence>
         {modalCarnetOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-hidden">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-5 sm:p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative my-auto max-h-[92dvh] max-h-[90vh] overflow-y-auto"
+              initial={{ opacity: 0, y: '100%' }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="w-full max-w-sm sm:max-w-md bg-white rounded-t-[32px] sm:rounded-3xl p-5 sm:p-6 text-center space-y-4 border-t sm:border border-[#CBD5E1] shadow-2xl relative max-h-[92dvh] overflow-y-auto safe-area-bottom"
             >
+              {/* Drag handle nativo para móviles */}
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-1 sm:hidden shrink-0" />
+
               <button
                 type="button"
                 onClick={() => setModalCarnetOpen(false)}

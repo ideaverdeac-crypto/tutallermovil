@@ -541,8 +541,37 @@ export default function ClienteDashboardPage() {
             </Link>
           </div>
 
-          {/* Acciones de Cabecera */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Acciones de Cabecera Móvil: Compacto y Limpio (PWA Mobile-First) */}
+          <div className="flex md:hidden items-center gap-2">
+            {serviciosActivos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTabServiciosModal('activos');
+                  setModalServiciosActivosOpen(true);
+                }}
+                className="h-10 px-2.5 rounded-xl bg-slate-900 text-white text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer min-h-[44px]"
+                title="Ver servicios activos"
+              >
+                <Activity className="w-3.5 h-3.5 text-[#CCFF00]" />
+                <span className="px-1.5 py-0.2 rounded-full bg-[#CCFF00] text-[#0A1525] text-[10px] font-mono font-black">
+                  {serviciosActivos.length}
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleCerrarSesion}
+              className="h-10 w-10 rounded-xl border border-slate-200 text-slate-600 hover:text-rose-600 flex items-center justify-center cursor-pointer min-h-[44px] min-w-[44px]"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Acciones de Cabecera Escritorio */}
+          <div className="hidden md:flex items-center gap-2 sm:gap-3 flex-wrap">
             <BotonSoporteWhatsApp 
               modo="header" 
               mensaje="Hola, necesito ayuda con mi garaje o servicio en TuTallerMóvil"

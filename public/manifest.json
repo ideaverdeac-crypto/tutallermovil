@@ -1,16 +1,19 @@
 {
   "name": "TuTallerMóvil",
-  "short_name": "TTM",
-  "description": "Asistencia mecánica a domicilio en Caracas",
+  "short_name": "TuTallerMóvil",
+  "description": "Asistencia mecánica automotriz a domicilio en Caracas",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#0A1525",
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

@@ -1143,6 +1143,18 @@ export default function TableroDespachoPage() {
     }
   }, [sheetRadarMecanicosOpen, modalAsignarOpen]);
 
+  // Escuchar eventos globales desde la barra de navegación móvil (PWA Bottom Nav)
+  useEffect(() => {
+    const handleOpenWhatsApp = () => setModalWhatsAppOpen(true);
+    const handleOpenOperadoras = () => setModalOperadorasOpen(true);
+    window.addEventListener('ttm:open-whatsapp', handleOpenWhatsApp);
+    window.addEventListener('ttm:open-operadoras', handleOpenOperadoras);
+    return () => {
+      window.removeEventListener('ttm:open-whatsapp', handleOpenWhatsApp);
+      window.removeEventListener('ttm:open-operadoras', handleOpenOperadoras);
+    };
+  }, []);
+
   // 5. Supabase Realtime: Suscripción a cambios, Presencia y Concurrencia
   useEffect(() => {
     // 0. Detectar operadora actual desde cookies o credenciales locales
@@ -2064,8 +2076,42 @@ export default function TableroDespachoPage() {
             </div>
           </div>
 
-          {/* Acciones de Cabecera */}
-          <div className="flex items-center gap-3">
+          {/* Acciones de Cabecera en Móvil: Compacto (PWA Mobile-First) */}
+          <div className="flex md:hidden items-center gap-2">
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setModalCrearServicioManualOpen(true)}
+              className="h-9 px-2.5 text-xs font-black bg-[#16a34a] text-white rounded-xl shadow-xs flex items-center gap-1 cursor-pointer min-h-[38px]"
+              title="Crear servicio manual recibido por llamada"
+            >
+              <Phone className="w-3.5 h-3.5 text-white" />
+              <span>Nuevo</span>
+            </motion.button>
+
+            {operadorasConectadas.length > 0 && (
+              <div
+                onClick={() => setModalOperadorasOpen(true)}
+                className="relative w-8 h-8 rounded-full border-2 border-white shadow-xs overflow-hidden bg-slate-200 cursor-pointer shrink-0 min-h-[32px] min-w-[32px]"
+                title="Ver Operadoras y Perfil"
+              >
+                <img
+                  src={
+                    operadorasConectadas[0].fotoUrl ||
+                    (operadorasConectadas[0].email?.toLowerCase().includes('carlos')
+                      ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
+                      : 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80')
+                  }
+                  alt={operadorasConectadas[0].nombre}
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white" />
+              </div>
+            )}
+          </div>
+
+          {/* Acciones de Cabecera en Escritorio */}
+          <div className="hidden md:flex items-center gap-3">
             {/* Acceso a Finanzas & QA y Gestión de Operadoras: Estrictamente Exclusivo para el Dueño / ADMIN */}
             {esDuenio && (
               <>

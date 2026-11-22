@@ -428,12 +428,14 @@ export default function BandejaWhatsAppSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200">
       <div 
-        className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[92vh] max-h-[850px] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800"
+        className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[94vh] sm:h-[92vh] max-h-[850px] rounded-t-[32px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border-t sm:border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom duration-300 sm:fade-in safe-area-bottom"
         role="dialog"
         aria-modal="true"
       >
+        {/* Drag handle nativo para móvil */}
+        <div className="w-12 h-1.5 bg-slate-400/50 rounded-full mx-auto my-2 sm:hidden shrink-0" />
         {/* Header Superior del Modal */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-slate-900 text-white border-b border-slate-800">
           <div className="flex items-center gap-3">

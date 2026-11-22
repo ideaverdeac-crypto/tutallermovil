@@ -429,16 +429,18 @@ export function SolicitarMecanicoModal({
               />
             </Dialog.Overlay>
 
-            {/* Contenido del Modal Responsive */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain">
+            {/* Contenido del Modal Responsive (Bottom Sheet nativo en móvil) */}
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden overscroll-contain">
               <Dialog.Content asChild>
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl relative overflow-hidden flex flex-col max-h-[92dvh] max-h-[90vh] my-auto"
+                  initial={{ opacity: 0, y: '100%' }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: '100%' }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                  className="w-full max-w-lg bg-white rounded-t-[32px] sm:rounded-3xl border-t sm:border border-slate-200 shadow-2xl relative overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] safe-area-bottom"
                 >
+                  {/* Drag handle para móvil */}
+                  <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-2 sm:hidden shrink-0" />
                   {/* Borde superior de marca */}
                   <div className="h-1.5 bg-gradient-to-r from-[#050B14] via-[#00E5FF] to-[#CCFF00] shrink-0" />
 
