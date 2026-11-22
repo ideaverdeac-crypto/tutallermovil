@@ -120,11 +120,11 @@ export default function PortalAliadosPage() {
     window.addEventListener('ttm:switch-tab', handleSwitchTab);
     return () => window.removeEventListener('ttm:switch-tab', handleSwitchTab);
   }, []);
-  const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-5385');
-  const [nombreMecanico, setNombreMecanico] = useState<string>('jose antonio');
-  const [fotoPerfil, setFotoPerfil] = useState<string>('https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80');
+  const [codigoAliado, setCodigoAliado] = useState<string>('#TTM-PEND');
+  const [nombreMecanico, setNombreMecanico] = useState<string>('Especialista Aliado');
+  const [fotoPerfil, setFotoPerfil] = useState<string>('');
   const [especialidadMecanico, setEspecialidadMecanico] = useState<string>('Mecánica General & Inyección');
-  const [telefonoMecanico, setTelefonoMecanico] = useState<string>('+58 412 123 4567');
+  const [telefonoMecanico, setTelefonoMecanico] = useState<string>('');
   const [zonaCobertura, setZonaCobertura] = useState<string>('Gran Caracas');
 
   // Modales de Edición de Perfil y Cámara
@@ -133,9 +133,9 @@ export default function PortalAliadosPage() {
   const [camaraIniciada, setCamaraIniciada] = useState<boolean>(false);
 
   // Estados de Formulario de Perfil
-  const [formNombre, setFormNombre] = useState<string>('jose antonio');
+  const [formNombre, setFormNombre] = useState<string>('');
   const [formEspecialidad, setFormEspecialidad] = useState<string>('Mecánica General & Inyección');
-  const [formTelefono, setFormTelefono] = useState<string>('+58 412 123 4567');
+  const [formTelefono, setFormTelefono] = useState<string>('');
   const [formZona, setFormZona] = useState<string>('Gran Caracas');
   const [formFotoPreview, setFormFotoPreview] = useState<string>('');
 
@@ -185,11 +185,28 @@ export default function PortalAliadosPage() {
   useEffect(() => {
     // Obtener sesión real del usuario autenticado
     const supabaseClient = createClient();
-    supabaseClient.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setMecanicoId(user.id);
-      }
-    }).catch(() => { });
+    supabaseClient.auth
+      .getUser()
+      .then(async ({ data: { user } }) => {
+        if (user) {
+          setMecanicoId(user.id);
+          try {
+            const { data: perfil } = await supabaseClient
+              .from('perfiles')
+              .select('*')
+              .eq('id', user.id)
+              .maybeSingle();
+
+            if (perfil) {
+              if (perfil.nombre_completo) setNombreMecanico(perfil.nombre_completo);
+              if (perfil.codigo_aliado) setCodigoAliado(perfil.codigo_aliado);
+              if (perfil.telefono) setTelefonoMecanico(perfil.telefono);
+              if (perfil.avatar_url) setFotoPerfil(perfil.avatar_url);
+            }
+          } catch (e) {}
+        }
+      })
+      .catch(() => {});
 
     if (typeof window !== 'undefined') {
       // Cargar foto guardada
@@ -228,8 +245,25 @@ export default function PortalAliadosPage() {
           if (parsed.especialidad) setEspecialidadMecanico(parsed.especialidad);
           if (parsed.telefono) setTelefonoMecanico(parsed.telefono);
           if (parsed.zona) setZonaCobertura(parsed.zona);
-        } catch (e) { }
+        } catch (e) {}
       }
+
+      // Fallback: si no hay nombre pero hay mecánicos guardados en ttm_aliados_mecanicos
+      try {
+        const rawMecs = localStorage.getItem('ttm_aliados_mecanicos');
+        if (rawMecs) {
+          const parsedMecs = JSON.parse(rawMecs);
+          if (Array.isArray(parsedMecs) && parsedMecs.length > 0) {
+            const primerMec = parsedMecs[0];
+            if (primerMec.nombre && !localStorage.getItem('ttm_aliado_nombre')) {
+              setNombreMecanico(primerMec.nombre);
+            }
+            if (primerMec.codigo_aliado && !matchCode) {
+              setCodigoAliado(primerMec.codigo_aliado);
+            }
+          }
+        }
+      } catch (e) {}
 
       const estaRegistrado = typeof document !== 'undefined' && Boolean(
         document.cookie.match(/(^| )ttm_user_code=([^;]+)/) ||
@@ -676,6 +710,24 @@ export default function PortalAliadosPage() {
     }
   };
 
+  // Métricas reales y dinámicas del especialista
+  const ordenesMecanico = ordenes.filter(
+    (o) =>
+      (mecanicoId && o.mecanico_id === mecanicoId) ||
+      (codigoAliado && (o.mecanico_id === codigoAliado || o.mecanico_id === codigoAliado.replace('#', '')))
+  );
+
+  const serviciosCompletados = ordenesMecanico.filter(
+    (o) => o.estado === 'FINALIZADO' || o.estado === 'COMPLETADO'
+  );
+
+  const numServicios = serviciosCompletados.length;
+  const totalAcumulado = serviciosCompletados.reduce(
+    (acc, o) => acc + (Number(o.ganancia_estimada) || 0),
+    0
+  );
+  const saldoDisponible = totalAcumulado;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0A1525] flex flex-col font-sans pb-28 md:pb-12 selection:bg-[#CCFF00] selection:text-[#0A1525]">
 
@@ -773,11 +825,25 @@ export default function PortalAliadosPage() {
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="relative group">
                 <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#0A1525] border-2 border-[#CBD5E1] p-1 overflow-hidden flex items-center justify-center text-white shadow-md relative">
-                  <img
-                    src={fotoPerfil}
-                    alt={`${nombreMecanico} - Especialista TuTallerMóvil`}
-                    className="w-full h-full rounded-xl object-cover object-center"
-                  />
+                  {fotoPerfil &&
+                  !fotoPerfil.includes('photo-1540569014015') &&
+                  !fotoPerfil.includes('photo-1534528741775') ? (
+                    <img
+                      src={fotoPerfil}
+                      alt={`${nombreMecanico} - Especialista TuTallerMóvil`}
+                      className="w-full h-full rounded-xl object-cover object-center"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-xl bg-[#0A1525] flex items-center justify-center font-mono text-xl sm:text-2xl font-black text-[#CCFF00] tracking-wider select-none">
+                      {nombreMecanico
+                        .trim()
+                        .split(' ')
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase() || 'TM'}
+                    </div>
+                  )}
                   {/* Overlay hover para cambiar foto */}
                   <button
                     type="button"
@@ -846,18 +912,25 @@ export default function PortalAliadosPage() {
                   <span>{telefonoMecanico}</span>
                 </div>
 
-                {/* Calificación 4.9 estrellas */}
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 pt-1">
-                  <div className="flex items-center text-amber-400">
-                    <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
-                    <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
-                    <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
-                    <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
-                    <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+                {/* Calificación y Estado de Reputación */}
+                {numServicios > 0 ? (
+                  <div className="flex items-center justify-center sm:justify-start gap-1.5 pt-1">
+                    <div className="flex items-center text-amber-400">
+                      <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+                    </div>
+                    <span className="text-xs font-black text-[#0A1525]">5.0</span>
+                    <span className="text-[11px] text-slate-400 font-normal">
+                      ({numServicios} {numServicios === 1 ? 'servicio' : 'servicios'})
+                    </span>
                   </div>
-                  <span className="text-xs font-black text-[#0A1525]">4.9</span>
-                  <span className="text-[11px] text-slate-400 font-normal">(118 reseñas)</span>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-center sm:justify-start gap-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
+                      Nuevo Especialista
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-normal">• Sin calificaciones aún</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1012,10 +1085,10 @@ export default function PortalAliadosPage() {
                   Servicios
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-[#0A1525] tracking-tight">
-                  124
+                  {numServicios > 0 ? numServicios : '0'}
                 </span>
                 <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
-                  +12 este mes
+                  {numServicios > 0 ? `+${numServicios} este mes` : '0 este mes'}
                 </span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
@@ -1033,7 +1106,9 @@ export default function PortalAliadosPage() {
                   Acumulado
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-[#0A1525] tracking-tight">
-                  $1,450
+                  {numServicios > 0
+                    ? `$${totalAcumulado.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+                    : '$0'}
                 </span>
                 <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
                   Total generado
@@ -1054,7 +1129,9 @@ export default function PortalAliadosPage() {
                   Saldo Disponible
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight">
-                  $350
+                  {numServicios > 0
+                    ? `$${saldoDisponible.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+                    : '$0'}
                 </span>
                 <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
                   Listo para retiro
@@ -1075,10 +1152,10 @@ export default function PortalAliadosPage() {
                   Calificación
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-[#0A1525] tracking-tight">
-                  4.95
+                  {numServicios > 0 ? '5.0 ★' : '—'}
                 </span>
                 <span className="text-[10px] text-amber-600 font-semibold block mt-0.5">
-                  Top 5% Caracas
+                  {numServicios > 0 ? 'Calificación verificada' : 'Nuevo aliado'}
                 </span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
