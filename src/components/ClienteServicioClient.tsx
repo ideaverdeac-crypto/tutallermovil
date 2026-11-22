@@ -6,6 +6,7 @@ import { motion, AnimatePresence, type TargetAndTransition } from 'framer-motion
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import { createClient } from '@/lib/supabase/client';
+import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import {
   Car,
   Wrench,
@@ -236,45 +237,7 @@ const DATOS_DEFAULT: OrdenCliente = {
   runner_id: null,
   kilometraje_actual: null,
   vehiculo_id: null,
-  diagnostico_json: {
-    frenos: 'requiere_cambio',
-    aceite: 'ok',
-    suspension: 'ok',
-    fluidos: 'requiere_cambio',
-    electrico: 'ok',
-    total_puntos: 25,
-    puntos_ok: 22,
-    puntos_cambio: 3,
-    piezas_requeridas: 'Pastillas de freno delanteras cerámicas Bosch, 2 Discos delanteros ventilados, 1 Botella Líquido DOT 4',
-    fecha: '2026-11-17T12:00:00.000Z',
-    items: {
-      aceite_motor: 'ok',
-      liquido_frenos: 'requiere_cambio',
-      refrigerante: 'ok',
-      direccion_hidraulica: 'ok',
-      limpiaparabrisas: 'ok',
-      aceite_transmision: 'ok',
-      fugas_motor: 'ok',
-      pastillas_delanteras: 'requiere_cambio',
-      pastillas_traseras: 'ok',
-      discos_freno: 'requiere_cambio',
-      lineas_mangueras: 'ok',
-      freno_mano: 'ok',
-      calipers_mordazas: 'ok',
-      amortiguadores: 'ok',
-      munones_rotulas: 'ok',
-      terminales_direccion: 'ok',
-      bujes_mesetas: 'ok',
-      barra_estabilizadora: 'ok',
-      rodamientos_rueda: 'ok',
-      luces_principales: 'ok',
-      luces_stop: 'ok',
-      bornes_bateria: 'ok',
-      estado_bateria: 'ok',
-      alternador_carga: 'ok',
-      correa_accesorios: 'ok'
-    }
-  }
+  diagnostico_json: null
 };
 
 const MECANICO_INFO = {
@@ -329,6 +292,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
   const [modalPagoOpen, setModalPagoOpen] = useState<boolean>(false);
   const [modalCalificacionOpen, setModalCalificacionOpen] = useState<boolean>(false);
   const [modalChecklistClienteOpen, setModalChecklistClienteOpen] = useState<boolean>(false);
+  const [modalPedirServicioOpen, setModalPedirServicioOpen] = useState<boolean>(false);
 
   // Estados de acciones
   const [guardandoAprobacion, setGuardandoAprobacion] = useState<boolean>(false);
@@ -809,7 +773,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
             runner_id: data.runner_id || null,
             kilometraje_actual: data.kilometraje_actual || data.kilometraje || null,
             vehiculo_id: data.vehiculo_id || null,
-            diagnostico_json: data.diagnostico_json || DATOS_DEFAULT.diagnostico_json
+            diagnostico_json: data.diagnostico_json || null
           });
 
           if (data.mecanico_id) {
@@ -1524,146 +1488,168 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 </div>
 
                 {/* Tarjeta 3: Estado del Vehículo (Bento Box - Diagnóstico 25 Puntos) */}
-                <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50">
-                        <ClipboardCheck className="w-4 h-4 stroke-[2.2]" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Checklist 25 Puntos
-                        </span>
-                        <h3 className="text-xs sm:text-sm font-black text-[#0A1525]">
-                          Estado del Vehículo
-                        </h3>
-                      </div>
-                    </div>
-                    {orden.diagnostico_json && (
-                      <span className="text-[10px] font-mono font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
-                        {orden.diagnostico_json.puntos_ok ?? 22}/25 OK
-                      </span>
-                    )}
-                  </div>
+                {(() => {
+                  const tieneChecklistReal = Boolean(
+                    orden.diagnostico_json &&
+                    typeof orden.diagnostico_json === 'object' &&
+                    (orden.diagnostico_json.items || orden.diagnostico_json.puntos_ok !== undefined)
+                  );
 
-                  {orden.diagnostico_json ? (
-                    <div className="space-y-2">
-                      {/* Grid de 4 Sistemas Clave */}
-                      <div className="grid grid-cols-2 gap-1.5 text-xs font-bold">
-                        {/* 1. Aceite y Motor */}
-                        <div className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-2">
-                          <span
-                            className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                              orden.diagnostico_json.aceite === 'ok' ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'
-                            }`}
-                          />
-                          <div className="min-w-0">
-                            <span className="text-[10px] text-slate-400 block leading-tight">Aceite Motor</span>
-                            <span
-                              className={`text-[11px] font-extrabold truncate block ${
-                                orden.diagnostico_json.aceite === 'ok' ? 'text-slate-800' : 'text-rose-600'
-                              }`}
-                            >
-                              {orden.diagnostico_json.aceite === 'ok' ? 'Nivel OK' : 'Requiere Cambio'}
+                  return (
+                    <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50">
+                            <ClipboardCheck className="w-4 h-4 stroke-[2.2]" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                              Checklist 25 Puntos
                             </span>
+                            <h3 className="text-xs sm:text-sm font-black text-[#0A1525]">
+                              Estado del Vehículo
+                            </h3>
                           </div>
                         </div>
-
-                        {/* 2. Frenos */}
-                        <div
-                          className={`p-2 rounded-xl border flex items-center gap-2 ${
-                            orden.diagnostico_json.frenos === 'requiere_cambio'
-                              ? 'bg-rose-50/70 border-rose-200'
-                              : 'bg-white border-slate-200'
-                          }`}
-                        >
-                          <span
-                            className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                              orden.diagnostico_json.frenos === 'requiere_cambio'
-                                ? 'bg-rose-500 animate-pulse'
-                                : 'bg-emerald-500'
-                            }`}
-                          />
-                          <div className="min-w-0">
-                            <span className="text-[10px] text-slate-400 block leading-tight">Frenos</span>
-                            <span
-                              className={`text-[11px] font-black truncate block ${
-                                orden.diagnostico_json.frenos === 'requiere_cambio'
-                                  ? 'text-rose-700'
-                                  : 'text-emerald-700'
-                              }`}
-                            >
-                              {orden.diagnostico_json.frenos === 'requiere_cambio'
-                                ? 'Requiere Cambio'
-                                : 'Sistema OK'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* 3. Suspensión */}
-                        <div className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-2">
-                          <span
-                            className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                              orden.diagnostico_json.suspension === 'ok' ? 'bg-emerald-500' : 'bg-amber-500'
-                            }`}
-                          />
-                          <div className="min-w-0">
-                            <span className="text-[10px] text-slate-400 block leading-tight">Suspensión</span>
-                            <span className="text-[11px] font-extrabold text-slate-800 truncate block">
-                              {orden.diagnostico_json.suspension === 'ok' ? 'Tren OK' : 'Atención'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* 4. Sistema Eléctrico */}
-                        <div className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                          <div className="min-w-0">
-                            <span className="text-[10px] text-slate-400 block leading-tight">Eléctrico</span>
-                            <span className="text-[11px] font-extrabold text-slate-800 truncate block">
-                              Batería & Faros OK
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Mensaje de Transparencia y Justificación de Repuestos */}
-                      {orden.diagnostico_json.frenos === 'requiere_cambio' && (
-                        <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-tight font-medium flex items-start gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                          <span>
-                            <strong>Inspección certificada:</strong> El desgaste detectado en frenos respalda los repuestos de tu presupuesto.
+                        {tieneChecklistReal && (
+                          <span className="text-[10px] font-mono font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                            {orden.diagnostico_json.puntos_ok ?? 25}/25 OK
                           </span>
+                        )}
+                      </div>
+
+                      {tieneChecklistReal ? (
+                        <div className="space-y-2">
+                          {/* Grid de 4 Sistemas Clave */}
+                          <div className="grid grid-cols-2 gap-1.5 text-xs font-bold">
+                            {/* 1. Aceite y Motor */}
+                            <div className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-2">
+                              <span
+                                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                  orden.diagnostico_json.aceite === 'ok' ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <span className="text-[10px] text-slate-400 block leading-tight">Aceite Motor</span>
+                                <span
+                                  className={`text-[11px] font-extrabold truncate block ${
+                                    orden.diagnostico_json.aceite === 'ok' ? 'text-slate-800' : 'text-rose-600'
+                                  }`}
+                                >
+                                  {orden.diagnostico_json.aceite === 'ok' ? 'Nivel OK' : 'Requiere Cambio'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 2. Frenos */}
+                            <div
+                              className={`p-2 rounded-xl border flex items-center gap-2 ${
+                                orden.diagnostico_json.frenos === 'requiere_cambio'
+                                  ? 'bg-rose-50/70 border-rose-200'
+                                  : 'bg-white border-slate-200'
+                              }`}
+                            >
+                              <span
+                                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                  orden.diagnostico_json.frenos === 'requiere_cambio'
+                                    ? 'bg-rose-500 animate-pulse'
+                                    : 'bg-emerald-500'
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <span className="text-[10px] text-slate-400 block leading-tight">Frenos</span>
+                                <span
+                                  className={`text-[11px] font-black truncate block ${
+                                    orden.diagnostico_json.frenos === 'requiere_cambio'
+                                      ? 'text-rose-700'
+                                      : 'text-emerald-700'
+                                  }`}
+                                >
+                                  {orden.diagnostico_json.frenos === 'requiere_cambio'
+                                    ? 'Requiere Cambio'
+                                    : 'Sistema OK'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 3. Suspensión */}
+                            <div className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-2">
+                              <span
+                                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                  orden.diagnostico_json.suspension === 'ok' ? 'bg-emerald-500' : 'bg-amber-500'
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <span className="text-[10px] text-slate-400 block leading-tight">Suspensión</span>
+                                <span className="text-[11px] font-extrabold text-slate-800 truncate block">
+                                  {orden.diagnostico_json.suspension === 'ok' ? 'Tren OK' : 'Atención'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 4. Sistema Eléctrico */}
+                            <div className="p-2 rounded-xl bg-white border border-slate-200 flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                              <div className="min-w-0">
+                                <span className="text-[10px] text-slate-400 block leading-tight">Eléctrico</span>
+                                <span className="text-[11px] font-extrabold text-slate-800 truncate block">
+                                  Batería & Faros OK
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Mensaje de Transparencia y Justificación de Repuestos */}
+                          {orden.diagnostico_json.frenos === 'requiere_cambio' && (
+                            <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-tight font-medium flex items-start gap-1.5">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                              <span>
+                                <strong>Inspección certificada:</strong> El desgaste detectado en frenos respalda los repuestos de tu presupuesto.
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Botón para ver los 25 puntos */}
+                          <button
+                            type="button"
+                            onClick={() => setModalChecklistClienteOpen(true)}
+                            className="w-full py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-[#1E56B0] text-[11px] font-black border border-slate-200 flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-98"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-[#1E56B0]" />
+                            <span>Ver los 25 Puntos Evaluados</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-2xl bg-white border border-slate-200 text-center space-y-3 my-auto">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                            <ClipboardCheck className="w-5 h-5 text-slate-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-[#0A1525]">Sin Inspección Realizada</p>
+                            <p className="text-[11px] text-slate-500 max-w-[220px] mx-auto leading-relaxed">
+                              Aún no se ha realizado la evaluación técnica de 25 puntos a este vehículo.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setModalPedirServicioOpen(true)}
+                            className="w-full py-2.5 px-3 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                          >
+                            <Wrench className="w-3.5 h-3.5 text-[#0A1525]" />
+                            <span>Pedir Inspección Técnica</span>
+                          </button>
                         </div>
                       )}
 
-                      {/* Botón para ver los 25 puntos */}
-                      <button
-                        type="button"
-                        onClick={() => setModalChecklistClienteOpen(true)}
-                        className="w-full py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-[#1E56B0] text-[11px] font-black border border-slate-200 flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-98"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-[#1E56B0]" />
-                        <span>Ver los 25 Puntos Evaluados</span>
-                      </button>
+                      {tieneChecklistReal && (
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold pt-0.5">
+                          <span>Protocolo TTM 2027</span>
+                          <span className="text-emerald-700 font-bold">100% Certificado</span>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="p-4 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-50 text-[#1E56B0] flex items-center justify-center mx-auto">
-                        <Activity className="w-4 h-4 animate-spin text-[#1E56B0]" />
-                      </div>
-                      <p className="text-xs font-bold text-slate-700">Inspección en Curso</p>
-                      <p className="text-[10px] text-slate-400">
-                        El especialista está evaluando los 25 puntos críticos de tu vehículo.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold pt-0.5">
-                    <span>Protocolo TTM 2027</span>
-                    <span className="text-emerald-700 font-bold">100% Certificado</span>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             </motion.div>
 
@@ -3724,6 +3710,24 @@ export function ClienteServicioClient({ id }: { id: string }) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal para solicitar Inspección Técnica / Servicio cuando no hay checklist */}
+      <SolicitarMecanicoModal
+        open={modalPedirServicioOpen}
+        onOpenChange={setModalPedirServicioOpen}
+        initialTipoServicio="INSPECCION_TECNICA"
+        initialVehiculo={{
+          marca: orden.vehiculo_marca || undefined,
+          modelo: orden.vehiculo_modelo || undefined,
+          anio: orden.vehiculo_anio || undefined,
+          placa: orden.placa || undefined
+        }}
+        initialCliente={{
+          nombre: orden.cliente_nombre || '',
+          telefono: orden.cliente_telefono || '',
+          email: ''
+        }}
+      />
 
     </div>
   );
