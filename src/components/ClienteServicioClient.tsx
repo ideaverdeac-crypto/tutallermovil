@@ -356,6 +356,48 @@ export function ClienteServicioClient({ id }: { id: string }) {
   const [comentarioCalificacion, setComentarioCalificacion] = useState<string>('');
   const [calificacionEnviada, setCalificacionEnviada] = useState<boolean>(false);
 
+  // Perfil del mecánico real asignado
+  const [mecanicoData, setMecanicoData] = useState<{
+    id: string;
+    nombre: string;
+    telefono: string;
+    especialidad: string;
+    rating: number;
+    ranking: string;
+    foto: string;
+    codigo: string;
+  } | null>(null);
+
+  const cargarPerfilMecanico = async (mecanicoId: string) => {
+    if (!mecanicoId) {
+      setMecanicoData(null);
+      return;
+    }
+    try {
+      const supabase = createClient();
+      const { data: mecProfile } = await supabase
+        .from('perfiles')
+        .select('id, nombre_completo, telefono, rol')
+        .eq('id', mecanicoId)
+        .maybeSingle();
+
+      if (mecProfile) {
+        setMecanicoData({
+          id: mecProfile.id,
+          nombre: mecProfile.nombre_completo || 'Técnico Especialista TTM',
+          telefono: mecProfile.telefono || '+584142314194',
+          especialidad: 'Mecánico Certificado TTM',
+          rating: 4.9,
+          ranking: 'Top #1 TTM',
+          foto: 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=400&q=80',
+          codigo: `TTM-${mecProfile.id.slice(0, 4).toUpperCase()}`
+        });
+      }
+    } catch (errMec) {
+      console.warn('Error cargando perfil del mecánico:', errMec);
+    }
+  };
+
   // Lista detallada de repuestos que se van a instalar en el vehículo
   const [repuestosDetallados, setRepuestosDetallados] = useState<RepuestoDetallado[]>(REPUESTOS_FALLBACK_DEFAULT);
 
@@ -753,6 +795,12 @@ export function ClienteServicioClient({ id }: { id: string }) {
             diagnostico_json: data.diagnostico_json || DATOS_DEFAULT.diagnostico_json
           });
 
+          if (data.mecanico_id) {
+            cargarPerfilMecanico(data.mecanico_id);
+          } else {
+            setMecanicoData(null);
+          }
+
           cargarHistorialYSuscripcion(data.placa, data.vehiculo_id || data.id);
 
           // Consultar repuestos asociados a la orden en diagnostico_json o en orden_repuestos
@@ -816,10 +864,16 @@ export function ClienteServicioClient({ id }: { id: string }) {
         (payload) => {
           console.log('⚡ Actualización en vivo recibida en Portal Cliente:', payload);
           if (payload.new) {
+            const nuevo = payload.new as any;
             setOrden((prev) => ({
               ...prev,
-              ...(payload.new as OrdenCliente)
+              ...nuevo
             }));
+            if (nuevo.mecanico_id) {
+              cargarPerfilMecanico(nuevo.mecanico_id);
+            } else if (nuevo.mecanico_id === null) {
+              setMecanicoData(null);
+            }
           }
         }
       )
@@ -860,7 +914,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
         return {
           etapaIndex: 0,
           titulo: 'El mecánico está revisando tu vehículo',
-          subtitulo: `${MECANICO_INFO.nombre} está en sitio realizando la inspección técnica de 25 puntos y captura del odómetro.`,
+          subtitulo: `${mecanicoActivo?.nombre || 'El especialista'} está en sitio realizando la inspección técnica de 25 puntos y captura del odómetro.`,
           icono: Wrench,
           iconoAnimacion: {
             rotate: [-10, 10, -10],
@@ -1002,10 +1056,11 @@ export function ClienteServicioClient({ id }: { id: string }) {
     }
 
     if (list.length === 0) {
+      if (!orden.mecanico_id) return [];
       return [...FOTOS_EVIDENCIAS_DEMO];
     }
     return list;
-  }, [orden.foto_odometro_url, orden.foto_repuesto_viejo_url, orden.foto_repuesto_nuevo_url, orden.diagnostico_json]);
+  }, [orden.foto_odometro_url, orden.foto_repuesto_viejo_url, orden.foto_repuesto_nuevo_url, orden.diagnostico_json, orden.mecanico_id]);
 
   // Paso Activo para el Stepper de 4 Pasos: Confirmado -> En Ruta -> Reparando -> Listo
   const pasoActivo = useMemo(() => {
@@ -1036,11 +1091,18 @@ export function ClienteServicioClient({ id }: { id: string }) {
 
   // Renderizado condicional del personal activo
   const tieneMecanico = useMemo(() => {
-    return Boolean(
-      orden.mecanico_id ||
-      ['ASIGNADO', 'EN_RUTA_TALLER', 'DIAGNOSTICO_AGENDADO', 'EN_EJECUCION', 'COTIZADO', 'ESPERANDO_APROBACION', 'REPUESTOS_EN_RUTA', 'EN_REPARACION', 'TRABAJO_TERMINADO', 'PENDIENTE_PAGO', 'PAGO_REPORTADO', 'PAGADO', 'FINALIZADO'].includes(orden.estado)
+    return Boolean(orden.mecanico_id);
+  }, [orden.mecanico_id]);
+
+  const mecanicoActivo = useMemo(() => {
+    if (!tieneMecanico) return null;
+    return (
+      mecanicoData || {
+        ...MECANICO_INFO,
+        codigo: orden.mecanico_id ? `TTM-${orden.mecanico_id.slice(0, 4).toUpperCase()}` : 'TTM-0842'
+      }
     );
-  }, [orden.mecanico_id, orden.estado]);
+  }, [tieneMecanico, mecanicoData, orden.mecanico_id]);
 
   const tieneRunner = useMemo(() => {
     return Boolean(
@@ -1679,8 +1741,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     <div className="flex items-center gap-3.5">
                       <div className="relative">
                         <img
-                          src={MECANICO_INFO.foto}
-                          alt={MECANICO_INFO.nombre}
+                          src={mecanicoActivo?.foto || MECANICO_INFO.foto}
+                          alt={mecanicoActivo?.nombre || MECANICO_INFO.nombre}
                           className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-[#CCFF00] shadow-md"
                         />
                         <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#CCFF00] text-[#0A1525] flex items-center justify-center font-black shadow-xs">
@@ -1691,21 +1753,21 @@ export function ClienteServicioClient({ id }: { id: string }) {
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5">
                           <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-                            {MECANICO_INFO.nombre}
+                            {mecanicoActivo?.nombre || MECANICO_INFO.nombre}
                           </h3>
                           <BadgeCheck className="w-4 h-4 text-[#CCFF00]" />
                         </div>
                         <p className="text-xs text-slate-300 font-medium">
-                          {MECANICO_INFO.especialidad}
+                          {mecanicoActivo?.especialidad || MECANICO_INFO.especialidad}
                         </p>
                         <div className="flex items-center gap-2 pt-0.5 text-xs">
                           <span className="flex items-center gap-1 text-amber-300 font-black">
                             <Star className="w-3 h-3 fill-amber-300" />
-                            {MECANICO_INFO.rating}
+                            {mecanicoActivo?.rating || MECANICO_INFO.rating}
                           </span>
                           <span className="text-slate-500">•</span>
                           <span className="text-[11px] text-[#CCFF00] font-bold">
-                            {MECANICO_INFO.ranking}
+                            {mecanicoActivo?.ranking || MECANICO_INFO.ranking}
                           </span>
                         </div>
                       </div>
@@ -1713,7 +1775,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
 
                     {/* Botón Llamar Directo */}
                     <a
-                      href={`tel:${MECANICO_INFO.telefono}`}
+                      href={`tel:${mecanicoActivo?.telefono || MECANICO_INFO.telefono}`}
                       className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-[#CCFF00] hover:text-[#0A1525] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
                       title="Llamar al Mecánico"
                     >
@@ -2294,53 +2356,55 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       {/* 7. GALERÍA DE EVIDENCIAS: Carrusel Snap                   */}
       {/* ======================================================== */}
-      <motion.div variants={itemVariants} className="space-y-3 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <Camera className="w-4 h-4 text-[#1E56B0]" />
-            <h3 className="text-sm font-black tracking-tight text-[#0A1525]">
-              Evidencias del Mecánico
-            </h3>
+      {tieneMecanico && listaEvidencias.length > 0 && (
+        <motion.div variants={itemVariants} className="space-y-3 pt-1">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-[#1E56B0]" />
+              <h3 className="text-sm font-black tracking-tight text-[#0A1525]">
+                Evidencias del Mecánico
+              </h3>
+            </div>
+            <span className="text-[11px] text-slate-400 font-bold">
+              {listaEvidencias.length} fotos registradas
+            </span>
           </div>
-          <span className="text-[11px] text-slate-400 font-bold">
-            {listaEvidencias.length} fotos registradas
-          </span>
-        </div>
 
-        {/* Carrusel Horizontal Snap */}
-        <div className="flex gap-3.5 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none -mx-4 px-4">
-          {listaEvidencias.map((foto, index) => (
-            <motion.div
-              key={index}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setModalFotoZoom(foto.url)}
-              className="snap-start shrink-0 w-64 sm:w-72 bg-white rounded-3xl border border-[#CBD5E1] overflow-hidden shadow-xs hover:border-[#1E56B0] transition-all cursor-pointer group"
-            >
-              <div className="relative h-40 bg-slate-100 overflow-hidden">
-                <img
-                  src={foto.url}
-                  alt={foto.titulo}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-3 left-3 bg-[#0A1525]/85 backdrop-blur-xs text-[#CCFF00] font-black text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-md">
-                  {foto.tipo}
+          {/* Carrusel Horizontal Snap */}
+          <div className="flex gap-3.5 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none -mx-4 px-4">
+            {listaEvidencias.map((foto, index) => (
+              <motion.div
+                key={index}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setModalFotoZoom(foto.url)}
+                className="snap-start shrink-0 w-64 sm:w-72 bg-white rounded-3xl border border-[#CBD5E1] overflow-hidden shadow-xs hover:border-[#1E56B0] transition-all cursor-pointer group"
+              >
+                <div className="relative h-40 bg-slate-100 overflow-hidden">
+                  <img
+                    src={foto.url}
+                    alt={foto.titulo}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-3 left-3 bg-[#0A1525]/85 backdrop-blur-xs text-[#CCFF00] font-black text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-md">
+                    {foto.tipo}
+                  </div>
+                  <div className="absolute bottom-3 right-3 w-7 h-7 rounded-lg bg-white/90 text-[#0A1525] flex items-center justify-center shadow-xs">
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </div>
                 </div>
-                <div className="absolute bottom-3 right-3 w-7 h-7 rounded-lg bg-white/90 text-[#0A1525] flex items-center justify-center shadow-xs">
-                  <ZoomIn className="w-3.5 h-3.5" />
+                <div className="p-3.5">
+                  <h4 className="text-xs font-black text-[#0A1525] line-clamp-1">
+                    {foto.titulo}
+                  </h4>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Subido en sitio • Certificado TTM
+                  </p>
                 </div>
-              </div>
-              <div className="p-3.5">
-                <h4 className="text-xs font-black text-[#0A1525] line-clamp-1">
-                  {foto.titulo}
-                </h4>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Subido en sitio • Certificado TTM
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* ======================================================== */}
       {/* 8. BOTTOM ACTION BAR: Fijo e Inmersivo (Glassmorphism)   */}
@@ -2390,8 +2454,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 <span>Calificar</span>
               </button>
             </div>
-          ) : (
-            /* Estado en curso (Inspección, Runner o Reparación) */
+          ) : tieneMecanico ? (
+            /* Estado en curso CON MECÁNICO ASIGNADO */
             <div className="flex items-center gap-2 w-full">
               <button
                 type="button"
@@ -2401,6 +2465,23 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 <QrCode className="w-5 h-5 text-[#0A1525]" />
                 <span>Verificar Carnet QR del Mecánico</span>
               </button>
+            </div>
+          ) : (
+            /* ASIGNANDO ESPECIALISTA: NO debe salir verificar carnet hasta haberlo asignado al cliente */
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex-1 h-14 bg-slate-100/95 border border-slate-200 rounded-2xl flex items-center justify-center gap-2.5 text-slate-700 font-extrabold text-xs sm:text-sm shadow-inner px-3">
+                <Clock className="w-4 h-4 text-[#1E56B0] animate-spin" style={{ animationDuration: '4s' }} />
+                <span>Asignando Especialista Técnico...</span>
+              </div>
+              <a
+                href="https://wa.me/584142314194?text=Hola,%20solicité%20un%20servicio%20en%20TuTallerMóvil%20y%20estoy%20en%20espera%20de%20asignación%20de%20especialista"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-14 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Soporte WhatsApp</span>
+              </a>
             </div>
           )}
 
@@ -2733,17 +2814,17 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   Credencial Oficial Verificada
                 </span>
                 <h3 className="text-xl font-black text-[#0A1525] tracking-tight mt-1.5">
-                  {MECANICO_INFO.nombre}
+                  {mecanicoActivo?.nombre || MECANICO_INFO.nombre}
                 </h3>
                 <p className="text-xs font-mono font-bold text-slate-500">
-                  {MECANICO_INFO.codigo} • Especialista TTM
+                  {mecanicoActivo?.codigo || MECANICO_INFO.codigo} • Especialista TTM
                 </p>
               </div>
 
               {/* QR Escaneable */}
               <div className="bg-[#F8FAFC] border-2 border-dashed border-[#CBD5E1] rounded-2xl p-4 flex flex-col items-center justify-center">
                 <QRCodeSVG
-                  value={`https://tutallermovil.vercel.app/carnet/${encodeURIComponent('TTM-0842')}`}
+                  value={`https://tutallermovil.vercel.app/carnet/${encodeURIComponent(mecanicoActivo?.codigo || 'TTM-0842')}`}
                   size={170}
                   level="H"
                   includeMargin={true}
@@ -2755,7 +2836,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
 
               <div className="space-y-2 pt-1">
                 <Link
-                  href="/carnet/TTM-0842"
+                  href={`/carnet/${encodeURIComponent(mecanicoActivo?.codigo || 'TTM-0842')}`}
                   className="w-full h-11 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
                 >
                   <span>Ver Carnet Completo en Pantalla</span>
@@ -3440,7 +3521,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
                     ¡Pago Verificado y Conciliado!
                   </span>
                   <h3 className="text-lg sm:text-xl font-black text-[#0A1525] tracking-tight mt-1.5">
-                    ¿Cómo estuvo tu experiencia con {MECANICO_INFO.nombre}?
+                    ¿Cómo estuvo tu experiencia con {mecanicoActivo?.nombre || 'el técnico especialista'}?
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Tu calificación ayuda a premiar a los mejores técnicos certificados de Caracas.
