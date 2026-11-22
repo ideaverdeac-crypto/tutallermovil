@@ -98,6 +98,7 @@ interface OrdenKanban {
   sector: string;
   direccion?: string | null;
   ubicacion_gps?: string | null;
+  tipo_servicio?: string | null;
   ganancia_estimada: number | string;
   estado: string;
   mecanico_id?: string | null;
@@ -980,7 +981,7 @@ export default function TableroDespachoPage() {
         ordenesFinales = [...data];
       }
 
-      // Sincronizar con órdenes de Flotas Corporativas registradas localmente o en tiempo real
+      // Sincronizar con órdenes de Flotas Corporativas y Solicitudes Recientes (Inspecciones / Leads)
       if (typeof window !== 'undefined') {
         try {
           const rawFlota = localStorage.getItem('ttm_ordenes_flota_recientes');
@@ -990,6 +991,18 @@ export default function TableroDespachoPage() {
               parsedFlota.forEach((of: OrdenKanban) => {
                 if (!ordenesFinales.some((o) => o.id === of.id)) {
                   ordenesFinales.unshift(of);
+                }
+              });
+            }
+          }
+
+          const rawRecientes = localStorage.getItem('ttm_ordenes_recientes');
+          if (rawRecientes) {
+            const parsedRecientes = JSON.parse(rawRecientes);
+            if (Array.isArray(parsedRecientes)) {
+              parsedRecientes.forEach((ord: OrdenKanban) => {
+                if (!ordenesFinales.some((o) => o.id === ord.id)) {
+                  ordenesFinales.unshift(ord);
                 }
               });
             }
@@ -2331,6 +2344,13 @@ export default function TableroDespachoPage() {
                             orden.falla_reportada?.includes('[FLOTA') ||
                             orden.empresa_flota
                           );
+                          const esInspeccionTecnica = Boolean(
+                            orden.tipo_servicio === 'INSPECCION_TECNICA' ||
+                            (orden as any).servicio === 'INSPECCION_TECNICA' ||
+                            orden.falla_reportada?.toUpperCase().includes('INSPECCI') ||
+                            orden.falla_reportada?.toUpperCase().includes('25 PUNTO') ||
+                            orden.falla_reportada?.toUpperCase().includes('EXPEDIENTE')
+                          );
 
                           return (
                             <motion.div
@@ -2352,7 +2372,9 @@ export default function TableroDespachoPage() {
                                   ? 'opacity-40 border-2 border-dashed border-[#1E56B0] scale-95 shadow-none'
                                   : esFlota
                                     ? 'bg-gradient-to-br from-blue-50/95 via-white to-indigo-50/70 border-2 border-[#1E56B0] shadow-md shadow-blue-900/10 ring-2 ring-[#1E56B0]/25 hover:border-[#0A1525] hover:shadow-lg'
-                                    : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md'
+                                    : esInspeccionTecnica
+                                      ? 'bg-gradient-to-br from-[#F4FFB8]/40 via-white to-lime-50/70 border-2 border-[#CCFF00] shadow-md shadow-lime-900/10 ring-2 ring-[#CCFF00]/60 hover:border-[#0A1525] hover:shadow-lg'
+                                      : 'bg-white border border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm hover:shadow-md'
                                 }`}
                             >
                               {/* 0. Banner Distintivo Flota Corporativa B2B (Resalta la tarjeta de color diferente) */}
@@ -2364,6 +2386,19 @@ export default function TableroDespachoPage() {
                                   </div>
                                   <span className="text-[9px] font-mono text-white font-extrabold px-1.5 py-0.5 rounded bg-[#1E56B0] shrink-0 shadow-2xs">
                                     PRIORIDAD B2B
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* 0. Banner Distintivo Inspección Técnica 25 Puntos (Firma Verde Lima Oficial de la Marca) */}
+                              {esInspeccionTecnica && !esFlota && (
+                                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#CCFF00] text-[#0A1525] shadow-2xs border border-[#0A1525]/15">
+                                  <div className="flex items-center gap-1.5 text-[10px] font-black tracking-wide uppercase truncate">
+                                    <ClipboardCheck className="w-3.5 h-3.5 text-[#0A1525] shrink-0 stroke-[2.5]" />
+                                    <span className="truncate font-black">INSPECCIÓN TÉCNICA (25 PUNTOS)</span>
+                                  </div>
+                                  <span className="text-[9px] font-mono text-white font-extrabold px-1.5 py-0.5 rounded bg-[#0A1525] shrink-0 shadow-2xs">
+                                    AUDITORÍA TTM
                                   </span>
                                 </div>
                               )}
@@ -2412,6 +2447,11 @@ export default function TableroDespachoPage() {
                                           FLOTA
                                         </span>
                                       )}
+                                      {esInspeccionTecnica && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black bg-[#CCFF00] text-[#0A1525] border border-lime-400 shrink-0 shadow-2xs">
+                                          25 PUNTOS
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="flex items-center justify-between">
                                       <p className="text-xs font-semibold text-[#475569] truncate flex items-center gap-1 group-hover:text-[#1E56B0] transition-colors" title="Clic para ver datos del cliente (teléfono, correo, dirección)">
@@ -2444,10 +2484,23 @@ export default function TableroDespachoPage() {
                                       setOrdenParaRadar(orden);
                                       setSheetRadarMecanicosOpen(true);
                                     }}
-                                    className="w-full h-8 px-3 rounded-xl bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 border border-blue-200 transition-all cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className={`w-full h-8 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed ${
+                                      esInspeccionTecnica
+                                        ? 'bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] border border-[#0A1525]/20 shadow-xs'
+                                        : 'bg-blue-50 hover:bg-[#CCFF00] text-[#1E56B0] hover:text-[#0A1525] border border-blue-200'
+                                    }`}
                                   >
-                                    <UserPlus className="w-3.5 h-3.5" />
-                                    <span>Asignar Mecánico</span>
+                                    {esInspeccionTecnica ? (
+                                      <>
+                                        <ClipboardCheck className="w-3.5 h-3.5 stroke-[2.5]" />
+                                        <span>Asignar Inspector Certificado</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserPlus className="w-3.5 h-3.5" />
+                                        <span>Asignar Mecánico</span>
+                                      </>
+                                    )}
                                   </button>
                                 </div>
                               )}
@@ -4371,6 +4424,12 @@ export default function TableroDespachoPage() {
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500 text-white uppercase tracking-wider flex items-center gap-1">
                           <Building2 className="w-3 h-3" />
                           {ord.empresa_flota || 'Flota B2B'}
+                        </span>
+                      )}
+                      {Boolean(ord.tipo_servicio === 'INSPECCION_TECNICA' || ord.falla_reportada?.toUpperCase().includes('INSPECCI') || ord.falla_reportada?.toUpperCase().includes('25 PUNTO')) && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-black bg-[#CCFF00] text-[#0A1525] uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                          <ClipboardCheck className="w-3 h-3 stroke-[2.5]" />
+                          Inspección 25 Pts
                         </span>
                       )}
                       <span className="text-slate-400 text-xs font-mono">

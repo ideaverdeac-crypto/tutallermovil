@@ -19,7 +19,8 @@ import {
   Mail,
   Plus,
   Check,
-  Phone
+  Phone,
+  ClipboardCheck
 } from 'lucide-react';
 
 export interface VehiculoOpcion {
@@ -36,6 +37,7 @@ export interface SolicitarMecanicoModalProps {
   onOpenChange: (open: boolean) => void;
   onSuccessToast?: (msg: string) => void;
   onVehiculoCreado?: (vehiculo: VehiculoOpcion) => void;
+  initialTipoServicio?: 'FALLA' | 'INSPECCION_TECNICA';
   initialVehiculo?: {
     marca?: string;
     modelo?: string;
@@ -56,10 +58,12 @@ export function SolicitarMecanicoModal({
   onOpenChange,
   onSuccessToast,
   onVehiculoCreado,
+  initialTipoServicio,
   initialVehiculo,
   initialCliente,
   vehiculosRegistrados
 }: SolicitarMecanicoModalProps) {
+  const [tipoServicio, setTipoServicio] = useState<'FALLA' | 'INSPECCION_TECNICA'>('FALLA');
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
@@ -196,11 +200,21 @@ export function SolicitarMecanicoModal({
         setPlaca('');
       }
 
-      if (initialVehiculo?.falla) setFalla(initialVehiculo.falla);
+      if (initialVehiculo?.falla) {
+        setFalla(initialVehiculo.falla);
+      } else if (initialTipoServicio === 'INSPECCION_TECNICA') {
+        setFalla('Inspección Técnica Certificada de 25 Puntos');
+      }
+
+      if (initialTipoServicio) {
+        setTipoServicio(initialTipoServicio);
+      } else {
+        setTipoServicio('FALLA');
+      }
     }
 
     sincronizarModal();
-  }, [open, initialVehiculo, initialCliente, vehiculosRegistrados]);
+  }, [open, initialVehiculo, initialCliente, vehiculosRegistrados, initialTipoServicio]);
 
   const handleSeleccionarVehiculo = (v: VehiculoOpcion) => {
     setVehiculoSeleccionadoId(v.id || v.placa);
@@ -312,6 +326,11 @@ export function SolicitarMecanicoModal({
         }
       }
 
+      const fallaLimpia = falla.trim();
+      const fallaFinal = tipoServicio === 'INSPECCION_TECNICA'
+        ? (fallaLimpia.toUpperCase().includes('INSPECCI') ? fallaLimpia : `[INSPECCIÓN TÉCNICA 25 PUNTOS] ${fallaLimpia || 'Auditoría integral y certificación preventiva de 25 sistemas críticos'}`)
+        : fallaLimpia;
+
       // 2. Insertar orden en la tabla ordenes (Campos oficiales de Supabase)
       const { data, error } = await supabase.from('ordenes').insert([
         {
@@ -323,9 +342,10 @@ export function SolicitarMecanicoModal({
           vehiculo_modelo: modeloFinal,
           vehiculo_placa: placaLimpia,
           vehiculo_anio: anioNum,
-          falla_reportada: falla.trim(),
+          falla_reportada: fallaFinal,
           sector: sector.trim(),
-          estado: 'LEAD_NUEVO'
+          estado: 'LEAD_NUEVO',
+          ganancia_estimada: 15.0
         }
       ]).select();
 
@@ -334,6 +354,32 @@ export function SolicitarMecanicoModal({
         setErrorMsg('Ocurrió un error al registrar la solicitud: ' + error.message);
         setSubmitting(false);
         return;
+      }
+
+      // 3. Sincronizar en localStorage para visibilidad inmediata en Despacho
+      if (typeof window !== 'undefined') {
+        try {
+          const nuevaOrdenCache = {
+            id: (data && data[0]?.id) || `ord_lead_${Date.now()}`,
+            cliente_nombre: nombreFinal,
+            cliente_telefono: telefonoFinal,
+            cliente_email: emailFinal,
+            vehiculo_id: vehiculoIdFinal,
+            vehiculo_marca: marca.trim(),
+            vehiculo_modelo: modeloFinal,
+            vehiculo_placa: placaLimpia,
+            vehiculo_anio: anioNum,
+            falla_reportada: fallaFinal,
+            sector: sector.trim(),
+            estado: 'LEAD_NUEVO',
+            ganancia_estimada: 15.0,
+            tipo_servicio: tipoServicio,
+            created_at: new Date().toISOString()
+          };
+          const rawPrev = localStorage.getItem('ttm_ordenes_recientes');
+          const prevList = rawPrev ? JSON.parse(rawPrev) : [];
+          localStorage.setItem('ttm_ordenes_recientes', JSON.stringify([nuevaOrdenCache, ...prevList]));
+        } catch (e) { }
       }
 
       // Éxito: limpiar campos de vehículo, cerrar modal y disparar toast
@@ -346,7 +392,11 @@ export function SolicitarMecanicoModal({
       onOpenChange(false);
 
       if (onSuccessToast) {
-        onSuccessToast('Solicitud enviada. Buscando mecánico...');
+        onSuccessToast(
+          tipoServicio === 'INSPECCION_TECNICA'
+            ? '✅ ¡Solicitud de Inspección Técnica enviada! Buscando inspector certificado...'
+            : 'Solicitud enviada. Buscando mecánico...'
+        );
       }
     } catch (err: any) {
       console.error('Excepción al solicitar mecánico:', err);
@@ -423,6 +473,63 @@ export function SolicitarMecanicoModal({
 
                   {/* Formulario */}
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Selector de Tipo de Servicio: Falla Mecánica vs Inspección Técnica */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider">
+                        Servicio Requerido <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTipoServicio('FALLA');
+                            if (falla === 'Inspección Técnica Certificada de 25 Puntos') {
+                              setFalla('');
+                            }
+                          }}
+                          className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-start gap-2.5 ${tipoServicio === 'FALLA'
+                            ? 'bg-blue-50/80 border-[#1E56B0] ring-2 ring-[#1E56B0]/25 shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                            }`}
+                        >
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${tipoServicio === 'FALLA' ? 'bg-[#1E56B0] text-white' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                            <Wrench className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-black text-[#0A1525] block">Diagnóstico / Falla</span>
+                            <span className="text-[10px] text-slate-500 leading-tight block">Reparación in situ por avería o ruido</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTipoServicio('INSPECCION_TECNICA');
+                            if (!falla) {
+                              setFalla('Inspección Técnica Certificada de 25 Puntos');
+                            }
+                          }}
+                          className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-start gap-2.5 ${tipoServicio === 'INSPECCION_TECNICA'
+                            ? 'bg-lime-50/90 border-[#CCFF00] ring-2 ring-[#CCFF00]/60 shadow-xs shadow-lime-500/10'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                            }`}
+                        >
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${tipoServicio === 'INSPECCION_TECNICA' ? 'bg-[#CCFF00] text-[#0A1525]' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                            <ClipboardCheck className="w-4 h-4 stroke-[2.5]" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs font-black text-[#0A1525] block">Inspección Técnica</span>
+                              <span className="text-[9px] font-mono font-black bg-[#CCFF00] text-[#0A1525] px-1 py-0.2 rounded">25 Pts</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 leading-tight block">Auditoría certificada y pasaporte</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Identidad del Solicitante: Si ya inició sesión NO se le pide el nombre ni email */}
                     {usuarioAutenticado ? (
                       <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl flex items-center justify-between">
@@ -788,8 +895,17 @@ export function SolicitarMecanicoModal({
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="w-5 h-5 text-[#050B14]" />
-                          <span>Confirmar y Pedir Mecánico</span>
+                          {tipoServicio === 'INSPECCION_TECNICA' ? (
+                            <>
+                              <ClipboardCheck className="w-5 h-5 text-[#050B14] stroke-[2.5]" />
+                              <span>Pedir Inspección Técnica Certificada</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-5 h-5 text-[#050B14]" />
+                              <span>Confirmar y Pedir Mecánico</span>
+                            </>
+                          )}
                         </>
                       )}
                     </motion.button>

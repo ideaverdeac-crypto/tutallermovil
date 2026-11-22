@@ -115,7 +115,7 @@ export function SolicitarExpedienteModal({
       const direccionCompleta = `${sector}: ${direccionExacta.trim()}`;
       const placaVehiculo = (vehiculo.placa || 'PLACA').toUpperCase().trim();
 
-      const fallaDetalle = `Apertura de Expediente Técnico Certificado (25 Puntos) - Pago: ${metodoPago.toUpperCase()}${referenciaPago ? ` (Ref: ${referenciaPago.trim()})` : ''}`;
+      const fallaDetalle = `[INSPECCIÓN TÉCNICA 25 PUNTOS] Auditoría y Expediente Técnico de 25 Puntos - Pago: ${metodoPago.toUpperCase()}${referenciaPago ? ` (Ref: ${referenciaPago.trim()})` : ''}`;
 
       const { data, error } = await supabase
         .from('ordenes')
@@ -129,8 +129,8 @@ export function SolicitarExpedienteModal({
             vehiculo_anio: anioNum,
             falla_reportada: fallaDetalle,
             sector: direccionCompleta,
-            estado: 'DISPONIBLE',
-            ganancia_estimada: 5.0,
+            estado: 'LEAD_NUEVO',
+            ganancia_estimada: 15.0,
             latitud: 10.49,
             longitud: -66.85
           }
@@ -147,6 +147,30 @@ export function SolicitarExpedienteModal({
 
       const orderId = data?.id || `ttm-exp-${Date.now().toString().slice(-6)}`;
       const codigoVisible = orderId.slice(0, 8).toUpperCase();
+
+      // Guardar en cache local para reflejo inmediato en el Tablero de Despacho
+      if (typeof window !== 'undefined') {
+        try {
+          const nuevaOrdenCache = {
+            id: orderId,
+            cliente_nombre: nombre.trim() || 'Cliente TuTallerMóvil',
+            cliente_email: email.trim() || null,
+            cliente_telefono: telefono.trim(),
+            vehiculo_marca: vehiculo.marca.trim(),
+            vehiculo_modelo: `${vehiculo.modelo.trim()} [${placaVehiculo}]`,
+            vehiculo_anio: anioNum,
+            falla_reportada: fallaDetalle,
+            sector: direccionCompleta,
+            estado: 'LEAD_NUEVO',
+            ganancia_estimada: 15.0,
+            tipo_servicio: 'INSPECCION_TECNICA',
+            created_at: new Date().toISOString()
+          };
+          const rawPrev = localStorage.getItem('ttm_ordenes_recientes');
+          const prevList = rawPrev ? JSON.parse(rawPrev) : [];
+          localStorage.setItem('ttm_ordenes_recientes', JSON.stringify([nuevaOrdenCache, ...prevList]));
+        } catch (e) { }
+      }
 
       setOrdenCreada({ id: orderId, codigo: codigoVisible });
       setSubmitting(false);

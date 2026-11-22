@@ -151,6 +151,7 @@ export default function ClienteDashboardPage() {
 
   // Modales
   const [modalSolicitarOpen, setModalSolicitarOpen] = useState(false);
+  const [tipoServicioModal, setTipoServicioModal] = useState<'FALLA' | 'INSPECCION_TECNICA'>('FALLA');
   const [modalChecklistOpen, setModalChecklistOpen] = useState(false);
   const [modalExpedienteOpen, setModalExpedienteOpen] = useState(false);
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<VehiculoGaraje | null>(null);
@@ -396,7 +397,25 @@ export default function ClienteDashboardPage() {
 
             <button
               type="button"
-              onClick={() => setModalSolicitarOpen(true)}
+              onClick={() => {
+                setTipoServicioModal('INSPECCION_TECNICA');
+                setVehiculoSeleccionado(null);
+                setModalSolicitarOpen(true);
+              }}
+              className="h-10 px-3.5 sm:px-4 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 border border-[#0A1525]/10"
+            >
+              <ClipboardCheck className="w-4 h-4 text-[#0A1525] stroke-[2.5]" />
+              <span className="hidden sm:inline">Inspección Técnica (25 Pts)</span>
+              <span className="sm:hidden">Inspección</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTipoServicioModal('FALLA');
+                setVehiculoSeleccionado(null);
+                setModalSolicitarOpen(true);
+              }}
               className="h-10 px-4 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
             >
               <Wrench className="w-4 h-4 text-[#CCFF00]" />
@@ -618,24 +637,26 @@ export default function ClienteDashboardPage() {
                             type="button"
                             onClick={() => {
                               setVehiculoSeleccionado(v);
+                              setTipoServicioModal('FALLA');
                               setModalSolicitarOpen(true);
                             }}
                             className="h-11 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                           >
                             <Wrench className="w-3.5 h-3.5 text-[#CCFF00]" />
-                            <span className="truncate">Pide tu primer servicio</span>
+                            <span className="truncate">Pedir Reparación</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => {
                               setVehiculoSeleccionado(v);
-                              setModalExpedienteOpen(true);
+                              setTipoServicioModal('INSPECCION_TECNICA');
+                              setModalSolicitarOpen(true);
                             }}
                             className="h-11 rounded-xl bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 border border-[#0A1525]/10"
                           >
-                            <ClipboardCheck className="w-3.5 h-3.5 text-[#0A1525]" />
-                            <span className="truncate">Abrir Expediente ($5)</span>
+                            <ClipboardCheck className="w-3.5 h-3.5 text-[#0A1525] stroke-[2.5]" />
+                            <span className="truncate">Inspección Técnica</span>
                           </button>
                         </div>
 
@@ -674,17 +695,31 @@ export default function ClienteDashboardPage() {
                           </button>
                         </div>
 
-                        <div className="text-center pt-1">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1 text-center">
                           <button
                             type="button"
                             onClick={() => {
                               setVehiculoSeleccionado(v);
+                              setTipoServicioModal('INSPECCION_TECNICA');
+                              setModalSolicitarOpen(true);
+                            }}
+                            className="text-[11px] font-extrabold text-[#0A1525] hover:text-[#1E56B0] inline-flex items-center gap-1 transition-colors cursor-pointer bg-lime-100 hover:bg-lime-200 px-3 py-1.5 rounded-lg border border-lime-300 shadow-2xs"
+                          >
+                            <ClipboardCheck className="w-3.5 h-3.5 text-[#0A1525]" />
+                            <span>Pedir Inspección Técnica (25 Puntos)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVehiculoSeleccionado(v);
+                              setTipoServicioModal('FALLA');
                               setModalSolicitarOpen(true);
                             }}
                             className="text-[11px] font-bold text-slate-500 hover:text-[#1E56B0] inline-flex items-center gap-1 transition-colors cursor-pointer"
                           >
-                            <Wrench className="w-3 h-3 text-[#1E56B0]" />
-                            <span>Solicitar Nuevo Servicio para este Carro</span>
+                            <Wrench className="w-3 h-3 text-slate-400" />
+                            <span>Reparación General</span>
                           </button>
                         </div>
                       </div>
@@ -942,6 +977,7 @@ export default function ClienteDashboardPage() {
       <SolicitarMecanicoModal
         open={modalSolicitarOpen}
         onOpenChange={setModalSolicitarOpen}
+        initialTipoServicio={tipoServicioModal}
         vehiculosRegistrados={vehiculos}
         onVehiculoCreado={(nuevo) => {
           setVehiculos((prev) => {
