@@ -213,6 +213,10 @@ export default function PortalAliadosPage() {
       const fotoGuardada = localStorage.getItem('ttm_aliado_foto');
       if (fotoGuardada) {
         setFotoPerfil(fotoGuardada);
+        // Sincronizar hacia Supabase si aún no está grabada
+        setTimeout(() => {
+          sincronizarFotoPerfil(fotoGuardada);
+        }, 1500);
       }
 
       // Cargar campos guardados
@@ -489,6 +493,147 @@ export default function PortalAliadosPage() {
     return ordenesDisponibles;
   }, [filtroServicios, ordenesAsignadas, ordenesDisponibles]);
 
+  // Compresión ligera de imagen en canvas para optimizar almacenamiento y velocidad en móvil
+  const comprimirImagen = (dataUrl: string, maxDimension = 480, calidad = 0.85): Promise<string> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(dataUrl);
+      if (!dataUrl || !dataUrl.startsWith('data:image')) return resolve(dataUrl);
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl);
+        ctx.drawImage(img, 0, 0, width, height);
+        const res = canvas.toDataURL('image/jpeg', calidad);
+        resolve(res);
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
+  // Sincronizar foto de perfil tanto localmente como en Supabase (tabla perfiles)
+  const sincronizarFotoPerfil = async (
+    fotoDataUrl: string,
+    extraDatos?: { nombre?: string; especialidad?: string; telefono?: string; zona?: string }
+  ) => {
+    setFotoPerfil(fotoDataUrl);
+    setFormFotoPreview(fotoDataUrl);
+
+    const nuevoNombre = extraDatos?.nombre || nombreMecanico;
+    const nuevaEsp = extraDatos?.especialidad || especialidadMecanico;
+    const nuevoTel = extraDatos?.telefono || telefonoMecanico;
+    const nuevaZona = extraDatos?.zona || zonaCobertura;
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('ttm_aliado_foto', fotoDataUrl);
+        localStorage.setItem('ttm_aliado_nombre', nuevoNombre);
+        localStorage.setItem('ttm_aliado_especialidad', nuevaEsp);
+        localStorage.setItem('ttm_aliado_telefono', nuevoTel);
+        localStorage.setItem('ttm_aliado_zona', nuevaZona);
+
+        const sesionActual = {
+          id: mecanicoId,
+          codigo_aliado: codigoAliado,
+          nombre: nuevoNombre,
+          especialidad: nuevaEsp,
+          telefono: nuevoTel,
+          zona: nuevaZona,
+          foto: fotoDataUrl
+        };
+        localStorage.setItem('ttm_aliado_sesion', JSON.stringify(sesionActual));
+        document.cookie = `ttm_user_name=${encodeURIComponent(nuevoNombre)}; path=/; max-age=31536000`;
+
+        // Sincronizar en listas locales
+        ['ttm_aliados_mecanicos', 'ttm_aliados_registrados'].forEach((k) => {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            try {
+              const arr = JSON.parse(raw);
+              if (Array.isArray(arr)) {
+                let encontrado = false;
+                arr.forEach((item: any) => {
+                  if (
+                    (mecanicoId && item.id === mecanicoId) ||
+                    (codigoAliado && item.codigo_aliado && item.codigo_aliado.includes(codigoAliado.replace('#', ''))) ||
+                    (nuevoNombre && item.nombre && item.nombre.toLowerCase() === nuevoNombre.toLowerCase())
+                  ) {
+                    item.foto = fotoDataUrl;
+                    item.avatar_url = fotoDataUrl;
+                    item.nombre = nuevoNombre;
+                    if (nuevoTel) item.telefono = nuevoTel;
+                    encontrado = true;
+                  }
+                });
+                if (!encontrado) {
+                  arr.unshift({
+                    id: mecanicoId,
+                    nombre: nuevoNombre,
+                    codigo_aliado: codigoAliado,
+                    telefono: nuevoTel,
+                    foto: fotoDataUrl,
+                    avatar_url: fotoDataUrl,
+                    rol: 'MECANICO'
+                  });
+                }
+                localStorage.setItem(k, JSON.stringify(arr));
+              }
+            } catch {}
+          }
+        });
+      } catch (storageErr) {
+        console.warn('Aviso guardando en localStorage:', storageErr);
+      }
+    }
+
+    // Persistir de forma definitiva en Supabase perfiles
+    try {
+      const supabase = createClient();
+      const updatePayload: Record<string, any> = {
+        avatar_url: fotoDataUrl,
+        perfil_completado: true
+      };
+      if (nuevoNombre) updatePayload.nombre_completo = nuevoNombre;
+      if (nuevoTel) updatePayload.telefono = nuevoTel;
+
+      const isUuid = (val?: string | null) =>
+        Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+      if (mecanicoId && isUuid(mecanicoId)) {
+        await supabase.from('perfiles').update(updatePayload).eq('id', mecanicoId);
+      } else if (codigoAliado) {
+        const cleanCod = codigoAliado.replace('#', '').trim();
+        await supabase
+          .from('perfiles')
+          .update(updatePayload)
+          .or(`codigo_aliado.eq.#${cleanCod},codigo_aliado.eq.${cleanCod}`);
+      } else if (nuevoNombre) {
+        await supabase
+          .from('perfiles')
+          .update(updatePayload)
+          .ilike('nombre_completo', `%${nuevoNombre}%`);
+      }
+    } catch (dbErr) {
+      console.warn('Aviso persistiendo foto en Supabase:', dbErr);
+    }
+  };
+
   // Abrir modal de edición con los datos actuales
   const handleAbrirEditarPerfil = () => {
     setFormNombre(nombreMecanico);
@@ -500,7 +645,7 @@ export default function PortalAliadosPage() {
   };
 
   // Guardar cambios del perfil
-  const handleGuardarPerfil = (e?: React.FormEvent) => {
+  const handleGuardarPerfil = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const nuevoNombre = formNombre.trim() || nombreMecanico;
     const nuevaEsp = formEspecialidad.trim() || especialidadMecanico;
@@ -512,26 +657,13 @@ export default function PortalAliadosPage() {
     setEspecialidadMecanico(nuevaEsp);
     setTelefonoMecanico(nuevoTel);
     setZonaCobertura(nuevaZona);
-    setFotoPerfil(nuevaFoto);
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ttm_aliado_nombre', nuevoNombre);
-      localStorage.setItem('ttm_aliado_especialidad', nuevaEsp);
-      localStorage.setItem('ttm_aliado_telefono', nuevoTel);
-      localStorage.setItem('ttm_aliado_zona', nuevaZona);
-      localStorage.setItem('ttm_aliado_foto', nuevaFoto);
-
-      const sesionActual = {
-        codigo_aliado: codigoAliado,
-        nombre: nuevoNombre,
-        especialidad: nuevaEsp,
-        telefono: nuevoTel,
-        zona: nuevaZona,
-        foto: nuevaFoto
-      };
-      localStorage.setItem('ttm_aliado_sesion', JSON.stringify(sesionActual));
-      document.cookie = `ttm_user_name=${encodeURIComponent(nuevoNombre)}; path=/; max-age=31536000`;
-    }
+    await sincronizarFotoPerfil(nuevaFoto, {
+      nombre: nuevoNombre,
+      especialidad: nuevaEsp,
+      telefono: nuevoTel,
+      zona: nuevaZona
+    });
 
     setModalEditarPerfilOpen(false);
     setToastAceptado('✓ Perfil y credenciales actualizados exitosamente');
@@ -549,15 +681,12 @@ export default function PortalAliadosPage() {
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const result = event.target?.result as string;
       if (result) {
-        setFormFotoPreview(result);
-        setFotoPerfil(result);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('ttm_aliado_foto', result);
-        }
-        setToastAceptado('✓ Foto de perfil cargada desde el dispositivo');
+        const fotoOptimizada = await comprimirImagen(result, 480, 0.85);
+        await sincronizarFotoPerfil(fotoOptimizada);
+        setToastAceptado('✓ Foto de perfil cargada y sincronizada');
         setTimeout(() => setToastAceptado(null), 3500);
       }
     };
@@ -592,7 +721,7 @@ export default function PortalAliadosPage() {
   };
 
   // Tomar fotografía desde el feed de video
-  const handleCapturarFotoWeb = () => {
+  const handleCapturarFotoWeb = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
@@ -603,13 +732,9 @@ export default function PortalAliadosPage() {
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    const fotoOptimizada = await comprimirImagen(dataUrl, 480, 0.85);
 
-    setFormFotoPreview(dataUrl);
-    setFotoPerfil(dataUrl);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ttm_aliado_foto', dataUrl);
-    }
-
+    await sincronizarFotoPerfil(fotoOptimizada);
     handleCerrarCamaraWeb();
     setToastAceptado('✓ Fotografía capturada con éxito');
     setTimeout(() => setToastAceptado(null), 3500);

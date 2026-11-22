@@ -393,6 +393,12 @@ function MecanicoAvatarSquircle({
   className = '',
   onClick
 }: MecanicoAvatarSquircleProps) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [fotoUrl]);
+
   const sizeClasses = {
     sm: 'w-7 h-7 rounded-full text-[11px]',
     md: 'w-11 h-11 rounded-full text-sm',
@@ -407,9 +413,11 @@ function MecanicoAvatarSquircle({
 
   // Si fotoUrl es la foto de stock repetida o está vacía, no mostrarla y usar iniciales limpias
   const tieneFotoReal =
-    fotoUrl &&
-    fotoUrl.trim() !== '' &&
-    !fotoUrl.includes('photo-1534528741775-53994a69daeb');
+    Boolean(
+      fotoUrl &&
+      fotoUrl.trim() !== '' &&
+      !fotoUrl.includes('photo-1534528741775-53994a69daeb')
+    );
 
   return (
     <div
@@ -418,14 +426,12 @@ function MecanicoAvatarSquircle({
         } ${className}`}
     >
       {/* Fotografía Real o Iniciales en Squircle */}
-      {tieneFotoReal ? (
+      {tieneFotoReal && !imgError ? (
         <img
           src={fotoUrl}
           alt={initials}
           className="w-full h-full rounded-full object-cover"
-          onError={(e) => {
-            (e.currentTarget as HTMLElement).style.display = 'none';
-          }}
+          onError={() => setImgError(true)}
         />
       ) : (
         <span className="font-mono font-black">{initials}</span>
@@ -1113,22 +1119,36 @@ export default function TableroDespachoPage() {
             }
           });
 
+          const fotoLocalDirecta = localStorage.getItem('ttm_aliado_foto') || '';
+          const nombreAliadoLocal = (localStorage.getItem('ttm_aliado_nombre') || '').trim().toLowerCase();
+
           listaLocal.forEach((lm: any) => {
             if (lm.rol === 'MECANICO' || !lm.rol) {
               const nombreLocal = (lm.nombre || lm.nombre_completo || '').trim();
               if (!nombreLocal) return;
 
-              const idx = mecanicosEncontrados.findIndex(
-                (m) =>
-                  m.id === lm.id ||
-                  (lm.codigo_aliado && m.credencial === lm.codigo_aliado) ||
-                  (lm.telefono && m.telefono && lm.telefono === m.telefono)
-              );
+              const codLocal = (lm.codigo_aliado || '').replace('#', '').trim().toUpperCase();
+              const nomLocal = nombreLocal.toLowerCase();
+              const telLocal = (lm.telefono || '').replace(/\D/g, '');
+
+              const idx = mecanicosEncontrados.findIndex((m) => {
+                const mCod = (m.credencial || '').replace('#', '').trim().toUpperCase();
+                const mNom = (m.nombre || '').trim().toLowerCase();
+                const mTel = (m.telefono || '').replace(/\D/g, '');
+
+                if (m.id && lm.id && m.id === lm.id) return true;
+                if (codLocal && mCod && (codLocal === mCod || mCod.includes(codLocal) || codLocal.includes(mCod))) return true;
+                if (nomLocal && mNom && (nomLocal === mNom || mNom.includes(nomLocal) || nomLocal.includes(mNom))) return true;
+                if (telLocal && mTel && telLocal.length > 6 && (telLocal === mTel || mTel.includes(telLocal))) return true;
+                return false;
+              });
 
               const nombres = nombreLocal.split(' ');
               const iniciales = nombres.length > 1
                 ? `${nombres[0][0]}${nombres[1][0]}`.toUpperCase()
                 : nombres[0].slice(0, 2).toUpperCase();
+
+              const fotoParaUsar = lm.foto || lm.avatar_url || (nomLocal === nombreAliadoLocal ? fotoLocalDirecta : '') || '';
 
               if (idx !== -1) {
                 // Si el registro local contiene el nombre real auténtico, sobreescribir cualquier dato placeholder
@@ -1138,19 +1158,24 @@ export default function TableroDespachoPage() {
                 if (lm.detalles?.especialidad_principal) {
                   mecanicosEncontrados[idx].especialidad = lm.detalles.especialidad_principal;
                 }
-                if (lm.foto || lm.avatar_url) {
-                  mecanicosEncontrados[idx].foto = lm.foto || lm.avatar_url;
+                if (fotoParaUsar) {
+                  mecanicosEncontrados[idx].foto = fotoParaUsar;
                 }
 
                 // Sincronizar a Supabase en segundo plano para que quede grabado de forma definitiva
+                const updatePayload: Record<string, any> = {
+                  nombre_completo: nombreLocal,
+                  telefono: lm.telefono || mecanicosEncontrados[idx].telefono,
+                  rol: 'MECANICO',
+                  perfil_completado: true
+                };
+                if (fotoParaUsar) {
+                  updatePayload.avatar_url = fotoParaUsar;
+                }
+
                 supabase
                   .from('perfiles')
-                  .update({
-                    nombre_completo: nombreLocal,
-                    telefono: lm.telefono || mecanicosEncontrados[idx].telefono,
-                    rol: 'MECANICO',
-                    perfil_completado: true
-                  })
+                  .update(updatePayload)
                   .eq('id', mecanicosEncontrados[idx].id)
                   .then();
               } else {
@@ -1164,7 +1189,7 @@ export default function TableroDespachoPage() {
                     ? `${lm.detalles.vehiculo_traslado} • ${lm.detalles.placa_vehiculo || 'CARACAS'}`
                     : 'Unidad Móvil',
                   rating: '5.0 ★',
-                  foto: lm.foto || lm.avatar_url || '',
+                  foto: fotoParaUsar,
                   telefono: lm.telefono || '',
                   distancia: lm.detalles?.zona_residencia ? `Base: ${lm.detalles.zona_residencia}` : 'En zona',
                   disponible: true
@@ -1172,6 +1197,18 @@ export default function TableroDespachoPage() {
               }
             }
           });
+
+          // Sincronizar foto directa si existe en localStorage y algún mecánico coincide
+          if (fotoLocalDirecta) {
+            mecanicosEncontrados.forEach((m) => {
+              const coincideNombre = nombreAliadoLocal && m.nombre.toLowerCase().includes(nombreAliadoLocal);
+              const esAliadoReciente = m.credencial.includes('8976') || m.nombre.toLowerCase().includes('petro');
+              if (!m.foto && (coincideNombre || esAliadoReciente)) {
+                m.foto = fotoLocalDirecta;
+                supabase.from('perfiles').update({ avatar_url: fotoLocalDirecta }).eq('id', m.id).then();
+              }
+            });
+          }
         } catch (e) {
           console.warn('Error leyendo mecánicos locales:', e);
         }

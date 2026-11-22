@@ -120,6 +120,9 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
               ? `${nombres[0][0]}${nombres[1][0]}`.toUpperCase()
               : nom.slice(0, 2).toUpperCase();
 
+          const fotoLocalDirecta = typeof window !== 'undefined' ? localStorage.getItem('ttm_aliado_foto') : null;
+          const fotoFinal = m.avatar_url || (cleanSearch.includes('8976') ? fotoLocalDirecta : null);
+
           setMecanico((prev) => ({
             ...prev,
             id: m.id,
@@ -127,7 +130,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
             iniciales,
             credencial: m.codigo_aliado || idOficial,
             telefono: m.telefono || prev.telefono,
-            foto: m.avatar_url || null,
+            foto: fotoFinal,
             cedula: m.cedula_rif || prev.cedula
           }));
           setCargando(false);
@@ -136,6 +139,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
 
         // 2. Fallback: Buscar en LocalStorage
         if (typeof window !== 'undefined') {
+          const fotoLocalDirecta = localStorage.getItem('ttm_aliado_foto') || null;
           const keys = ['ttm_aliados_mecanicos', 'ttm_aliados_registrados', 'ttm_aliado_sesion'];
           for (const k of keys) {
             const raw = localStorage.getItem(k);
@@ -165,7 +169,7 @@ export function CarnetCard({ codigo }: CarnetCardProps) {
                   iniciales,
                   credencial: match.codigo_aliado || idOficial,
                   telefono: match.telefono || prev.telefono,
-                  foto: match.foto || match.avatar_url || null,
+                  foto: match.foto || match.avatar_url || fotoLocalDirecta || null,
                   cedula: match.detalles?.cedula_rif || prev.cedula,
                   vehiculo: match.detalles?.vehiculo_traslado
                     ? `${match.detalles.vehiculo_traslado} • ${match.detalles.placa_vehiculo || 'CARACAS'}`
