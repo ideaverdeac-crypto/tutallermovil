@@ -1059,7 +1059,7 @@ export default function TableroDespachoPage() {
       const { data, error } = await supabase
         .from('perfiles')
         .select('id, rol, nombre_completo, telefono, codigo_aliado, avatar_url, perfil_completado, created_at')
-        .eq('rol', 'MECANICO');
+        .or('rol.eq.MECANICO,rol.eq.mecanico,codigo_aliado.ilike.%TTM%');
 
       let mecanicosEncontrados: MecanicoDespacho[] = [];
 
@@ -1135,6 +1135,13 @@ export default function TableroDespachoPage() {
       setCargandoMecanicos(false);
     }
   };
+
+  // Refrescar lista de mecánicos al abrir el modal o sheet de asignación
+  useEffect(() => {
+    if (sheetRadarMecanicosOpen || modalAsignarOpen) {
+      cargarMecanicos();
+    }
+  }, [sheetRadarMecanicosOpen, modalAsignarOpen]);
 
   // 5. Supabase Realtime: Suscripción a cambios, Presencia y Concurrencia
   useEffect(() => {

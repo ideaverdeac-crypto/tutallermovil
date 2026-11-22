@@ -392,6 +392,8 @@ function RegistroRolContent() {
           options: {
             data: {
               nombre: nombre.trim(),
+              nombre_completo: nombre.trim(),
+              full_name: nombre.trim(),
               rol: config.rol,
               telefono: telefono.trim(),
               cedula_rif: cedulaCompleta,
@@ -431,7 +433,20 @@ function RegistroRolContent() {
           .maybeSingle();
 
         if (perfilError) {
-          console.warn('[REGISTRO ALIADO] Error en upsert de perfil:', perfilError);
+          console.warn('[REGISTRO ALIADO] Error en upsert de perfil, intentando update:', perfilError);
+          // Intentar actualización directa si la fila fue creada automáticamente por trigger
+          if (!userId.startsWith('usr_')) {
+            await supabase
+              .from('perfiles')
+              .update({
+                rol: config.rol,
+                nombre_completo: nombre.trim(),
+                telefono: telefono.trim(),
+                codigo_aliado: codigoNuevo,
+                perfil_completado: true
+              })
+              .eq('id', userId);
+          }
         }
 
         if (perfilData?.codigo_aliado) {
