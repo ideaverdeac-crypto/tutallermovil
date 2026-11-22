@@ -483,10 +483,20 @@ function LoginForm() {
 
               {/* Contraseña */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-[#1E56B0]" />
-                  <span>Contraseña</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-[#1E56B0]" />
+                    <span>Contraseña</span>
+                  </label>
+                  <a
+                    href="https://wa.me/584142314194?text=Hola%2C%20solicito%20restablecer%20mi%20contrase%C3%B1a%20de%20staff%20en%20TuTallerM%C3%B3vil."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-[#1E56B0] hover:underline cursor-pointer"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </a>
+                </div>
                 <input
                   type="password"
                   required
@@ -554,15 +564,20 @@ function LoginForm() {
 
               {/* Contraseña o PIN */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
                     <KeyRound className="w-3.5 h-3.5 text-[#1E56B0]" />
                     <span>Contraseña o PIN</span>
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    PIN o Contraseña
-                  </span>
-                </label>
+                  </label>
+                  <a
+                    href="https://wa.me/584142314194?text=Hola%2C%20necesito%20ayuda%20para%20recuperar%20mi%20PIN%20de%20aliado%20en%20TuTallerM%C3%B3vil."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-[#1E56B0] hover:underline cursor-pointer"
+                  >
+                    ¿Olvidaste tu PIN?
+                  </a>
+                </div>
                 <input
                   type="password"
                   required

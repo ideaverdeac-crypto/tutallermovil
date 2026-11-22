@@ -21,7 +21,10 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  ChevronRight
+  ChevronRight,
+  X,
+  RefreshCw,
+  Send
 } from 'lucide-react';
 
 function LoginClienteContent() {
@@ -57,6 +60,49 @@ function LoginClienteContent() {
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
+
+  // Estados para recuperación de contraseña
+  const [modalRecuperarOpen, setModalRecuperarOpen] = useState(false);
+  const [emailRecuperar, setEmailRecuperar] = useState('');
+  const [recuperandoCargando, setRecuperandoCargando] = useState(false);
+  const [recuperarExito, setRecuperarExito] = useState(false);
+  const [recuperarError, setRecuperarError] = useState<string | null>(null);
+
+  const handleRecuperarPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecuperarError(null);
+    setRecuperarExito(false);
+
+    if (!emailRecuperar.trim()) {
+      setRecuperarError('Por favor ingresa tu correo electrónico.');
+      return;
+    }
+
+    setRecuperandoCargando(true);
+
+    try {
+      const supabase = createClient();
+      const destino = typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback?next=/cliente/dashboard`
+        : 'https://tutallermovil.vercel.app/auth/callback';
+
+      const { error } = await supabase.auth.resetPasswordForEmail(emailRecuperar.trim(), {
+        redirectTo: destino
+      });
+
+      if (error) {
+        setRecuperarError(error.message);
+        return;
+      }
+
+      setRecuperarExito(true);
+    } catch (err: any) {
+      console.error('Error enviando correo de recuperación:', err);
+      setRecuperarError('No se pudo enviar el correo de recuperación. Intenta nuevamente.');
+    } finally {
+      setRecuperandoCargando(false);
+    }
+  };
 
   // Iniciar Sesión con Supabase Auth
   const handleIngresar = async (e: React.FormEvent) => {
@@ -373,9 +419,18 @@ function LoginClienteContent() {
                     Contraseña <span className="text-rose-500">*</span>
                   </label>
                   {tabActiva === 'ingresar' && (
-                    <span className="text-[11px] text-[#1E56B0] hover:underline cursor-pointer">
-                      ¿Olvidaste tu clave?
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmailRecuperar(email || '');
+                        setRecuperarError(null);
+                        setRecuperarExito(false);
+                        setModalRecuperarOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-[#1E56B0] hover:underline cursor-pointer"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
                   )}
                 </div>
                 <div className="relative">
@@ -476,6 +531,131 @@ function LoginClienteContent() {
           </div>
 
         </div>
+
+        {/* MODAL: RECUPERACIÓN DE CONTRASEÑA */}
+        <AnimatePresence>
+          {modalRecuperarOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 sm:p-6 relative my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden space-y-4"
+              >
+                {/* Botón Cerrar */}
+                <button
+                  type="button"
+                  onClick={() => setModalRecuperarOpen(false)}
+                  className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label="Cerrar modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Cabecera */}
+                <div className="flex items-center gap-3 pr-8 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs shrink-0">
+                    <KeyRound className="w-6 h-6 text-[#CCFF00]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-[#0A1525] tracking-tight">
+                      Recuperar Contraseña
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Ingresa tu correo para restablecer tu clave de acceso
+                    </p>
+                  </div>
+                </div>
+
+                {/* Contenido scrolleable */}
+                <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                  {recuperarError && (
+                    <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{recuperarError}</span>
+                    </div>
+                  )}
+
+                  {recuperarExito ? (
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-3">
+                      <div className="flex items-center gap-2 font-black text-sm text-emerald-800">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <span>¡Correo de recuperación enviado!</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        Hemos enviado un enlace a <strong>{emailRecuperar}</strong>. Revisa tu bandeja de entrada o la carpeta de spam para ingresar tu nueva contraseña.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setModalRecuperarOpen(false)}
+                        className="w-full h-11 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer mt-2"
+                      >
+                        Volver a Iniciar Sesión
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleRecuperarPassword} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Correo Electrónico Registrado <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="email"
+                            required
+                            value={emailRecuperar}
+                            onChange={(e) => setEmailRecuperar(e.target.value)}
+                            placeholder="tu@correo.com"
+                            className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1E56B0] transition-all"
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Te enviaremos un correo con un link directo y seguro para definir una nueva clave.
+                        </p>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={recuperandoCargando}
+                        className="w-full h-12 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+                      >
+                        {recuperandoCargando ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin text-[#CCFF00]" />
+                            <span>Enviando enlace...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Enviar Enlace de Recuperación</span>
+                            <Send className="w-4 h-4 text-[#CCFF00]" />
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+
+                  {/* Asistencia Directa por WhatsApp */}
+                  <div className="pt-2 border-t border-slate-100 text-center space-y-1.5">
+                    <span className="text-[11px] text-slate-400 block font-medium">
+                      ¿No recuerdas tu correo o no recibes el enlace?
+                    </span>
+                    <a
+                      href="https://wa.me/584142314194?text=Hola%20TuTallerM%C3%B3vil%2C%20necesito%20ayuda%20para%20recuperar%20mi%20contrase%C3%B1a%20de%20cliente."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline"
+                    >
+                      <span>Asistencia inmediata con Soporte por WhatsApp</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Footer Sencillo */}
