@@ -201,73 +201,19 @@ interface RepuestoSeleccionado {
   cantidad: number;
 }
 
-// Mecánicos disponibles para asignación
-const MECANICOS_DISPONIBLES = [
-  {
-    id: '123e4567-e89b-12d3-a456-426614174000',
-    nombre: 'Carlos Mendoza',
-    iniciales: 'CM',
-    credencial: '#TTM-0842',
-    especialidad: 'Especialista Senior (OBD2 & Inyección)',
-    unidad: 'Moto Yamaha FZ • AB123CD',
-    rating: '4.9 ★',
-    foto: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80'
-  },
-  {
-    id: '223e4567-e89b-12d3-a456-426614174001',
-    nombre: 'Alejandro Blanco',
-    iniciales: 'AB',
-    credencial: '#TTM-0912',
-    especialidad: 'Mecánica Ligera & Frenos',
-    unidad: 'Moto Suzuki GN • AC456DF',
-    rating: '4.95 ★',
-    foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: '323e4567-e89b-12d3-a456-426614174002',
-    nombre: 'Roberto Páez',
-    iniciales: 'RP',
-    credencial: '#TTM-0341',
-    especialidad: 'Electricidad Automotriz & Baterías',
-    unidad: 'Moto Bera SBR • AE789GH',
-    rating: '4.8 ★',
-    foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
-  }
-];
-
-// Mecánicos en el Radar táctil con cálculo de distancia y disponibilidad
-const MECANICOS_RADAR = [
-  {
-    id: '123e4567-e89b-12d3-a456-426614174000',
-    nombre: 'Carlos Mendoza',
-    iniciales: 'CM',
-    credencial: '#TTM-0842',
-    especialidad: 'Especialista Senior (OBD2 & Inyección)',
-    distancia: '1.2 km (8 min)',
-    disponible: true,
-    foto: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: '223e4567-e89b-12d3-a456-426614174001',
-    nombre: 'Alejandro Blanco',
-    iniciales: 'AB',
-    credencial: '#TTM-0912',
-    especialidad: 'Mecánica Ligera & Frenos',
-    distancia: '3.4 km (18 min)',
-    disponible: true,
-    foto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: '323e4567-e89b-12d3-a456-426614174002',
-    nombre: 'Roberto Páez',
-    iniciales: 'RP',
-    credencial: '#TTM-0341',
-    especialidad: 'Electricidad Automotriz & Baterías',
-    distancia: '6.1 km (35 min)',
-    disponible: false,
-    foto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
-  }
-];
+export interface MecanicoDespacho {
+  id: string;
+  nombre: string;
+  iniciales: string;
+  credencial: string;
+  especialidad: string;
+  unidad: string;
+  rating: string;
+  foto: string;
+  telefono?: string;
+  distancia?: string;
+  disponible: boolean;
+}
 
 // Motorizados de Delivery de Repuestos (Runners)
 const MOTORIZADOS_RUNNER = [
@@ -581,6 +527,43 @@ export default function TableroDespachoPage() {
   // Estados de Validación de Comprobante de Pago
   const [modalComprobanteOpen, setModalComprobanteOpen] = useState(false);
 
+  // Estados de Mecánicos Registrados (Sin datos de prueba)
+  const [listaMecanicos, setListaMecanicos] = useState<MecanicoDespacho[]>([]);
+  const [cargandoMecanicos, setCargandoMecanicos] = useState<boolean>(true);
+
+  const obtenerMecanicoAsignado = (mecanicoId?: string | null): MecanicoDespacho => {
+    if (!mecanicoId) {
+      return {
+        id: '',
+        nombre: 'Sin Asignar',
+        iniciales: 'SA',
+        credencial: '#TTM-PEND',
+        especialidad: 'Especialista Pendiente',
+        unidad: 'Despacho Pendiente',
+        rating: '-',
+        foto: FOTO_MECANICO_OFICIAL,
+        telefono: '',
+        distancia: '',
+        disponible: true
+      };
+    }
+    const encontrado = listaMecanicos.find((m) => m.id === mecanicoId);
+    if (encontrado) return encontrado;
+    return {
+      id: mecanicoId,
+      nombre: 'Mecánico Registrado',
+      iniciales: 'MR',
+      credencial: '#TTM-ASIG',
+      especialidad: 'Especialista en Ruta',
+      unidad: 'Unidad Móvil',
+      rating: '5.0 ★',
+      foto: FOTO_MECANICO_OFICIAL,
+      telefono: '',
+      distancia: 'En zona',
+      disponible: true
+    };
+  };
+
   // Notificaciones Push y Alertas Sonoras (Piano Elegante)
   const [pushActivo, setPushActivo] = useState<boolean>(false);
   const [toastPush, setToastPush] = useState<string | null>(null);
@@ -726,8 +709,7 @@ export default function TableroDespachoPage() {
       (orden.vehiculo_modelo.match(/\[([A-Z0-9-]+)\]/)?.[1]) ||
       orden.vehiculo_placa ||
       'AB123CD';
-    const mecAsignado =
-      MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+    const mecAsignado = obtenerMecanicoAsignado(orden.mecanico_id);
     const runnerNombre = runnersAsignados[orden.id] || null;
 
     const ahora = new Date();
@@ -1066,6 +1048,90 @@ export default function TableroDespachoPage() {
     }
   };
 
+  const cargarMecanicos = async () => {
+    try {
+      setCargandoMecanicos(true);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('perfiles')
+        .select('id, rol, nombre_completo, telefono, codigo_aliado, avatar_url, perfil_completado, created_at')
+        .eq('rol', 'MECANICO');
+
+      let mecanicosEncontrados: MecanicoDespacho[] = [];
+
+      if (data && data.length > 0) {
+        mecanicosEncontrados = data.map((m: any) => {
+          const nombres = (m.nombre_completo || 'Mecánico').trim().split(' ');
+          const iniciales = nombres.length > 1
+            ? `${nombres[0][0]}${nombres[1][0]}`.toUpperCase()
+            : nombres[0].slice(0, 2).toUpperCase();
+
+          return {
+            id: m.id,
+            nombre: m.nombre_completo || 'Especialista Mecánico',
+            iniciales,
+            credencial: m.codigo_aliado || `#TTM-${m.id.slice(0, 4).toUpperCase()}`,
+            especialidad: 'Especialista Mecánico Certificado',
+            unidad: 'Unidad Móvil de Asistencia',
+            rating: '5.0 ★',
+            foto: m.avatar_url || FOTO_MECANICO_OFICIAL,
+            telefono: m.telefono || '',
+            distancia: 'En zona (disponible)',
+            disponible: true
+          };
+        });
+      }
+
+      // Sincronizar con mecánicos guardados localmente (fallback offline o registro reciente)
+      if (typeof window !== 'undefined') {
+        try {
+          const rawMecs = localStorage.getItem('ttm_aliados_mecanicos') || localStorage.getItem('ttm_aliados_registrados');
+          if (rawMecs) {
+            const parsed = JSON.parse(rawMecs);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((lm: any) => {
+                if (lm.rol === 'MECANICO' || !lm.rol) {
+                  const yaExiste = mecanicosEncontrados.some(
+                    (m) => m.id === lm.id || (lm.codigo_aliado && m.credencial === lm.codigo_aliado)
+                  );
+                  if (!yaExiste) {
+                    const nombres = (lm.nombre || lm.nombre_completo || 'Mecánico').trim().split(' ');
+                    const iniciales = nombres.length > 1
+                      ? `${nombres[0][0]}${nombres[1][0]}`.toUpperCase()
+                      : nombres[0].slice(0, 2).toUpperCase();
+                    mecanicosEncontrados.unshift({
+                      id: lm.id || `mec_loc_${Date.now()}`,
+                      nombre: lm.nombre || lm.nombre_completo || 'Especialista Mecánico',
+                      iniciales,
+                      credencial: lm.codigo_aliado || '#TTM-REG',
+                      especialidad: lm.detalles?.especialidad_principal || 'Mecánica General & Diagnóstico',
+                      unidad: lm.detalles?.vehiculo_traslado
+                        ? `${lm.detalles.vehiculo_traslado} • ${lm.detalles.placa_vehiculo || 'CARACAS'}`
+                        : 'Unidad Móvil',
+                      rating: '5.0 ★',
+                      foto: lm.foto || FOTO_MECANICO_OFICIAL,
+                      telefono: lm.telefono || '',
+                      distancia: lm.detalles?.zona_residencia ? `Base: ${lm.detalles.zona_residencia}` : 'En zona',
+                      disponible: true
+                    });
+                  }
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Error leyendo mecánicos locales:', e);
+        }
+      }
+
+      setListaMecanicos(mecanicosEncontrados);
+    } catch (err) {
+      console.error('Error cargando lista de mecánicos:', err);
+    } finally {
+      setCargandoMecanicos(false);
+    }
+  };
+
   // 5. Supabase Realtime: Suscripción a cambios, Presencia y Concurrencia
   useEffect(() => {
     // 0. Detectar operadora actual desde cookies o credenciales locales
@@ -1141,11 +1207,29 @@ export default function TableroDespachoPage() {
 
     cargarOrdenes();
     cargarCatalogoRepuestos();
+    cargarMecanicos();
 
     // Inicializar servicios finalizados del día estrictamente en vacío
     setServiciosDia([]);
 
     const supabase = createClient();
+
+    // Canal en tiempo real para sincronizar mecánicos registrados
+    const canalMecanicos = supabase
+      .channel('despacho_perfiles_mecanicos_sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'perfiles'
+        },
+        () => {
+          cargarMecanicos();
+        }
+      )
+      .subscribe();
+
     const canal = supabase
       .channel('kanban_torre_despacho_presence', {
         config: {
@@ -1229,6 +1313,7 @@ export default function TableroDespachoPage() {
 
     return () => {
       supabase.removeChannel(canal);
+      supabase.removeChannel(canalMecanicos);
     };
   }, [miOperadora.email]);
 
@@ -1374,15 +1459,19 @@ export default function TableroDespachoPage() {
       return; // Ya está en esta columna
     }
 
-    // Si se suelta en EN_INSPECCION y no tiene mecánico asignado, asignar el primer especialista disponible por defecto
+    // Si se suelta en EN_INSPECCION y no tiene mecánico asignado, asignar si hay especialistas registrados
     if (targetColId === 'EN_INSPECCION' && !orden.mecanico_id) {
-      await moverOrden(ordenId, 'EN_INSPECCION', MECANICOS_DISPONIBLES[0].id);
+      if (listaMecanicos.length > 0) {
+        await moverOrden(ordenId, 'EN_INSPECCION', listaMecanicos[0].id);
+      } else {
+        await moverOrden(ordenId, 'EN_INSPECCION');
+      }
     } else {
       await moverOrden(ordenId, targetCol.estadoDestino);
     }
   };
 
-  const handleSeleccionarMecanico = async (mecanico: typeof MECANICOS_DISPONIBLES[0]) => {
+  const handleSeleccionarMecanico = async (mecanico: MecanicoDespacho) => {
     if (!ordenParaAsignar) return;
     await moverOrden(ordenParaAsignar.id, 'EN_INSPECCION', mecanico.id);
     setModalAsignarOpen(false);
@@ -1390,7 +1479,7 @@ export default function TableroDespachoPage() {
   };
 
   // 1. Asignación Forzada desde el Radar de Mecánicos
-  const handleForzarAsignacion = async (mecanico: typeof MECANICOS_RADAR[0]) => {
+  const handleForzarAsignacion = async (mecanico: MecanicoDespacho) => {
     if (!ordenParaRadar) return;
     const ordenId = ordenParaRadar.id;
     const cliente = ordenParaRadar.cliente_nombre;
@@ -2507,7 +2596,7 @@ export default function TableroDespachoPage() {
 
                               {/* En EN_INSPECCION: Avatar del Mecánico + Botón Diagnóstico + Botón de Cotizar */}
                               {columna.id === 'EN_INSPECCION' && (() => {
-                                const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                                const mecAsignado = obtenerMecanicoAsignado(orden.mecanico_id);
                                 return (
                                   <div className="space-y-2 ml-5">
                                     <div className="flex items-center justify-between gap-2">
@@ -2586,7 +2675,7 @@ export default function TableroDespachoPage() {
 
                               {/* En REPUESTOS_EN_RUTA: Avatar del Mecánico Asignado + Gestión de Runner */}
                               {columna.id === 'REPUESTOS_EN_RUTA' && (() => {
-                                const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                                const mecAsignado = obtenerMecanicoAsignado(orden.mecanico_id);
                                 return (
                                   <div className="space-y-1.5 ml-5">
                                     <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
@@ -2636,7 +2725,7 @@ export default function TableroDespachoPage() {
 
                               {/* En EN_EJECUCION: Avatar del Mecánico Asignado + Estado de Instalación + Ver Checklist */}
                               {columna.id === 'EN_EJECUCION' && (() => {
-                                const mecAsignado = MECANICOS_DISPONIBLES.find((m) => m.id === orden.mecanico_id) || MECANICOS_DISPONIBLES[0];
+                                const mecAsignado = obtenerMecanicoAsignado(orden.mecanico_id);
                                 return (
                                   <div className="space-y-2 ml-5">
                                     <div className="p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between text-xs">
@@ -3359,44 +3448,84 @@ export default function TableroDespachoPage() {
               </div>
 
               <div className="space-y-3 overflow-y-auto flex-1 pr-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#475569] block">
-                  Especialistas Verificados Disponibles
-                </span>
-
-                {MECANICOS_DISPONIBLES.map((mec) => (
-                  <div
-                    key={mec.id}
-                    className="p-3.5 rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] bg-[#F8FAFC] hover:bg-blue-50/40 transition-all flex items-center justify-between gap-3 shadow-2xs"
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#475569] block">
+                    Especialistas Verificados Registrados ({listaMecanicos.length})
+                  </span>
+                  <Link
+                    href="/registro/mecanico"
+                    target="_blank"
+                    className="text-[11px] font-black text-[#1E56B0] hover:underline flex items-center gap-1"
                   >
-                    <div className="flex items-center gap-3">
-                      <MecanicoAvatarSquircle
-                        initials={mec.iniciales}
-                        fotoUrl={mec.foto}
-                        size="md"
-                        status="verified"
-                      />
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-[#0A1525]">{mec.nombre}</span>
-                          <span className="font-mono text-[10px] font-black text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                            {mec.credencial}
-                          </span>
-                          <span className="text-[11px] font-bold text-amber-600">{mec.rating}</span>
-                        </div>
-                        <p className="text-xs text-[#475569] font-medium">{mec.especialidad}</p>
-                        <p className="text-[11px] text-slate-400">{mec.unidad}</p>
-                      </div>
-                    </div>
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>+ Registrar Mecánico</span>
+                  </Link>
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSeleccionarMecanico(mec)}
-                      className="h-10 px-4 text-xs font-black bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all shadow-2xs cursor-pointer border border-[#0A1525]/15 shrink-0"
-                    >
-                      Asignar
-                    </button>
+                {cargandoMecanicos ? (
+                  <div className="p-8 text-center space-y-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#1E56B0] mx-auto" />
+                    <p className="text-xs text-slate-500 font-medium">Cargando especialistas registrados...</p>
                   </div>
-                ))}
+                ) : listaMecanicos.length === 0 ? (
+                  <div className="p-8 text-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 space-y-3 my-2">
+                    <div className="w-12 h-12 rounded-full bg-blue-50 text-[#1E56B0] flex items-center justify-center mx-auto">
+                      <Wrench className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-[#0A1525]">No hay mecánicos registrados aún</h4>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Los mecánicos de prueba han sido eliminados. Puedes registrar especialistas en el portal de registro y aparecerán aquí automáticamente.
+                      </p>
+                    </div>
+                    <Link
+                      href="/registro/mecanico"
+                      target="_blank"
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black transition-all shadow-xs"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 text-[#CCFF00]" />
+                      <span>Registrar Especialista Mecánico</span>
+                    </Link>
+                  </div>
+                ) : (
+                  listaMecanicos.map((mec) => (
+                    <div
+                      key={mec.id}
+                      className="p-3.5 rounded-2xl border border-[#E2E8F0] hover:border-[#1E56B0] bg-[#F8FAFC] hover:bg-blue-50/40 transition-all flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-3">
+                        <MecanicoAvatarSquircle
+                          initials={mec.iniciales}
+                          fotoUrl={mec.foto}
+                          size="md"
+                          status="verified"
+                        />
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-[#0A1525]">{mec.nombre}</span>
+                            <span className="font-mono text-[10px] font-black text-[#1E56B0] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                              {mec.credencial}
+                            </span>
+                            <span className="text-[11px] font-bold text-amber-600">{mec.rating}</span>
+                          </div>
+                          <p className="text-xs text-[#475569] font-medium">{mec.especialidad}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                            <span>{mec.unidad}</span>
+                            {mec.telefono && <span>• Tel: {mec.telefono}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSeleccionarMecanico(mec)}
+                        className="h-10 px-4 text-xs font-black bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] rounded-xl transition-all shadow-2xs cursor-pointer border border-[#0A1525]/15 shrink-0"
+                      >
+                        Asignar
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="pt-2 text-center">
@@ -3440,165 +3569,169 @@ export default function TableroDespachoPage() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="overflow-y-auto flex-1 space-y-4 pr-1">
-                {/* Cabecera: Avatar Squircle Oficial w-20 h-20, Nombre, Código y Calificación */}
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1 text-center sm:text-left">
-                <MecanicoAvatarSquircle initials="CM" fotoUrl={FOTO_MECANICO_OFICIAL} size="lg" status="verified" />
+              {(() => {
+                const mecModal = obtenerMecanicoAsignado(ordenParaEvidencia?.mecanico_id);
+                return (
+                  <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                    {/* Cabecera: Avatar Squircle Oficial w-20 h-20, Nombre, Código y Calificación */}
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1 text-center sm:text-left">
+                      <MecanicoAvatarSquircle initials={mecModal.iniciales} fotoUrl={mecModal.foto} size="lg" status="verified" />
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
-                      Carlos Mendoza
-                    </h2>
-                    <span className="w-5 h-5 rounded-full bg-[#16A34A] flex items-center justify-center shrink-0 shadow-2xs" title="Técnico Verificado Oficial">
-                      <Check className="w-3 h-3 text-white stroke-[3.5]" />
-                    </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                          <h2 className="text-xl font-black text-[#0A1525] tracking-tight">
+                            {mecModal.nombre}
+                          </h2>
+                          <span className="w-5 h-5 rounded-full bg-[#16A34A] flex items-center justify-center shrink-0 shadow-2xs" title="Técnico Verificado Oficial">
+                            <Check className="w-3 h-3 text-white stroke-[3.5]" />
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                          <span className="font-mono text-xs font-black text-[#1E56B0] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                            {mecModal.credencial}
+                          </span>
+                          <span className="text-xs font-bold text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            <Star className="w-3.5 h-3.5 fill-amber-500 stroke-amber-500" />
+                            {mecModal.rating}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Grid de Datos (Bento Grid 2x2 con Stagger) */}
+                    <motion.div
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: {
+                          opacity: 1,
+                          transition: { staggerChildren: 0.08 }
+                        }
+                      }}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                    >
+                      {/* 1. Rango / Especialidad */}
+                      <motion.div
+                        variants={{
+                          hidden: { opacity: 0, y: 12 },
+                          visible: { opacity: 1, y: 0 }
+                        }}
+                        className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1"
+                      >
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <Shield className="w-4 h-4 text-[#1E56B0]" />
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider">
+                            Especialidad
+                          </span>
+                        </div>
+                        <p className="text-xs font-black text-[#0A1525]">
+                          {mecModal.especialidad}
+                        </p>
+                      </motion.div>
+
+                      {/* 4. Zona Actual */}
+                      <motion.div
+                        variants={{
+                          hidden: { opacity: 0, y: 12 },
+                          visible: { opacity: 1, y: 0 }
+                        }}
+                        className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1"
+                      >
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <MapPin className="w-4 h-4 text-emerald-600" />
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider">
+                            Zona de Atención
+                          </span>
+                        </div>
+                        <p className="text-xs font-black text-[#0A1525]">
+                          {mecModal.distancia || 'En Ruta • Caracas'}
+                        </p>
+                      </motion.div>
+
+                      {/* 2. Unidad de Traslado */}
+                      <motion.div
+                        variants={{
+                          hidden: { opacity: 0, y: 12 },
+                          visible: { opacity: 1, y: 0 }
+                        }}
+                        className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1 sm:col-span-2"
+                      >
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <Bike className="w-4 h-4 text-[#0A1525]" />
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 font-black">
+                            Unidad de Traslado
+                          </span>
+                        </div>
+                        <p className="text-xs font-black text-[#0A1525]">
+                          {mecModal.unidad}
+                        </p>
+                      </motion.div>
+
+                      {/* 3. Teléfono */}
+                      {mecModal.telefono && (
+                        <motion.div
+                          variants={{
+                            hidden: { opacity: 0, y: 12 },
+                            visible: { opacity: 1, y: 0 }
+                          }}
+                          className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1 sm:col-span-2"
+                        >
+                          <div className="flex items-center gap-1.5 text-slate-400">
+                            <Phone className="w-4 h-4 text-[#1E56B0]" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider">
+                              Contacto Directo
+                            </span>
+                          </div>
+                          <p className="text-xs font-black font-mono text-[#0A1525]">
+                            {mecModal.telefono}
+                          </p>
+                        </motion.div>
+                      )}
+                    </motion.div>
+
+                    {/* Botón para ver Evidencia de Odómetro */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalMecanicoDetalleOpen(false);
+                        setModalEvidenciaOpen(true);
+                      }}
+                      className="w-full h-11 rounded-2xl bg-[#F8FAFC] hover:bg-[#CCFF00] text-[#0A1525] text-xs font-black flex items-center justify-center gap-2 border border-[#CBD5E1] transition-all cursor-pointer shadow-2xs active:scale-95"
+                    >
+                      <Camera className="w-4 h-4 text-[#1E56B0]" />
+                      <span>Ver Foto del Odómetro {ordenParaEvidencia?.foto_odometro_url ? '(Foto Subida ✓)' : '(Pendiente)'}</span>
+                    </button>
+
+                    {/* Botones de Acción Rápida (Footer del Modal) */}
+                    <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                      <a
+                        href={mecModal.telefono ? `tel:${mecModal.telefono}` : '#'}
+                        className="flex-1 h-12 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
+                      >
+                        <Phone className="w-4 h-4" />
+                        <span>Llamar al Mecánico</span>
+                      </a>
+
+                      <Link
+                        href={`/carnet/${(mecModal.credencial || 'TTM-0842').replace('#', '')}`}
+                        target="_blank"
+                        className="flex-1 h-12 rounded-xl bg-white hover:bg-slate-50 text-[#0A1525] border border-[#CBD5E1] hover:border-[#1E56B0] text-xs font-black flex items-center justify-center gap-2 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                      >
+                        <span>Ver Carnet QR</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-[#1E56B0]" />
+                      </Link>
+                    </div>
+
+                    {/* Nota de UX en el footer */}
+                    <div className="pt-2 text-center border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                      <span>Verificado por TuTallerMóvil • Activo en ruta</span>
+                    </div>
                   </div>
-
-                  <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <span className="font-mono text-xs font-black text-[#1E56B0] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                      #TTM-0842
-                    </span>
-                    <span className="text-xs font-bold text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                      <Star className="w-3.5 h-3.5 fill-amber-500 stroke-amber-500" />
-                      4.9 / 5.0
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Grid de Datos (Bento Grid 2x2 con Stagger) */}
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: { opacity: 0 },
-                  visible: {
-                    opacity: 1,
-                    transition: { staggerChildren: 0.08 }
-                  }
-                }}
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-              >
-                {/* 1. Rango / Especialidad */}
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1"
-                >
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Shield className="w-4 h-4 text-[#1E56B0]" />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
-                      Rango / Especialidad
-                    </span>
-                  </div>
-                  <p className="text-xs font-black text-[#0A1525]">
-                    Mecánico 1 — Senior
-                  </p>
-                </motion.div>
-
-                {/* 4. Zona Actual */}
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1"
-                >
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <MapPin className="w-4 h-4 text-emerald-600" />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
-                      Zona Actual
-                    </span>
-                  </div>
-                  <p className="text-xs font-black text-[#0A1525]">
-                    Chacao
-                  </p>
-                </motion.div>
-
-                {/* 2. Unidad de Traslado (Vital para Garita) */}
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1 sm:col-span-2"
-                >
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Bike className="w-4 h-4 text-[#0A1525]" />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 font-black">
-                      Unidad de Traslado (Autorización Garita)
-                    </span>
-                  </div>
-                  <p className="text-xs font-black text-[#0A1525]">
-                    Moto Yamaha FZ • Negro • Placa{' '}
-                    <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-300 text-[#1E56B0]">
-                      AB123CD
-                    </span>
-                  </p>
-                </motion.div>
-
-                {/* 3. Teléfono */}
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    visible: { opacity: 1, y: 0 }
-                  }}
-                  className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-1 sm:col-span-2"
-                >
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Phone className="w-4 h-4 text-[#1E56B0]" />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
-                      Contacto Directo
-                    </span>
-                  </div>
-                  <p className="text-xs font-black font-mono text-[#0A1525]">
-                    +58 412-1234567
-                  </p>
-                </motion.div>
-              </motion.div>
-
-              {/* Botón para ver Evidencia de Odómetro */}
-              <button
-                type="button"
-                onClick={() => {
-                  setModalMecanicoDetalleOpen(false);
-                  setModalEvidenciaOpen(true);
-                }}
-                className="w-full h-11 rounded-2xl bg-[#F8FAFC] hover:bg-[#CCFF00] text-[#0A1525] text-xs font-black flex items-center justify-center gap-2 border border-[#CBD5E1] transition-all cursor-pointer shadow-2xs active:scale-95"
-              >
-                <Camera className="w-4 h-4 text-[#1E56B0]" />
-                <span>Ver Foto del Odómetro {ordenParaEvidencia?.foto_odometro_url ? '(Foto Subida ✓)' : '(Pendiente)'}</span>
-              </button>
-
-              {/* Botones de Acción Rápida (Footer del Modal) */}
-              <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
-                <a
-                  href="tel:+584121234567"
-                  className="flex-1 h-12 rounded-xl bg-[#1E56B0] hover:bg-[#15448c] text-white text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
-                >
-                  <Phone className="w-4 h-4" />
-                  <span>Llamar al Mecánico</span>
-                </a>
-
-                <Link
-                  href="/carnet/TTM-0842"
-                  target="_blank"
-                  className="flex-1 h-12 rounded-xl bg-white hover:bg-slate-50 text-[#0A1525] border border-[#CBD5E1] hover:border-[#1E56B0] text-xs font-black flex items-center justify-center gap-2 transition-all shadow-2xs active:scale-95 cursor-pointer"
-                >
-                  <span>Ver Carnet QR</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-[#1E56B0]" />
-                </Link>
-              </div>
-
-              {/* Nota de UX en el footer */}
-              <div className="pt-2 text-center border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                <span>Verificado por TuTallerMóvil • Activo en ruta</span>
-              </div>
-              </div>
+                );
+              })()}
             </motion.div>
           </div>
         )}
@@ -3649,72 +3782,94 @@ export default function TableroDespachoPage() {
               <div className="p-6 flex-1 overflow-y-auto space-y-4">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
                   <span>Especialistas por Cobertura</span>
-                  <span className="text-[#1E56B0] font-mono">3 simulados</span>
+                  <span className="text-[#1E56B0] font-mono">{listaMecanicos.length} registrados</span>
                 </div>
 
-                {MECANICOS_RADAR.map((mec) => (
-                  <div
-                    key={mec.id}
-                    className={`p-4 rounded-2xl border transition-all space-y-3.5 ${mec.disponible
-                      ? 'bg-white border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm'
-                      : 'bg-slate-50/70 border-slate-200 opacity-60'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <MecanicoAvatarSquircle
-                          initials={mec.iniciales}
-                          fotoUrl={mec.foto}
-                          size="md"
-                          status={mec.disponible ? 'verified' : 'slate'}
-                        />
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="text-sm font-black text-[#0A1525]">
-                              {mec.nombre}
-                            </h3>
-                            <span className="font-mono text-[10px] font-bold text-[#1E56B0] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
-                              {mec.credencial}
-                            </span>
-                          </div>
-                          <p className="text-xs text-[#475569] font-medium">
-                            {mec.especialidad}
-                          </p>
-                          <div className="flex items-center gap-1 text-[11px] text-slate-500 pt-0.5">
-                            <MapPin className="w-3 h-3 text-[#1E56B0]" />
-                            <span>{mec.distancia}</span>
+                {listaMecanicos.length === 0 ? (
+                  <div className="p-8 text-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-blue-50 text-[#1E56B0] flex items-center justify-center mx-auto">
+                      <Wrench className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-[#0A1525]">Sin especialistas en radar</h4>
+                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                        Los mecánicos de prueba fueron eliminados. Los aliados registrados aparecerán aquí para despacho inmediato.
+                      </p>
+                    </div>
+                    <Link
+                      href="/registro/mecanico"
+                      target="_blank"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0A1525] hover:bg-[#1E56B0] text-white text-xs font-black transition-all shadow-xs"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 text-[#CCFF00]" />
+                      <span>+ Registrar Mecánico</span>
+                    </Link>
+                  </div>
+                ) : (
+                  listaMecanicos.map((mec) => (
+                    <div
+                      key={mec.id}
+                      className={`p-4 rounded-2xl border transition-all space-y-3.5 ${mec.disponible
+                        ? 'bg-white border-[#E2E8F0] hover:border-[#1E56B0] shadow-sm'
+                        : 'bg-slate-50/70 border-slate-200 opacity-60'
+                        }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <MecanicoAvatarSquircle
+                            initials={mec.iniciales}
+                            fotoUrl={mec.foto}
+                            size="md"
+                            status={mec.disponible ? 'verified' : 'slate'}
+                          />
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <h3 className="text-sm font-black text-[#0A1525]">
+                                {mec.nombre}
+                              </h3>
+                              <span className="font-mono text-[10px] font-bold text-[#1E56B0] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                                {mec.credencial}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#475569] font-medium">
+                              {mec.especialidad}
+                            </p>
+                            <div className="flex items-center gap-1 text-[11px] text-slate-500 pt-0.5">
+                              <MapPin className="w-3 h-3 text-[#1E56B0]" />
+                              <span>{mec.distancia || 'En zona'}</span>
+                            </div>
                           </div>
                         </div>
+
+                        {/* Badge: Verde lima si Disponible, gris si Ocupado */}
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 border ${mec.disponible
+                            ? 'bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/10'
+                            : 'bg-slate-200 text-slate-500 border-slate-300'
+                            }`}
+                        >
+                          {mec.disponible ? '● Disponible' : 'Ocupado'}
+                        </span>
                       </div>
 
-                      {/* Badge: Verde lima si Disponible, gris si Ocupado */}
-                      <span
-                        className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 border ${mec.disponible
-                          ? 'bg-[#CCFF00] text-[#0A1525] border-[#0A1525]/10'
-                          : 'bg-slate-200 text-slate-500 border-slate-300'
-                          }`}
-                      >
-                        {mec.disponible ? '● Disponible' : 'Ocupado'}
-                      </span>
+                      {/* Botón Forzar Asignación */}
+                      {mec.disponible ? (
+                        <button
+                          type="button"
+                          onClick={() => handleForzarAsignacion(mec)}
+                          className="w-full h-10 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          <span>Forzar Asignación Inmediata</span>
+                        </button>
+                      ) : (
+                        <div className="text-[11px] font-semibold text-slate-400 italic text-center py-1 bg-slate-100/60 rounded-xl">
+                          En servicio activo • No disponible para despacho
+                        </div>
+                      )}
                     </div>
-
-                    {/* Botón Forzar Asignación */}
-                    {mec.disponible ? (
-                      <button
-                        type="button"
-                        onClick={() => handleForzarAsignacion(mec)}
-                        className="w-full h-10 rounded-xl bg-[#0A1525] hover:bg-[#CCFF00] text-white hover:text-[#0A1525] text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        <span>Forzar Asignación Inmediata</span>
-                      </button>
-                    ) : (
-                      <div className="text-[11px] font-semibold text-slate-400 italic text-center py-1 bg-slate-100/60 rounded-xl">
-                        En servicio activo • No disponible para despacho
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Footer del Sheet */}

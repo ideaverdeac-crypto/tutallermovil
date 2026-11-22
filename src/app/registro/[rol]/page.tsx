@@ -413,29 +413,26 @@ function RegistroRolContent() {
         console.warn('Aviso de Auth SignUp:', authEx);
       }
 
-      // 2. Upsert en la tabla 'perfiles' con todos los datos auditables
+      // 2. Upsert en la tabla 'perfiles' con los datos soportados
       try {
-        const { data: perfilData } = await supabase
+        const perfilPayload: Record<string, any> = {
+          id: userId,
+          rol: config.rol,
+          nombre_completo: nombre.trim(),
+          telefono: telefono.trim(),
+          codigo_aliado: codigoNuevo,
+          perfil_completado: true
+        };
+
+        const { data: perfilData, error: perfilError } = await supabase
           .from('perfiles')
-          .upsert(
-            [
-              {
-                id: userId,
-                email: email.trim().toLowerCase(),
-                rol: config.rol,
-                nombre_completo: nombre.trim(),
-                telefono: telefono.trim(),
-                codigo_aliado: codigoNuevo,
-                perfil_completado: true,
-                cedula_rif: cedulaCompleta,
-                detalles: detalles,
-                updated_at: new Date().toISOString()
-              }
-            ],
-            { onConflict: 'id' }
-          )
+          .upsert([perfilPayload], { onConflict: 'id' })
           .select('codigo_aliado')
           .maybeSingle();
+
+        if (perfilError) {
+          console.warn('[REGISTRO ALIADO] Error en upsert de perfil:', perfilError);
+        }
 
         if (perfilData?.codigo_aliado) {
           setCodigoGenerado(perfilData.codigo_aliado);
@@ -457,6 +454,21 @@ function RegistroRolContent() {
         codigo_aliado: codigoNuevo,
         detalles
       };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ttm_aliado_sesion', JSON.stringify(sesionAliado));
+        // Guardar también en lista de aliados locales para fallback y panel de despacho
+        try {
+          const listaKey = `ttm_aliados_${config.rol.toLowerCase()}s`;
+          const guardados = JSON.parse(localStorage.getItem(listaKey) || '[]');
+          guardados.unshift(sesionAliado);
+          localStorage.setItem(listaKey, JSON.stringify(guardados));
+
+          const todosAliados = JSON.parse(localStorage.getItem('ttm_aliados_registrados') || '[]');
+          todosAliados.unshift(sesionAliado);
+          localStorage.setItem('ttm_aliados_registrados', JSON.stringify(todosAliados));
+        } catch (e) {}
+      }
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('ttm_aliado_sesion', JSON.stringify(sesionAliado));
