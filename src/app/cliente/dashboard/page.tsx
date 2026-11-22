@@ -737,17 +737,18 @@ export default function ClienteDashboardPage() {
       {/* MODAL 1: CHECKLIST DE 25 PUNTOS DEL VEHÍCULO */}
       <AnimatePresence>
         {modalChecklistOpen && vehiculoSeleccionado && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 relative my-auto space-y-4 max-h-[90vh] flex flex-col"
+              className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 sm:p-6 relative my-auto space-y-4 max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden"
             >
               <button
                 type="button"
                 onClick={() => setModalChecklistOpen(false)}
-                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer z-10"
+                aria-label="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -880,17 +881,18 @@ export default function ClienteDashboardPage() {
       {/* MODAL 2: AÑADIR NUEVO VEHÍCULO AL GARAJE */}
       <AnimatePresence>
         {modalNuevoVehiculo && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 relative space-y-4"
+              className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 sm:p-6 relative space-y-4 my-auto max-h-[92dvh] max-h-[90vh] overflow-y-auto"
             >
               <button
                 type="button"
                 onClick={() => setModalNuevoVehiculo(false)}
-                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer z-10"
+                aria-label="Cerrar ventana"
               >
                 <X className="w-5 h-5" />
               </button>

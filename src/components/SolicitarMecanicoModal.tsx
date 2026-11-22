@@ -420,59 +420,63 @@ export function SolicitarMecanicoModal({
               />
             </Dialog.Overlay>
 
-            {/* Contenido del Modal */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            {/* Contenido del Modal Responsive */}
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain">
               <Dialog.Content asChild>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 15 }}
                   transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="w-full max-w-lg bg-white rounded-2xl border-2 border-[#CBD5E1] shadow-2xl p-6 sm:p-7 relative overflow-hidden"
+                  className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl relative overflow-hidden flex flex-col max-h-[92dvh] max-h-[90vh] my-auto"
                 >
                   {/* Borde superior de marca */}
-                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#050B14] via-[#00E5FF] to-[#CCFF00]" />
+                  <div className="h-1.5 bg-gradient-to-r from-[#050B14] via-[#00E5FF] to-[#CCFF00] shrink-0" />
 
-                  {/* Botón Cerrar */}
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                      aria-label="Cerrar"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </Dialog.Close>
+                  {/* Header Fijo con Botón de Cerrar Siempre Visible */}
+                  <div className="p-4 sm:p-5 pb-3 flex items-start justify-between border-b border-slate-100 bg-white shrink-0 relative z-10">
+                    <div className="flex items-center gap-3 pr-2 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#CCFF00] flex items-center justify-center text-[#050B14] shrink-0 shadow-xs">
+                        <Wrench className="w-5 h-5 text-[#050B14]" />
+                      </div>
+                      <div className="min-w-0">
+                        <Dialog.Title className="text-lg sm:text-2xl font-black text-[#0A1525] tracking-tight leading-tight truncate">
+                          {tipoServicio === 'INSPECCION_TECNICA' ? 'Pedir Inspección Técnica' : 'Pedir Mecánico Ahora'}
+                        </Dialog.Title>
+                        <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">
+                          Atención en menos de 45 min en Caracas
+                        </p>
+                      </div>
+                    </div>
 
-                  {/* Header */}
-                  <div className="flex items-center gap-3 mb-2 pt-2">
-                    <div className="w-10 h-10 rounded-xl bg-[#CCFF00] flex items-center justify-center text-[#050B14] shrink-0 shadow-xs">
-                      <Wrench className="w-5 h-5 text-[#050B14]" />
-                    </div>
-                    <div>
-                      <Dialog.Title className="text-xl sm:text-2xl font-black text-[#0A1525] tracking-tight">
-                        Pedir Mecánico Ahora
-                      </Dialog.Title>
-                      <p className="text-xs text-slate-500 font-medium">
-                        Atención en menos de 45 min en Caracas
-                      </p>
-                    </div>
+                    {/* Botón Cerrar: Cómodo y accesible en móviles */}
+                    <Dialog.Close asChild>
+                      <button
+                        type="button"
+                        className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
+                        aria-label="Cerrar ventana"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </Dialog.Close>
                   </div>
 
-                  <Dialog.Description className="text-xs text-slate-600 mb-5 leading-relaxed">
-                    Completa los datos de tu vehículo. Asignaremos a un especialista verificado con escáner y herramientas directas a tu ubicación.
-                  </Dialog.Description>
+                  {/* Contenedor Scrolleable Interno */}
+                  <div className="overflow-y-auto flex-1 p-4 sm:p-6 space-y-4 overscroll-contain">
+                    <Dialog.Description className="text-xs text-slate-600 leading-relaxed">
+                      Completa los datos de tu vehículo. Asignaremos a un especialista verificado con escáner y herramientas directas a tu ubicación.
+                    </Dialog.Description>
 
-                  {/* Mensaje de error si ocurre */}
-                  {errorMsg && (
-                    <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-                      <span>{errorMsg}</span>
-                    </div>
-                  )}
+                    {/* Mensaje de error si ocurre */}
+                    {errorMsg && (
+                      <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                        <span>{errorMsg}</span>
+                      </div>
+                    )}
 
-                  {/* Formulario */}
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Formulario */}
+                    <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Selector de Tipo de Servicio: Falla Mecánica vs Inspección Técnica */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-[#0A1525] uppercase tracking-wider">
@@ -910,7 +914,7 @@ export function SolicitarMecanicoModal({
                       )}
                     </motion.button>
 
-                    <p className="text-[11px] text-center text-slate-500 pt-1">
+                    <p className="text-[11px] text-center text-slate-500 pt-1 pb-4">
                       Al solicitar el servicio declaras aceptar los{' '}
                       <Link
                         href="/terminos"
@@ -922,7 +926,8 @@ export function SolicitarMecanicoModal({
                       de TuTallerMóvil.
                     </p>
                   </form>
-                </motion.div>
+                </div>
+              </motion.div>
               </Dialog.Content>
             </div>
           </Dialog.Portal>

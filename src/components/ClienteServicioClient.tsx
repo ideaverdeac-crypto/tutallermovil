@@ -2708,17 +2708,18 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalCarnetOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative"
+              className="w-full max-w-sm bg-white rounded-3xl p-5 sm:p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative my-auto max-h-[92dvh] max-h-[90vh] overflow-y-auto"
             >
               <button
                 type="button"
                 onClick={() => setModalCarnetOpen(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer z-10"
+                aria-label="Cerrar credencial"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2815,33 +2816,48 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalAprobarPresupuesto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/75 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/75 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-lg bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#CBD5E1] shadow-2xl relative max-h-[92dvh] max-h-[90vh] overflow-hidden flex flex-col my-auto"
             >
-              <button
-                type="button"
-                onClick={() => setModalAprobarPresupuesto(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="w-14 h-14 rounded-2xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-md">
-                <FileText className="w-7 h-7 stroke-[2.5]" />
+              {/* Header Fijo con Botón Cerrar */}
+              <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center shrink-0 shadow-xs">
+                    <FileText className="w-5 h-5 stroke-[2.5]" />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <h3 className="text-base sm:text-lg font-black text-[#0A1525] tracking-tight truncate">
+                      Aprobar Presupuesto
+                    </h3>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      {orden.vehiculo_modelo}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalAprobarPresupuesto(false)}
+                  className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
+                  aria-label="Cerrar modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div>
-                <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
-                  Aprobar Presupuesto Detallado
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Revisa los repuestos e insumos certificados a montar en tu {orden.vehiculo_modelo}
-                </p>
-              </div>
+              {/* Contenido scrolleable */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain space-y-4 text-center">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-700">
+                    Desglose de Repuestos e Insumos
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Revisa las piezas certificadas a montar en tu vehículo
+                  </p>
+                </div>
 
               {/* Desglose con Repuestos Detallados */}
               <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 text-left space-y-3.5 text-xs">
@@ -2967,7 +2983,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   Rechazar
                 </button>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -2977,34 +2994,40 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalAgregarPieza && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-lg bg-white rounded-3xl p-6 space-y-4 border border-[#CBD5E1] shadow-2xl relative max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#CBD5E1] shadow-2xl relative max-h-[92dvh] max-h-[90vh] overflow-hidden flex flex-col my-auto"
             >
-              <button
-                type="button"
-                onClick={() => setModalAgregarPieza(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shadow-md shrink-0">
-                  <Plus className="w-6 h-6 stroke-[3]" />
+              {/* Header Fijo con Botón Cerrar */}
+              <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shadow-xs shrink-0">
+                    <Plus className="w-5 h-5 stroke-[3]" />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#1E56B0] block">
+                      Personaliza tu Servicio
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black text-[#0A1525] tracking-tight truncate">
+                      Añadir Repuesto o Servicio
+                    </h3>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#1E56B0]">
-                    Personaliza tu Servicio
-                  </span>
-                  <h3 className="text-lg font-black text-[#0A1525] tracking-tight">
-                    Añadir Repuesto o Servicio
-                  </h3>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalAgregarPieza(false)}
+                  className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
+                  aria-label="Cerrar modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
+
+              {/* Contenedor scrolleable */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain space-y-4">
 
               <p className="text-xs text-slate-600 font-medium">
                 Selecciona una pieza recomendada con 1 toque o escribe un requerimiento para que el taller móvil lo incluya.
@@ -3103,7 +3126,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   <span>Añadir a mi Cotización</span>
                 </button>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -3113,43 +3137,49 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalPagoOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-sm bg-white/95 backdrop-blur-xl rounded-3xl p-6 text-center space-y-4 border border-slate-200 shadow-2xl relative overflow-hidden"
+              className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl relative max-h-[92dvh] max-h-[90vh] overflow-hidden flex flex-col my-auto"
             >
-              {/* Luz decorativa */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#16A34A]/10 rounded-full blur-2xl pointer-events-none" />
-
-              <button
-                type="button"
-                onClick={() => setModalPagoOpen(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="w-14 h-14 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center mx-auto shadow-md">
-                <Receipt className="w-7 h-7 stroke-[2.5]" />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-flex mb-1">
-                  <Lock className="w-3 h-3 text-emerald-600" />
-                  <span>Bóveda Segura SSL 256-Bit</span>
+              {/* Header Fijo con Botón Cerrar */}
+              <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shrink-0 shadow-xs">
+                    <Receipt className="w-5 h-5 stroke-[2.5]" />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <h3 className="text-base sm:text-lg font-black text-[#0A1525] tracking-tight truncate">
+                      Reportar Pago
+                    </h3>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      Monto: <strong className="text-[#0A1525] font-mono">${totalCotizado.toFixed(2)} USD</strong>
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
-                  Reportar Pago
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Monto a conciliar:{' '}
-                  <strong className="text-[#0A1525] font-mono text-sm">
-                    ${totalCotizado.toFixed(2)} USD
-                  </strong>
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setModalPagoOpen(false)}
+                  className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
+                  aria-label="Cerrar modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
+
+              {/* Contenedor scrolleable */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain space-y-4 text-center">
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-flex mb-1">
+                    <Lock className="w-3 h-3 text-emerald-600" />
+                    <span>Bóveda Segura SSL 256-Bit</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Realiza tu transferencia o pago móvil y adjunta el comprobante
+                  </p>
+                </div>
 
               {/* Datos Bancarios Reales con Botones de Copiar */}
               <div className="space-y-2 text-left">
@@ -3275,7 +3305,8 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   )}
                 </button>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -3285,57 +3316,69 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       <AnimatePresence>
         {pantallaExitoReportado && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.8, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 30 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative overflow-hidden"
+              className="w-full max-w-sm bg-white rounded-3xl p-5 sm:p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative overflow-hidden my-auto max-h-[92dvh] max-h-[90vh] flex flex-col"
             >
               <div className="absolute top-0 right-0 w-36 h-36 bg-[#16A34A]/20 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-36 h-36 bg-[#CCFF00]/20 rounded-full blur-2xl pointer-events-none" />
 
-              <motion.div
-                initial={{ scale: 0, rotate: -45 }}
-                animate={{ scale: [0, 1.25, 1], rotate: 0 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#16A34A] to-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 relative"
+              {/* Botón X superior accesible en móvil */}
+              <button
+                type="button"
+                onClick={() => setPantallaExitoReportado(false)}
+                className="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Cerrar modal"
               >
-                <Check className="w-10 h-10 stroke-[3.5] text-[#0A1525]" />
-                <span className="absolute inset-0 rounded-3xl border-2 border-[#16A34A] animate-ping opacity-30" />
-              </motion.div>
+                <X className="w-4 h-4" />
+              </button>
 
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  ✓ Comprobante Notificado
-                </span>
-                <h3 className="text-xl font-black text-[#0A1525] tracking-tight">
-                  ¡Pago en Validación!
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Tu comprobante ha sido enviado a la operadora de despacho. En unos minutos tu orden pasará a <strong>PAGADO</strong> y se liberará tu certificado de garantía.
-                </p>
-              </div>
+              <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: [0, 1.25, 1], rotate: 0 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-[#16A34A] to-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 relative"
+                >
+                  <Check className="w-8 h-8 sm:w-10 sm:h-10 stroke-[3.5] text-[#0A1525]" />
+                  <span className="absolute inset-0 rounded-3xl border-2 border-[#16A34A] animate-ping opacity-30" />
+                </motion.div>
 
-              {comprobanteUrl && (
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
-                  <img
-                    src={comprobanteUrl}
-                    alt="Ticket"
-                    className="w-12 h-12 rounded-xl object-cover border border-emerald-400"
-                  />
-                  <div className="text-left text-xs">
-                    <span className="font-bold text-[#0A1525] block">Comprobante Recibido</span>
-                    <span className="text-[10px] text-slate-500 font-mono">Bucket: evidencias</span>
-                  </div>
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    ✓ Comprobante Notificado
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-black text-[#0A1525] tracking-tight">
+                    ¡Pago en Validación!
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Tu comprobante ha sido enviado a la operadora de despacho. En unos minutos tu orden pasará a <strong>PAGADO</strong> y se liberará tu certificado de garantía.
+                  </p>
                 </div>
-              )}
+
+                {comprobanteUrl && (
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
+                    <img
+                      src={comprobanteUrl}
+                      alt="Ticket"
+                      className="w-12 h-12 rounded-xl object-cover border border-emerald-400"
+                    />
+                    <div className="text-left text-xs">
+                      <span className="font-bold text-[#0A1525] block">Comprobante Recibido</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Bucket: evidencias</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <button
                 type="button"
                 onClick={() => setPantallaExitoReportado(false)}
-                className="w-full h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                className="w-full h-11 sm:h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95 shrink-0"
               >
                 Entendido, Continuar
               </button>
@@ -3368,71 +3411,83 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalCalificacionOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.85, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.85, y: 30 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative overflow-hidden"
+              className="w-full max-w-sm bg-white rounded-3xl p-5 sm:p-6 text-center space-y-4 border border-[#CBD5E1] shadow-2xl relative overflow-hidden my-auto max-h-[92dvh] max-h-[90vh] flex flex-col"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/30 rounded-full blur-2xl pointer-events-none" />
 
-              <div className="w-16 h-16 rounded-3xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-lg shadow-[#CCFF00]/40">
-                <Sparkles className="w-8 h-8 text-[#0A1525] stroke-[2.2]" />
-              </div>
+              {/* Botón X visible en móvil */}
+              <button
+                type="button"
+                onClick={() => setModalCalificacionOpen(false)}
+                className="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
 
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  ¡Pago Verificado y Conciliado!
-                </span>
-                <h3 className="text-xl font-black text-[#0A1525] tracking-tight mt-1.5">
-                  ¿Cómo estuvo tu experiencia con {MECANICO_INFO.nombre}?
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Tu calificación ayuda a premiar a los mejores técnicos certificados de Caracas.
-                </p>
-              </div>
+              <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-lg shadow-[#CCFF00]/40">
+                  <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-[#0A1525] stroke-[2.2]" />
+                </div>
 
-              {/* Selector Interactivo de 5 Estrellas */}
-              <div className="flex items-center justify-center gap-2 py-2">
-                {[1, 2, 3, 4, 5].map((estrella) => (
-                  <button
-                    key={estrella}
-                    type="button"
-                    onClick={() => setCalificacionEstrellas(estrella)}
-                    className="p-1 transition-transform hover:scale-125 active:scale-95 cursor-pointer"
-                  >
-                    <Star
-                      className={`w-8 h-8 ${
-                        estrella <= calificacionEstrellas
-                          ? 'text-amber-400 fill-amber-400 filter drop-shadow-xs'
-                          : 'text-slate-300'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    ¡Pago Verificado y Conciliado!
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-black text-[#0A1525] tracking-tight mt-1.5">
+                    ¿Cómo estuvo tu experiencia con {MECANICO_INFO.nombre}?
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Tu calificación ayuda a premiar a los mejores técnicos certificados de Caracas.
+                  </p>
+                </div>
 
-              {/* Caja de Comentario */}
-              <textarea
-                value={comentarioCalificacion}
-                onChange={(e) => setComentarioCalificacion(e.target.value)}
-                placeholder="Deja un comentario para Carlos Mendoza (opcional)..."
-                rows={2}
-                className="w-full rounded-2xl border border-slate-200 p-3 text-xs text-[#0A1525] focus:outline-none focus:border-[#1E56B0] resize-none"
-              />
+                {/* Selector Interactivo de 5 Estrellas */}
+                <div className="flex items-center justify-center gap-2 py-2">
+                  {[1, 2, 3, 4, 5].map((estrella) => (
+                    <button
+                      key={estrella}
+                      type="button"
+                      onClick={() => setCalificacionEstrellas(estrella)}
+                      className="p-1 transition-transform hover:scale-125 active:scale-95 cursor-pointer"
+                    >
+                      <Star
+                        className={`w-7 h-7 sm:w-8 sm:h-8 ${
+                          estrella <= calificacionEstrellas
+                            ? 'text-amber-400 fill-amber-400 filter drop-shadow-xs'
+                            : 'text-slate-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Caja de Comentario */}
+                <textarea
+                  value={comentarioCalificacion}
+                  onChange={(e) => setComentarioCalificacion(e.target.value)}
+                  placeholder="Deja un comentario para Carlos Mendoza (opcional)..."
+                  rows={2}
+                  className="w-full rounded-2xl border border-slate-200 p-3 text-xs text-[#0A1525] focus:outline-none focus:border-[#1E56B0] resize-none"
+                />
+              </div>
 
               {calificacionEnviada ? (
-                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-center gap-2 text-emerald-800 font-extrabold text-xs">
+                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-center gap-2 text-emerald-800 font-extrabold text-xs shrink-0">
                   <Check className="w-4 h-4 stroke-[3]" />
                   <span>¡Gracias! Tu reseña ha sido registrada.</span>
                 </div>
               ) : (
-                <div className="space-y-2 pt-1">
+                <div className="space-y-2 pt-1 shrink-0">
                   <button
                     type="button"
                     onClick={handleEnviarCalificacion}
-                    className="w-full h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                    className="w-full h-11 sm:h-12 bg-[#0A1525] hover:bg-[#1E56B0] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
                   >
                     Enviar Calificación
                   </button>
@@ -3440,7 +3495,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
                   <button
                     type="button"
                     onClick={() => setModalCalificacionOpen(false)}
-                    className="w-full h-9 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
+                    className="w-full h-8 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
                   >
                     Omitir por ahora
                   </button>
@@ -3456,20 +3511,21 @@ export function ClienteServicioClient({ id }: { id: string }) {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalChecklistClienteOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full max-w-lg bg-white rounded-3xl border border-[#CBD5E1] shadow-2xl p-5 sm:p-6 relative my-auto space-y-4 max-h-[90vh] flex flex-col"
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#CBD5E1] shadow-2xl p-4 sm:p-6 relative my-auto space-y-4 max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden"
             >
-              {/* Botón Cerrar */}
+              {/* Botón Cerrar Pinned / Sticky */}
               <button
                 type="button"
                 onClick={() => setModalChecklistClienteOpen(false)}
-                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
+                className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
                 title="Cerrar visor"
+                aria-label="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>

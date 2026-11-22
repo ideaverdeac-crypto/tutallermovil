@@ -1678,23 +1678,25 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       {/* Modal para que el Mecánico agregue más piezas desmontadas o reemplazadas */}
       <AnimatePresence>
         {modalAgregarPiezaMecanico && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 space-y-4 border border-[#CBD5E1] shadow-2xl relative"
+              className="w-full max-w-sm bg-white rounded-3xl p-5 sm:p-6 space-y-4 border border-[#CBD5E1] shadow-2xl relative my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden"
             >
+              {/* Botón X superior accesible en móvil */}
               <button
                 type="button"
                 onClick={() => setModalAgregarPiezaMecanico(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shadow-xs">
+              <div className="flex items-center gap-2.5 shrink-0 pr-8">
+                <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center shadow-xs shrink-0">
                   <Plus className="w-5 h-5 stroke-[3]" />
                 </div>
                 <div>
@@ -1707,57 +1709,59 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
                 </div>
               </div>
 
-              <p className="text-xs text-slate-500">
-                Registra cualquier otra pieza o insumo extraído o sustituido durante el servicio para documentar la evidencia fotográfica del viejo y nuevo.
-              </p>
+              <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                <p className="text-xs text-slate-500">
+                  Registra cualquier otra pieza o insumo extraído o sustituido durante el servicio para documentar la evidencia fotográfica del viejo y nuevo.
+                </p>
 
-              {/* Sugerencias Rápidas */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Piezas comunes:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    'Estopera de Cigüeñal',
-                    'Buje de Meseta / Barra',
-                    'Abrazadera / Manguera',
-                    'Terminal de Dirección',
-                    'Filtro de Gasolina',
-                    'Sensor de Temperatura'
-                  ].map((sug, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleAgregarPiezaMecanico(sug)}
-                      className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#1E56B0] hover:text-white transition-all text-slate-700 cursor-pointer"
-                    >
-                      + {sug}
-                    </button>
-                  ))}
+                {/* Sugerencias Rápidas */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Piezas comunes:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'Estopera de Cigüeñal',
+                      'Buje de Meseta / Barra',
+                      'Abrazadera / Manguera',
+                      'Terminal de Dirección',
+                      'Filtro de Gasolina',
+                      'Sensor de Temperatura'
+                    ].map((sug, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleAgregarPiezaMecanico(sug)}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#1E56B0] hover:text-white transition-all text-slate-700 cursor-pointer"
+                      >
+                        + {sug}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Input personalizado */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <label className="text-xs font-bold text-[#0A1525] block">
-                  O escribe el nombre de la pieza:
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Empacadura de tapa de válvulas"
-                  value={nombreNuevaPiezaMecanico}
-                  onChange={(e) => setNombreNuevaPiezaMecanico(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-[#1E56B0]"
-                />
+                {/* Input personalizado */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="text-xs font-bold text-[#0A1525] block">
+                    O escribe el nombre de la pieza:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Empacadura de tapa de válvulas"
+                    value={nombreNuevaPiezaMecanico}
+                    onChange={(e) => setNombreNuevaPiezaMecanico(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-[#1E56B0]"
+                  />
 
-                <button
-                  type="button"
-                  onClick={() => handleAgregarPiezaMecanico()}
-                  className="w-full h-11 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer active:scale-95"
-                >
-                  <Plus className="w-4 h-4 stroke-[3]" />
-                  <span>Añadir Pieza a la Inspección</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAgregarPiezaMecanico()}
+                    className="w-full h-11 bg-[#CCFF00] hover:bg-[#b8e600] text-[#0A1525] font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>Añadir Pieza a la Inspección</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -1769,12 +1773,12 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalExitoOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-5 border border-[#CBD5E1] shadow-2xl relative"
+              className="w-full max-w-sm bg-white rounded-3xl p-5 sm:p-6 text-center space-y-4 sm:space-y-5 border border-[#CBD5E1] shadow-2xl relative my-auto max-h-[92dvh] max-h-[90vh] overflow-y-auto"
             >
               <div className="w-16 h-16 rounded-full bg-[#CCFF00] text-[#0A1525] flex items-center justify-center mx-auto shadow-lg shadow-[#CCFF00]/30">
                 <Check className="w-8 h-8 stroke-[3.5]" />
@@ -1803,7 +1807,7 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
 
               <Link
                 href="/aliados/portal"
-                className="w-full h-14 bg-[#0A1525] hover:bg-slate-800 text-white font-black text-sm rounded-2xl flex items-center justify-center transition-all shadow-md active:scale-95"
+                className="w-full h-13 sm:h-14 bg-[#0A1525] hover:bg-slate-800 text-white font-black text-sm rounded-2xl flex items-center justify-center transition-all shadow-md active:scale-95"
               >
                 Volver a la Bandeja de Servicios
               </Link>
@@ -1815,19 +1819,20 @@ export function ServicioEjecucionClient({ id }: ServicioEjecucionClientProps) {
       {/* Modal Zoom de Fotos */}
       <AnimatePresence>
         {modalFotoZoom && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-            <div className="relative max-w-md w-full">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto overscroll-contain">
+            <div className="relative max-w-md w-full my-auto flex flex-col items-center">
               <button
                 type="button"
                 onClick={() => setModalFotoZoom(null)}
-                className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center"
+                className="absolute top-2 right-2 z-20 w-10 h-10 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center transition-colors cursor-pointer shadow-lg"
+                aria-label="Cerrar foto"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
               <img
                 src={modalFotoZoom}
                 alt="Evidencia ampliada"
-                className="w-full rounded-2xl object-contain max-h-[80vh]"
+                className="w-full rounded-2xl object-contain max-h-[85dvh] max-h-[85vh] shadow-2xl"
               />
             </div>
           </div>

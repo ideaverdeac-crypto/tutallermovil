@@ -3322,21 +3322,21 @@ export default function TableroDespachoPage() {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalAsignarOpen && ordenParaAsignar && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/60 backdrop-blur-xs overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 20 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 relative overflow-hidden space-y-5"
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-5 sm:p-6 relative my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden space-y-4"
             >
-              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-[#1E56B0] text-white flex items-center justify-center font-bold">
                     <UserCheck className="w-5 h-5 text-[#CCFF00]" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-[#0A1525] tracking-tight">
+                    <h2 className="text-base sm:text-lg font-black text-[#0A1525] tracking-tight">
                       Asignar Especialista en Ruta
                     </h2>
                     <p className="text-xs text-[#475569] font-medium">
@@ -3351,13 +3351,14 @@ export default function TableroDespachoPage() {
                     setModalAsignarOpen(false);
                     setOrdenParaAsignar(null);
                   }}
-                  className="p-1.5 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors"
+                  className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                  aria-label="Cerrar modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 overflow-y-auto flex-1 pr-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#475569] block">
                   Especialistas Verificados Disponibles
                 </span>
@@ -3420,26 +3421,28 @@ export default function TableroDespachoPage() {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalMecanicoDetalleOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/60 backdrop-blur-xs overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 20 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full max-w-md bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 relative overflow-hidden space-y-5"
+              className="w-full max-w-md bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-5 sm:p-6 relative my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden space-y-4"
             >
               {/* Botón de Cierre */}
               <button
                 type="button"
                 onClick={() => setModalMecanicoDetalleOpen(false)}
-                className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
                 title="Cerrar"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Cabecera: Avatar Squircle Oficial w-20 h-20, Nombre, Código y Calificación */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1 text-center sm:text-left">
+              <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                {/* Cabecera: Avatar Squircle Oficial w-20 h-20, Nombre, Código y Calificación */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-1 text-center sm:text-left">
                 <MecanicoAvatarSquircle initials="CM" fotoUrl={FOTO_MECANICO_OFICIAL} size="lg" status="verified" />
 
                 <div className="space-y-1">
@@ -3595,6 +3598,7 @@ export default function TableroDespachoPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                 <span>Verificado por TuTallerMóvil • Activo en ruta</span>
               </div>
+              </div>
             </motion.div>
           </div>
         )}
@@ -3729,14 +3733,14 @@ export default function TableroDespachoPage() {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalRunnerOpen && ordenParaRunner && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/60 backdrop-blur-xs overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 20 }}
-              className="w-full max-w-sm bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 space-y-4"
+              className="w-full max-w-sm bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-5 sm:p-6 space-y-4 my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden"
             >
-              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-sky-100 text-[#1E56B0] flex items-center justify-center font-bold">
                     <Bike className="w-5 h-5" />
@@ -3756,13 +3760,14 @@ export default function TableroDespachoPage() {
                     setModalRunnerOpen(false);
                     setOrdenParaRunner(null);
                   }}
-                  className="p-1 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100"
+                  className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                  aria-label="Cerrar modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
                 {MOTORIZADOS_RUNNER.map((runner) => (
                   <button
                     key={runner.id}
@@ -3859,20 +3864,21 @@ export default function TableroDespachoPage() {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalEvidenciaOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/75 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/75 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ type: 'spring', damping: 25, stiffness: 320 }}
-              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 relative overflow-hidden space-y-4"
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-4 sm:p-6 relative my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden space-y-4"
             >
               {/* Botón de Cierre */}
               <button
                 type="button"
                 onClick={() => setModalEvidenciaOpen(false)}
-                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
+                className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
                 title="Cerrar visor"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -4041,25 +4047,26 @@ export default function TableroDespachoPage() {
       {/* ======================================================== */}
       <AnimatePresence>
         {modalComprobanteOpen && ordenParaComprobante && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1525]/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
             <motion.div
               initial={{ opacity: 0, scale: 0.85, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.85, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-6 relative overflow-hidden space-y-4"
+              className="w-full max-w-lg bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-4 sm:p-6 relative my-auto max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden space-y-4"
             >
               <button
                 type="button"
                 onClick={handleCerrarComprobante}
-                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
+                className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
                 title="Cerrar modal"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
 
               {/* Cabecera */}
-              <div className="flex items-center gap-3 pr-8">
+              <div className="flex items-center gap-3 pr-8 shrink-0">
                 <div className="w-10 h-10 rounded-2xl bg-[#0A1525] text-[#CCFF00] flex items-center justify-center font-black shadow-xs shrink-0">
                   <Receipt className="w-5 h-5 text-[#CCFF00]" />
                 </div>
@@ -4078,65 +4085,67 @@ export default function TableroDespachoPage() {
                 </div>
               </div>
 
-              {/* Resumen de Monto y Vehículo */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-200">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Monto a Conciliar</span>
-                  <span className="text-base font-mono font-black text-[#0A1525]">
-                    ${typeof ordenParaComprobante.ganancia_estimada === 'number' && ordenParaComprobante.ganancia_estimada > 0 ? (Number(ordenParaComprobante.ganancia_estimada) * 1.5).toFixed(2) : '75.00'} USD
-                  </span>
-                </div>
-                <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-200">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Vehículo</span>
-                  <span className="text-xs font-bold text-slate-800 truncate block">
-                    {ordenParaComprobante.vehiculo_modelo}
-                  </span>
-                  <span className="text-[10px] text-[#1E56B0] font-mono font-bold">
-                    Sector: {ordenParaComprobante.sector}
-                  </span>
-                </div>
-              </div>
-
-              {/* Visor de la Imagen del Ticket */}
-              <div className="space-y-2">
-                <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-[#CBD5E1] bg-slate-900 shadow-inner flex items-center justify-center group">
-                  <img
-                    src={
-                      ordenParaComprobante.comprobante_url ||
-                      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80'
-                    }
-                    alt="Comprobante Bancario"
-                    className="w-full h-full object-contain"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <span className="bg-[#16A34A] text-white text-[11px] font-black px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 border border-white/20">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>Comprobante Subido por Cliente</span>
+              <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                {/* Resumen de Monto y Vehículo */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-200">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Monto a Conciliar</span>
+                    <span className="text-base font-mono font-black text-[#0A1525]">
+                      ${typeof ordenParaComprobante.ganancia_estimada === 'number' && ordenParaComprobante.ganancia_estimada > 0 ? (Number(ordenParaComprobante.ganancia_estimada) * 1.5).toFixed(2) : '75.00'} USD
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-200">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Vehículo</span>
+                    <span className="text-xs font-bold text-slate-800 truncate block">
+                      {ordenParaComprobante.vehiculo_modelo}
+                    </span>
+                    <span className="text-[10px] text-[#1E56B0] font-mono font-bold">
+                      Sector: {ordenParaComprobante.sector}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-500 px-1">
-                  <span className="font-mono text-[11px]">
-                    Bucket: evidencias • SHA-256 verificado
-                  </span>
-                  <a
-                    href={
-                      ordenParaComprobante.comprobante_url ||
-                      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80'
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#1E56B0] hover:underline font-bold flex items-center gap-1 text-[11px]"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    <span>Ver en alta resolución</span>
-                  </a>
+                {/* Visor de la Imagen del Ticket */}
+                <div className="space-y-2">
+                  <div className="relative w-full h-64 sm:h-80 rounded-2xl overflow-hidden border border-[#CBD5E1] bg-slate-900 shadow-inner flex items-center justify-center group">
+                    <img
+                      src={
+                        ordenParaComprobante.comprobante_url ||
+                        'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80'
+                      }
+                      alt="Comprobante Bancario"
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className="bg-[#16A34A] text-white text-[11px] font-black px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 border border-white/20">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Comprobante Subido por Cliente</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                    <span className="font-mono text-[11px]">
+                      Bucket: evidencias • SHA-256 verificado
+                    </span>
+                    <a
+                      href={
+                        ordenParaComprobante.comprobante_url ||
+                        'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80'
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#1E56B0] hover:underline font-bold flex items-center gap-1 text-[11px]"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Ver en alta resolución</span>
+                    </a>
+                  </div>
                 </div>
               </div>
 
               {/* Botones de Acción de Validación */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-3 pt-2 shrink-0">
                 <button
                   type="button"
                   disabled={actualizandoId === ordenParaComprobante.id}
@@ -4179,13 +4188,13 @@ export default function TableroDespachoPage() {
           const itemsOkCount = 25 - itemsCambioCount;
 
           return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0A1525]/80 backdrop-blur-md overflow-y-auto overscroll-contain">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="w-full max-w-2xl bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-5 sm:p-6 relative my-auto space-y-4 max-h-[90vh] flex flex-col"
+                className="w-full max-w-2xl bg-white rounded-3xl border border-[#E2E8F0] shadow-2xl p-4 sm:p-6 relative my-auto space-y-4 max-h-[92dvh] max-h-[90vh] flex flex-col overflow-hidden"
               >
                 {/* Botón Cerrar */}
                 <button
@@ -4194,8 +4203,9 @@ export default function TableroDespachoPage() {
                     setModalDiagnosticoOpen(false);
                     setOrdenParaDiagnostico(null);
                   }}
-                  className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
+                  className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer"
                   title="Cerrar visor"
+                  aria-label="Cerrar"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -4406,16 +4416,16 @@ export default function TableroDespachoPage() {
             `🕒 *Estado:* ${ord.estado}`;
 
           return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto overscroll-contain">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 15 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]"
+                className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col my-auto max-h-[92dvh] max-h-[90vh]"
               >
                 {/* Header del Modal */}
-                <div className="bg-[#0A1525] p-5 text-white flex items-start justify-between relative">
-                  <div className="space-y-1 pr-6">
+                <div className="bg-[#0A1525] p-4 sm:p-5 text-white flex items-start justify-between relative shrink-0">
+                  <div className="space-y-1 pr-6 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#CCFF00] text-[#0A1525] uppercase tracking-wider">
                         {ord.estado.replace(/_/g, ' ')}
@@ -4436,17 +4446,18 @@ export default function TableroDespachoPage() {
                         #{ord.id.slice(0, 8)}
                       </span>
                     </div>
-                    <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                      <User className="w-5 h-5 text-[#CCFF00]" />
-                      <span>Ficha del Cliente & Datos del Servicio</span>
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2 truncate">
+                      <User className="w-5 h-5 text-[#CCFF00] shrink-0" />
+                      <span className="truncate">Ficha del Cliente & Datos</span>
                     </h2>
                   </div>
                   <button
                     type="button"
                     onClick={() => setModalDetalleClienteOpen(false)}
-                    className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    aria-label="Cerrar ficha"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
 

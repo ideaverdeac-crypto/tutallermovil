@@ -195,35 +195,40 @@ export function SolicitarExpedienteModal({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-[#0A1525]/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[92vh] w-[95vw] max-w-lg translate-x-[-50%] translate-y-[-50%] overflow-y-auto rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-slate-200 outline-none focus:outline-none">
-          
-          {/* Botón Cerrar */}
-          <button
-            type="button"
-            onClick={handleCerrar}
-            className="absolute top-5 right-5 p-2 text-slate-400 hover:text-[#0A1525] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer z-10"
-            aria-label="Cerrar modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          {!ordenCreada ? (
-            /* VISTA DEL FORMULARIO */
-            <div className="space-y-5">
-              
-              {/* Encabezado */}
-              <div className="pr-6">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1E56B0]/10 text-[#1E56B0] text-xs font-black mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
-                  <span>Auditoría Certificada • $5.00 USD</span>
-                </div>
-                <Dialog.Title className="text-xl sm:text-2xl font-black text-[#0A1525] tracking-tight">
-                  Apertura de Expediente Técnico
-                </Dialog.Title>
-                <Dialog.Description className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
-                  Un mecánico especialista de TuTallerMóvil acude a tu ubicación en Caracas para realizar la inspección técnica de <strong>25 puntos</strong> y crear tu historial digital oficial.
-                </Dialog.Description>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto overscroll-contain">
+          <Dialog.Content className="w-full max-w-lg max-h-[92dvh] max-h-[90vh] flex flex-col rounded-3xl bg-white shadow-2xl border border-slate-200 outline-none focus:outline-none my-auto overflow-hidden relative">
+            
+            {/* Header Fijo con Botón de Cerrar Siempre Accesible */}
+            <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1E56B0]/10 text-[#1E56B0] text-xs font-black">
+                <Sparkles className="w-3.5 h-3.5 text-[#1E56B0]" />
+                <span>Auditoría Certificada • $5.00 USD</span>
               </div>
+              <button
+                type="button"
+                onClick={handleCerrar}
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-[#0A1525] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Cuerpo Scrolleable */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain space-y-4">
+              {!ordenCreada ? (
+                /* VISTA DEL FORMULARIO */
+                <div className="space-y-4">
+                  
+                  {/* Encabezado */}
+                  <div>
+                    <Dialog.Title className="text-xl sm:text-2xl font-black text-[#0A1525] tracking-tight">
+                      Apertura de Expediente Técnico
+                    </Dialog.Title>
+                    <Dialog.Description className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
+                      Un mecánico especialista de TuTallerMóvil acude a tu ubicación en Caracas para realizar la inspección técnica de <strong>25 puntos</strong> y crear tu historial digital oficial.
+                    </Dialog.Description>
+                  </div>
 
               {/* Ficha del Vehículo Seleccionado */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
@@ -505,8 +510,10 @@ export function SolicitarExpedienteModal({
 
             </div>
           )}
+          </div>
 
         </Dialog.Content>
+        </div>
       </Dialog.Portal>
     </Dialog.Root>
   );
