@@ -1440,6 +1440,22 @@ export default function ClienteDashboardPage() {
         open={modalSolicitarOpen}
         onOpenChange={setModalSolicitarOpen}
         initialTipoServicio={tipoServicioModal}
+        initialVehiculo={
+          vehiculoSeleccionado
+            ? {
+                marca: vehiculoSeleccionado.marca,
+                modelo: vehiculoSeleccionado.modelo,
+                anio: vehiculoSeleccionado.anio,
+                placa: vehiculoSeleccionado.placa,
+                falla: tipoServicioModal === 'INSPECCION_TECNICA' ? 'Inspección Técnica Certificada de 25 Puntos' : ''
+              }
+            : undefined
+        }
+        initialCliente={{
+          nombre: usuario.nombre,
+          email: usuario.email,
+          telefono: usuario.telefono
+        }}
         vehiculosRegistrados={vehiculos}
         onSuccessToast={() => recargarOrdenes()}
         onVehiculoCreado={(nuevo) => {
@@ -1462,21 +1478,6 @@ export default function ClienteDashboardPage() {
               }
             ];
           });
-        }}
-        initialVehiculo={
-          vehiculoSeleccionado
-            ? {
-                marca: vehiculoSeleccionado.marca,
-                modelo: vehiculoSeleccionado.modelo,
-                anio: vehiculoSeleccionado.anio,
-                placa: vehiculoSeleccionado.placa
-              }
-            : undefined
-        }
-        initialCliente={{
-          nombre: usuario.nombre,
-          email: usuario.email,
-          telefono: usuario.telefono
         }}
       />
 

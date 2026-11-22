@@ -129,10 +129,7 @@ export function SolicitarExpedienteModal({
             vehiculo_anio: anioNum,
             falla_reportada: fallaDetalle,
             sector: direccionCompleta,
-            estado: 'LEAD_NUEVO',
-            ganancia_estimada: 15.0,
-            latitud: 10.49,
-            longitud: -66.85
+            estado: 'LEAD_NUEVO'
           }
         ])
         .select()

@@ -127,18 +127,20 @@ export function SolicitarMecanicoModal({
         } catch (e) { }
       }
 
-      if (userNombre || userEmail) {
+      if (userNombre || userEmail || userTel) {
         setUsuarioAutenticado({
           nombre: userNombre,
           email: userEmail,
           telefono: userTel
         });
-        setNombre(userNombre);
-        setEmail(userEmail);
+        if (userNombre) setNombre(userNombre);
+        if (userEmail) setEmail(userEmail);
+        if (userTel) setTelefono(userTel);
       } else {
         setUsuarioAutenticado(null);
         setNombre('');
         setEmail('');
+        setTelefono('');
       }
 
       // 2. Resolver lista de vehículos registrados reales del usuario (SIN datos falsos o mock)
@@ -331,23 +333,30 @@ export function SolicitarMecanicoModal({
         ? (fallaLimpia.toUpperCase().includes('INSPECCI') ? fallaLimpia : `[INSPECCIÓN TÉCNICA 25 PUNTOS] ${fallaLimpia || 'Auditoría integral y certificación preventiva de 25 sistemas críticos'}`)
         : fallaLimpia;
 
-      // 2. Insertar orden en la tabla ordenes (Campos oficiales de Supabase)
-      const { data, error } = await supabase.from('ordenes').insert([
-        {
-          cliente_nombre: nombreFinal,
-          cliente_telefono: telefonoFinal,
-          cliente_email: emailFinal,
-          vehiculo_id: vehiculoIdFinal,
-          vehiculo_marca: marca.trim(),
-          vehiculo_modelo: modeloFinal,
-          vehiculo_placa: placaLimpia,
-          vehiculo_anio: anioNum,
-          falla_reportada: fallaFinal,
-          sector: sector.trim(),
-          estado: 'LEAD_NUEVO',
-          ganancia_estimada: 15.0
-        }
-      ]).select();
+      // Validar si vehiculo_id es un UUID válido para no violar constraints de Postgres
+      const esUUIDValido = (v?: string | null) =>
+        Boolean(v && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v));
+      const vehiculoIdParaInsert = esUUIDValido(vehiculoIdFinal) ? vehiculoIdFinal : null;
+
+      // 2. Insertar orden en la tabla ordenes (solo campos que existen en Supabase)
+      const ordenPayload: Record<string, any> = {
+        cliente_nombre: nombreFinal,
+        cliente_telefono: telefonoFinal,
+        cliente_email: emailFinal,
+        vehiculo_marca: marca.trim(),
+        vehiculo_modelo: modeloFinal,
+        vehiculo_placa: placaLimpia,
+        vehiculo_anio: anioNum,
+        falla_reportada: fallaFinal,
+        sector: sector.trim() || 'Caracas',
+        estado: 'LEAD_NUEVO'
+      };
+
+      if (vehiculoIdParaInsert) {
+        ordenPayload.vehiculo_id = vehiculoIdParaInsert;
+      }
+
+      const { data, error } = await supabase.from('ordenes').insert([ordenPayload]).select();
 
       if (error) {
         console.error('Error insertando orden en Supabase:', error);
