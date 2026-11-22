@@ -221,21 +221,21 @@ const CHECKLIST_25_CLIENTE = [
 // Datos por defecto si la orden es de prueba o nueva
 const DATOS_DEFAULT: OrdenCliente = {
   id: 'TTM-ORD-7892',
-  cliente_nombre: 'María Rodríguez',
-  vehiculo_marca: 'Toyota',
-  vehiculo_modelo: 'Toyota Corolla 2018',
-  vehiculo_anio: 2018,
-  placa: 'AB123CD',
-  falla_reportada: 'Chirrido agudo al frenar y pedal de freno esponjoso',
-  sector: 'Chacao — Calle El Retiro, Qta. Milagrosa',
+  cliente_nombre: 'Cliente TTM',
+  vehiculo_marca: 'Vehículo',
+  vehiculo_modelo: 'Modelo Vehicular',
+  vehiculo_anio: 2020,
+  placa: '',
+  falla_reportada: 'Inspección técnica vehicular',
+  sector: 'Caracas',
   estado: 'COTIZADO',
   ganancia_estimada: 65.0,
-  foto_odometro_url: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
+  foto_odometro_url: null,
   created_at: '2026-11-17T12:00:00.000Z',
   mecanico_id: null,
   runner_id: null,
-  kilometraje_actual: 85400,
-  vehiculo_id: 'veh-corolla-01',
+  kilometraje_actual: null,
+  vehiculo_id: null,
   diagnostico_json: {
     frenos: 'requiere_cambio',
     aceite: 'ok',
@@ -472,78 +472,95 @@ export function ClienteServicioClient({ id }: { id: string }) {
   const inputComprobanteRef = useRef<HTMLInputElement>(null);
 
   // Consulta de Suscripción e Historial Médico del Vehículo
-  const cargarHistorialYSuscripcion = async (placaParam?: string, vehiculoIdParam?: string) => {
+  const cargarHistorialYSuscripcion = async (placaParam?: string | null, vehiculoIdParam?: string | null) => {
     setCargandoHistorial(true);
     try {
       const supabase = createClient();
-      const placaActual = (placaParam || orden.placa || 'AB123CD').toUpperCase().trim();
-      const vehiculoIdActual = vehiculoIdParam || orden.vehiculo_id || orden.id;
+      const placaActual = (placaParam || orden.placa || '').toUpperCase().trim();
+      let vehiculoIdActual = vehiculoIdParam || orden.vehiculo_id || null;
+
+      // Limpiar cache local de servicios temporales
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('ttm_historial_servicios_recientes');
+        } catch (e) {}
+      }
+
+      // Si no tenemos vehiculoIdActual pero tenemos placa, buscar el vehiculo_id real en la tabla vehiculos
+      if (!vehiculoIdActual && placaActual) {
+        try {
+          const { data: vData } = await supabase
+            .from('vehiculos')
+            .select('id')
+            .eq('placa', placaActual)
+            .maybeSingle();
+          if (vData?.id) {
+            vehiculoIdActual = vData.id;
+          }
+        } catch (eVeh) {
+          console.warn('Error resolviendo vehiculo por placa:', eVeh);
+        }
+      }
+
+      // Si el cliente no tiene vehículo registrado o es un servicio nuevo sin historial
+      if (!vehiculoIdActual && !placaActual) {
+        setListaHistorial([]);
+        setTieneSuscripcion(false);
+        return;
+      }
 
       // 1. Consultar estado de suscripción en Supabase / LocalStorage
       let subActiva = false;
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && placaActual) {
         const localSub = localStorage.getItem(`ttm_sub_${placaActual}`);
         if (localSub === 'activa') subActiva = true;
       }
 
-      try {
-        const { data: subData } = await supabase
-          .from('suscripciones')
-          .select('*')
-          .or(`placa.eq.${placaActual},vehiculo_id.eq.${vehiculoIdActual}`)
-          .maybeSingle();
+      if (vehiculoIdActual) {
+        try {
+          const { data: subData } = await supabase
+            .from('suscripciones')
+            .select('*')
+            .eq('vehiculo_id', vehiculoIdActual)
+            .eq('activa', true)
+            .maybeSingle();
 
-        if (subData && subData.activa) {
-          subActiva = true;
+          if (subData) {
+            subActiva = true;
+          }
+        } catch (errSub) {
+          console.warn('Verificación remota de suscripción omitida:', errSub);
         }
-      } catch (errSub) {
-        console.warn('Verificación remota de suscripción omitida:', errSub);
       }
       setTieneSuscripcion(subActiva);
 
-      // 2. Consultar historial_servicios en Supabase
+      // 2. Consultar historial_servicios estrictamente para ESTE vehículo (filtrado real sin datos mock)
       let servicios: any[] = [];
-      try {
-        const { data: srvData } = await supabase
-          .from('historial_servicios')
-          .select('*')
-          .or(`placa.eq.${placaActual},vehiculo_id.eq.${vehiculoIdActual}`)
-          .order('fecha', { ascending: false });
-
-        if (srvData && srvData.length > 0) {
-          servicios = srvData;
-        }
-      } catch (errSrv) {
-        console.warn('Verificación remota de historial omitida:', errSrv);
-      }
-
-      // 3. Mezclar con servicios cerrados localmente en ttm_historial_servicios_recientes
-      if (typeof window !== 'undefined') {
+      if (vehiculoIdActual) {
         try {
-          const guardados = JSON.parse(localStorage.getItem('ttm_historial_servicios_recientes') || '[]');
-          if (Array.isArray(guardados) && guardados.length > 0) {
-            const coincidentes = guardados.filter(
-              (g: any) =>
-                g.placa?.toUpperCase() === placaActual ||
-                g.vehiculo_id === vehiculoIdActual ||
-                g.vehiculo_id === orden.id
-            );
-            const ids = new Set(servicios.map((s) => s.id));
-            for (const item of coincidentes) {
-              if (!ids.has(item.id)) {
-                servicios.unshift(item);
-                ids.add(item.id);
-              }
-            }
+          const { data: srvData } = await supabase
+            .from('historial_servicios')
+            .select('*')
+            .eq('vehiculo_id', vehiculoIdActual)
+            .order('fecha', { ascending: false });
+
+          if (srvData && srvData.length > 0) {
+            servicios = srvData.map((s) => ({
+              ...s,
+              costo: Number(s.costo_usd ?? s.costo ?? 0),
+              foto_repuesto_nuevo_url: s.foto_evidencia || s.foto_repuesto_nuevo_url || s.foto_url,
+              detalles: s.checklist_json?.detalles || s.detalles || ''
+            }));
           }
-        } catch (e) {
-          console.warn('Error leyendo cache de historial local:', e);
+        } catch (errSrv) {
+          console.warn('Verificación remota de historial omitida:', errSrv);
         }
       }
 
       setListaHistorial(servicios);
     } catch (err) {
       console.error('Error cargando historial y suscripción:', err);
+      setListaHistorial([]);
     } finally {
       setCargandoHistorial(false);
     }
@@ -781,7 +798,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
             vehiculo_marca: data.vehiculo_marca || 'Vehículo',
             vehiculo_modelo: data.vehiculo_modelo || 'Toyota Corolla',
             vehiculo_anio: data.vehiculo_anio || 2018,
-            placa: data.placa || 'AB123CD',
+            placa: data.vehiculo_placa || data.placa || '',
             falla_reportada: data.falla_reportada || 'Servicio de mantenimiento automotriz',
             sector: data.sector || 'Caracas',
             estado: data.estado || 'COTIZADO',
@@ -801,7 +818,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
             setMecanicoData(null);
           }
 
-          cargarHistorialYSuscripcion(data.placa, data.vehiculo_id || data.id);
+          cargarHistorialYSuscripcion(data.vehiculo_placa || data.placa, data.vehiculo_id || null);
 
           // Consultar repuestos asociados a la orden en diagnostico_json o en orden_repuestos
           if (data.diagnostico_json?.repuestos_aprobados && Array.isArray(data.diagnostico_json.repuestos_aprobados) && data.diagnostico_json.repuestos_aprobados.length > 0) {
@@ -841,7 +858,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
         }
       } catch (err) {
         console.warn('Cargando orden con valores por defecto para demostración:', err);
-        cargarHistorialYSuscripcion('AB123CD', id);
+        cargarHistorialYSuscripcion('', null);
       } finally {
         setCargando(false);
       }
@@ -1335,7 +1352,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
             const nuevaPestana = val as 'servicio' | 'historial';
             setPestanaActiva(nuevaPestana);
             if (nuevaPestana === 'historial') {
-              cargarHistorialYSuscripcion();
+              cargarHistorialYSuscripcion(orden.placa, orden.vehiculo_id);
             }
           }}
           className="w-full"

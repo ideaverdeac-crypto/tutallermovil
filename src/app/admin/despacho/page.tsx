@@ -825,48 +825,52 @@ export default function TableroDespachoPage() {
       try {
         const supabase = createClient();
         const placaVehiculo =
+          orden.vehiculo_placa ||
           orden.placa_flota ||
-          (orden.vehiculo_modelo.match(/\[([A-Z0-9-]+)\]/)?.[1]) ||
-          'AB123CD';
-        const fotoRepuestoNuevo =
-          orden.foto_repuesto_nuevo_url ||
-          orden.foto_odometro_url ||
-          'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80';
-        const kmFinal = orden.kilometraje_actual || 85400;
-        const costoTotal = Number(
-          orden.monto_aprobado_cliente || orden.ganancia_estimada || 75.0
-        );
+          (orden.vehiculo_modelo?.match(/\[([A-Z0-9-]+)\]/)?.[1]) ||
+          '';
 
-        const nuevoHistorial = {
-          vehiculo_id: orden.vehiculo_id || orden.id,
-          placa: placaVehiculo,
-          fecha: new Date().toISOString().split('T')[0],
-          kilometraje: kmFinal,
-          tipo_servicio: orden.falla_reportada || 'Mantenimiento Certificado TTM',
-          costo: costoTotal,
-          detalles: `Servicio cerrado y conciliado por operadora ${miOperadora.nombre}`,
-          foto_repuesto_nuevo_url: fotoRepuestoNuevo,
-          foto_url: fotoRepuestoNuevo,
-          checklist_json: orden.diagnostico_json || null,
-          created_at: new Date().toISOString()
-        };
-
-        const { error: errHist } = await supabase
-          .from('historial_servicios')
-          .insert([nuevoHistorial]);
-
-        if (errHist) {
-          console.warn('Aviso insertando en historial_servicios:', errHist.message);
+        let vId = orden.vehiculo_id;
+        if (!vId && placaVehiculo) {
+          const { data: vData } = await supabase
+            .from('vehiculos')
+            .select('id')
+            .eq('placa', placaVehiculo)
+            .maybeSingle();
+          if (vData?.id) vId = vData.id;
         }
 
-        // Respaldo en localStorage para disponibilidad inmediata en el Portal del Cliente
-        if (typeof window !== 'undefined') {
-          try {
-            const rawH = localStorage.getItem('ttm_historial_servicios_recientes');
-            const listaH = rawH ? JSON.parse(rawH) : [];
-            listaH.unshift({ id: `srv_${Date.now()}`, ...nuevoHistorial });
-            localStorage.setItem('ttm_historial_servicios_recientes', JSON.stringify(listaH));
-          } catch (eH) { }
+        if (vId) {
+          const fotoEvidencia =
+            orden.foto_repuesto_nuevo_url ||
+            orden.foto_odometro_url ||
+            'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80';
+          const kmFinal = orden.kilometraje_actual || 85400;
+          const costoTotal = Number(
+            orden.monto_aprobado_cliente || orden.ganancia_estimada || 75.0
+          );
+
+          const nuevoHistorial = {
+            vehiculo_id: vId,
+            fecha: new Date().toISOString().split('T')[0],
+            kilometraje: kmFinal,
+            tipo_servicio: orden.falla_reportada || 'Mantenimiento Certificado TTM',
+            costo_usd: costoTotal,
+            foto_evidencia: fotoEvidencia,
+            checklist_json: {
+              ...(orden.diagnostico_json || {}),
+              detalles: `Servicio cerrado y conciliado por operadora ${miOperadora.nombre}`
+            },
+            created_at: new Date().toISOString()
+          };
+
+          const { error: errHist } = await supabase
+            .from('historial_servicios')
+            .insert([nuevoHistorial]);
+
+          if (errHist) {
+            console.warn('Aviso insertando en historial_servicios:', errHist.message);
+          }
         }
       } catch (errHist) {
         console.warn('Excepción guardando historial_servicios:', errHist);
