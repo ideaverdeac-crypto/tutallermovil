@@ -3570,7 +3570,7 @@ export function ClienteServicioClient({ id }: { id: string }) {
                 <textarea
                   value={comentarioCalificacion}
                   onChange={(e) => setComentarioCalificacion(e.target.value)}
-                  placeholder="Deja un comentario para Carlos Mendoza (opcional)..."
+                  placeholder={`Deja un comentario para ${mecanicoActivo?.nombre || 'el especialista'} (opcional)...`}
                   rows={2}
                   className="w-full rounded-2xl border border-slate-200 p-3 text-xs text-[#0A1525] focus:outline-none focus:border-[#1E56B0] resize-none"
                 />
