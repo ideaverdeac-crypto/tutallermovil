@@ -91,12 +91,6 @@ export default function Home() {
             <a href="#servicios" className="hover:text-[#CCFF00] transition-colors">
               [ SERVICIOS ]
             </a>
-            <a href="#precios" className="hover:text-[#CCFF00] transition-colors">
-              [ PRECIOS ]
-            </a>
-            <a href="#contacto" className="hover:text-[#CCFF00] transition-colors">
-              [ CONTACTO ]
-            </a>
           </nav>
 
           {/* Acceso Clientes y WhatsApp */}
