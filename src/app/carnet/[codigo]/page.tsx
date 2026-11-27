@@ -20,7 +20,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `Credencial Oficial ${idFormateado} - TuTallerMóvil`,
-    description: `Verificación oficial de identidad del especialista mecánico de TuTallerMóvil (${idFormateado}) en Caracas.`
+    description: `Verificación oficial de identidad del especialista mecánico de TuTallerMóvil (${idFormateado}) en Caracas.`,
+    robots: {
+      index: false,
+      follow: false
+    }
   };
 }
 

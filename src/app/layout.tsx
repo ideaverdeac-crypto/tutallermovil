@@ -50,6 +50,9 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
     apple: "/icon.svg",
   },
+  alternates: {
+    canonical: "https://tutallermovil.vercel.app",
+  },
   openGraph: {
     title: "TuTallerMóvil | Mecánica Automotriz a Domicilio en Caracas",
     description:
@@ -81,9 +84,49 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "AutoRepair",
+    "name": "Tu Taller Móvil",
+    "description":
+      "Mecánica automotriz a domicilio en Caracas. Diagnóstico desde $15, garantía escrita de 90 días, llegada en menos de 45 minutos.",
+    "url": "https://tutallermovil.vercel.app",
+    "logo": "https://tutallermovil.vercel.app/icon.svg",
+    "image": "https://tutallermovil.vercel.app/icon.svg",
+    "telephone": "+584142314194",
+    "priceRange": "$$",
+    "areaServed": [
+      {
+        "@type": "AdministrativeArea",
+        "name": "Municipio Libertador, Caracas"
+      },
+      {
+        "@type": "AdministrativeArea",
+        "name": "Municipio Chacao, Caracas"
+      },
+      {
+        "@type": "AdministrativeArea",
+        "name": "Municipio Baruta, Caracas"
+      },
+      {
+        "@type": "AdministrativeArea",
+        "name": "Municipio Sucre, Caracas"
+      },
+      {
+        "@type": "AdministrativeArea",
+        "name": "Municipio El Hatillo, Caracas"
+      }
+    ],
+    "serviceType": [
+      "Mecánica a domicilio",
+      "Diagnóstico OBD2",
+      "Mantenimiento preventivo"
+    ]
+  };
+
   return (
     <html
-      lang="es"
+      lang="es-VE"
       className={`${playfair.variable} ${anton.variable} ${spaceMono.variable} h-full antialiased`}
     >
       <head>
@@ -94,6 +137,10 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-white text-[#0A1525] selection:bg-[#CCFF00] selection:text-[#050505] overflow-x-hidden pb-24 md:pb-0">
         <CustomCursor />
