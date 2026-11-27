@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -15,11 +17,15 @@ import {
   X,
   CheckCircle2
 } from 'lucide-react';
-import { SolicitarMecanicoModal } from '@/components/SolicitarMecanicoModal';
 import BotonSoporteWhatsApp from '@/components/BotonSoporteWhatsApp';
 import { SocialProof } from '@/components/SocialProof';
 import { Marquee } from '@/components/Marquee';
 import { HeroCredencialQR } from '@/components/HeroCredencialQR';
+
+const SolicitarMecanicoModal = dynamic(
+  () => import('@/components/SolicitarMecanicoModal').then((mod) => mod.SolicitarMecanicoModal),
+  { ssr: false }
+);
 
 export default function Home() {
   const router = useRouter();
@@ -128,10 +134,13 @@ export default function Home() {
             transform: `translate3d(0, ${bgOffsetY}px, 0)`,
           }}
         >
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1920&q=80"
-            alt="Taller y mecánica automotriz"
-            className="w-full h-[120%] object-cover object-center brutalist-hero-image"
+            alt="Taller y mecánica automotriz a domicilio en Caracas"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center brutalist-hero-image"
           />
         </div>
 

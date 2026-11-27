@@ -104,6 +104,7 @@ export function HeroCredencialQR() {
           alt="Carlos E. Mendoza"
           width={48}
           height={48}
+          loading="lazy"
           className="w-12 h-12 object-cover border border-[#CCFF00]/40 shrink-0 filter grayscale"
         />
         <div className="min-w-0 flex-1 leading-tight">
