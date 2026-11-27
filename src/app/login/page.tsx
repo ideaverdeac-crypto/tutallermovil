@@ -118,8 +118,9 @@ function LoginForm() {
               }
 
               // Autenticación de Operadora creada por el dueño exitosa
-              document.cookie = `ttm_role=OPERADORA; path=/; max-age=86400; SameSite=Lax;`;
-              document.cookie = `ttm_user_code=${email}; path=/; max-age=86400; SameSite=Lax;`;
+              const secureFlag = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+              document.cookie = `ttm_role=OPERADORA; path=/; max-age=86400; SameSite=Lax${secureFlag}`;
+              document.cookie = `ttm_user_code=${email}; path=/; max-age=86400; SameSite=Lax${secureFlag}`;
 
               setExitoMensaje(`¡Bienvenida ${opEncontrada.nombre}! Accediendo al Centro de Despacho...`);
               setTimeout(() => {
@@ -160,8 +161,9 @@ function LoginForm() {
       }
 
       // Guardar cookie de rol para Middleware
-      document.cookie = `ttm_role=${rolDetectado}; path=/; max-age=86400; SameSite=Lax;`;
-      document.cookie = `ttm_user_code=${email}; path=/; max-age=86400; SameSite=Lax;`;
+      const secureFlagStaff = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `ttm_role=${rolDetectado}; path=/; max-age=86400; SameSite=Lax${secureFlagStaff}`;
+      document.cookie = `ttm_user_code=${email}; path=/; max-age=86400; SameSite=Lax${secureFlagStaff}`;
 
       console.log('[AUTH RBAC] Staff autenticado:', {
         email,
@@ -290,8 +292,9 @@ function LoginForm() {
       }
 
       // Guardar cookies de rol y código para Middleware y sesión
-      document.cookie = `ttm_role=${rolDeducido}; path=/; max-age=86400; SameSite=Lax;`;
-      document.cookie = `ttm_user_code=${codigoParaCookie}; path=/; max-age=86400; SameSite=Lax;`;
+      const secureFlagAliado = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `ttm_role=${rolDeducido}; path=/; max-age=86400; SameSite=Lax${secureFlagAliado}`;
+      document.cookie = `ttm_user_code=${codigoParaCookie}; path=/; max-age=86400; SameSite=Lax${secureFlagAliado}`;
 
       if (typeof window !== 'undefined') {
         const sesionLocal = {
