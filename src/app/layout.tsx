@@ -143,6 +143,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-white text-[#0A1525] selection:bg-[#CCFF00] selection:text-[#050505] overflow-x-hidden pb-24 md:pb-0">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-[#CCFF00] focus:text-[#0A1525] focus:font-bold focus:text-xs focus:rounded-md focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#0A1525]"
+        >
+          Saltar al contenido principal
+        </a>
         <CustomCursor />
         <PageTransition>{children}</PageTransition>
         <MobileBottomNav />

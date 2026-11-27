@@ -579,7 +579,7 @@ export default function BandejaWhatsAppSheet({
                           {c.nombre.charAt(0).toUpperCase()}
                         </div>
                         {c.noLeidos > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center shadow-sm animate-pulse">
+                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#991B1B] text-white text-[10px] font-black flex items-center justify-center shadow-sm animate-pulse">
                             {c.noLeidos}
                           </span>
                         )}

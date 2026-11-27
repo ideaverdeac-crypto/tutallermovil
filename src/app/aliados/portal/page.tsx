@@ -1019,6 +1019,7 @@ export default function PortalAliadosPage() {
               disabled={refreshing}
               className="p-2 rounded-lg border border-[#CBD5E1] text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
               title="Actualizar Órdenes"
+              aria-label="Actualizar Órdenes"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-[#1E56B0]' : ''}`} />
             </button>
@@ -1034,6 +1035,7 @@ export default function PortalAliadosPage() {
                   ? 'Notificaciones Push y Sonido Piano Elegante Activos (Clic para probar)'
                   : 'Activar Notificaciones Push con Sonido de Piano Elegante'
               }
+              aria-label={pushActivo ? 'Notificaciones Push y Sonido Activos' : 'Activar Notificaciones Push'}
             >
               <Bell className={`w-4 h-4 ${pushActivo ? 'text-emerald-600' : ''}`} />
               <span
@@ -1048,6 +1050,7 @@ export default function PortalAliadosPage() {
                 onClick={() => setMostrarTutorial(true)}
                 className="p-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E56B0] transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
                 title="Ver tutorial de bienvenida (Solo primera visita)"
+                aria-label="Ver tutorial de bienvenida"
               >
                 <Sparkles className="w-4 h-4 text-[#1E56B0]" />
                 <span className="hidden sm:inline">Tutorial</span>
@@ -1059,6 +1062,7 @@ export default function PortalAliadosPage() {
               onClick={cerrarSesion}
               className="p-2 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
               title="Cerrar sesión"
+              aria-label="Cerrar sesión"
             >
               <LogOut className="w-4 h-4 text-rose-600" />
               <span className="hidden sm:inline">Salir</span>
@@ -1067,7 +1071,7 @@ export default function PortalAliadosPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 w-full space-y-6">
+      <main id="main" className="max-w-4xl mx-auto px-4 py-6 w-full space-y-6">
 
         {/* 1. Header del Perfil */}
         <section className="bg-white border border-[#CBD5E1] rounded-2xl p-5 sm:p-6 shadow-sm">

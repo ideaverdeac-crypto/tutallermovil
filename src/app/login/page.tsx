@@ -470,11 +470,12 @@ function LoginForm() {
             >
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
+                <label htmlFor="staff-email" className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5 cursor-pointer">
                   <Mail className="w-3.5 h-3.5 text-[#1E56B0]" />
                   <span>Correo Corporativo</span>
                 </label>
                 <input
+                  id="staff-email"
                   type="email"
                   required
                   value={staffEmail}
@@ -487,7 +488,7 @@ function LoginForm() {
               {/* Contraseña */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
+                  <label htmlFor="staff-password" className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5 cursor-pointer">
                     <Lock className="w-3.5 h-3.5 text-[#1E56B0]" />
                     <span>Contraseña</span>
                   </label>
@@ -501,6 +502,7 @@ function LoginForm() {
                   </a>
                 </div>
                 <input
+                  id="staff-password"
                   type="password"
                   required
                   value={staffPassword}
@@ -546,7 +548,7 @@ function LoginForm() {
             >
               {/* Código de Aliado o Correo */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center justify-between">
+                <label htmlFor="aliado-codigo" className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center justify-between cursor-pointer">
                   <span className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-[#1E56B0]" />
                     <span>Correo o Código de Aliado</span>
@@ -556,6 +558,7 @@ function LoginForm() {
                   </span>
                 </label>
                 <input
+                  id="aliado-codigo"
                   type="text"
                   required
                   value={aliadoCodigo}
@@ -568,7 +571,7 @@ function LoginForm() {
               {/* Contraseña o PIN */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5">
+                  <label htmlFor="aliado-pin" className="text-xs font-bold uppercase tracking-wider text-[#0A1525] flex items-center gap-1.5 cursor-pointer">
                     <KeyRound className="w-3.5 h-3.5 text-[#1E56B0]" />
                     <span>Contraseña o PIN</span>
                   </label>
@@ -582,6 +585,7 @@ function LoginForm() {
                   </a>
                 </div>
                 <input
+                  id="aliado-pin"
                   type="password"
                   required
                   value={aliadoPin}

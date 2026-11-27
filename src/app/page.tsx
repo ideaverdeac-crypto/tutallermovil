@@ -124,7 +124,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* HERO (Efecto Cartel Editorial sobre Fondo Blanco) */}
+      <main id="main" className="flex-1">
+        {/* HERO (Efecto Cartel Editorial sobre Fondo Blanco) */}
       <section className="relative min-h-[90vh] lg:min-h-[95vh] flex flex-col justify-between overflow-hidden bg-white border-b border-slate-200 pt-6 pb-8 px-4 sm:px-6 lg:px-8">
         
         {/* 1. Fondo de Imagen con Filtros Editoriales y Parallax */}
@@ -407,6 +408,8 @@ export default function Home() {
       {/* Sección de Prueba Social */}
       <SocialProof />
 
+      </main>
+
       {/* Footer sobre Fondo Claro */}
       <footer id="contacto" className="bg-slate-50 border-t border-slate-200 py-10 text-center text-xs text-slate-500 font-mono">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -457,6 +460,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setToastMessage(null)}
+              aria-label="Cerrar notificación"
               className="text-neutral-400 hover:text-white p-1 rounded-sm hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />

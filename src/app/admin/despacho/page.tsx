@@ -2236,7 +2236,7 @@ export default function TableroDespachoPage() {
               <MessageSquare className="w-4 h-4 text-white" />
               <span>Chats WhatsApp</span>
               {unreadWhatsAppCount > 0 && (
-                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs">
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#991B1B] text-white text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs">
                   {unreadWhatsAppCount}
                 </span>
               )}

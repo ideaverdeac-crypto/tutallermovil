@@ -230,14 +230,15 @@
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
-  /* Focus visible con glow lima */
+  /* Focus visible accesible con alto contraste */
   button:focus-visible,
   a:focus-visible,
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    outline: none !important;
-    box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.6) !important;
+    outline: 2px solid #0A1525 !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 4px rgba(204, 255, 0, 0.7) !important;
   }
 }
 

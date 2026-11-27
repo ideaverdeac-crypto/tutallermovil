@@ -341,6 +341,7 @@ Instrucciones:
                 onClick={onClose}
                 className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
                 title="Cerrar modal"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
