@@ -97,10 +97,24 @@ export default function Home() {
             <a href="#servicios" className="hover:text-[#CCFF00] transition-colors">
               [ SERVICIOS ]
             </a>
+            <Link
+              href="/aliados/portal"
+              className="text-neutral-400 hover:text-[#CCFF00] transition-colors flex items-center gap-1"
+              title="Portal de Operadores y Mecánicos Aliados"
+            >
+              [ ACCESO OPERADORES ]
+            </Link>
           </nav>
 
-          {/* Acceso Clientes y WhatsApp */}
+          {/* Acceso Clientes, Operadores (Móvil) y WhatsApp */}
           <div className="flex items-center gap-3">
+            <Link
+              href="/aliados/portal"
+              className="md:hidden h-9 px-2.5 text-[11px] font-mono font-semibold border border-neutral-700 bg-neutral-900/80 text-neutral-300 hover:text-[#CCFF00] hover:border-[#CCFF00] transition-colors rounded-sm flex items-center"
+              title="Acceso Operadores y Aliados"
+            >
+              <span>[ OPERADORES ]</span>
+            </Link>
             <BotonSoporteWhatsApp modo="header" className="hidden sm:inline-flex" />
 
             {!session ? (
@@ -415,6 +429,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 TUTALLERMÓVIL (TTM) — TITULAR: JOSÉ ÁNGEL ACOSTA LLOVERA. TODOS LOS DERECHOS RESERVADOS.</p>
           <div className="flex items-center gap-4 font-bold text-[#0A1525]">
+            <Link href="/aliados/portal" className="text-slate-600 hover:text-[#1E56B0] underline">
+              [ PORTAL DE ALIADOS ]
+            </Link>
+            <span>·</span>
             <Link href="/terminos" className="hover:text-[#1E56B0] underline">
               [ TÉRMINOS Y PRIVACIDAD ]
             </Link>
